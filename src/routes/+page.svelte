@@ -7,7 +7,7 @@
 </svelte:head>
 
 <main class="container">
-  <h1>gallery-gui</h1>
+  <img src="/favicon.png" style="width: 50px; height: auto;" alt="logo" />
 </main>
 
 <style>
