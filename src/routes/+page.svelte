@@ -1,26 +1,33 @@
 <script>
-import '@fortawesome/fontawesome-free/css/all.min.css';
-import { invoke } from '@tauri-apps/api/core';
+  import '@fortawesome/fontawesome-free/css/all.min.css';
+  import { invoke } from '@tauri-apps/api/core';
+  import { fade, slide } from 'svelte/transition'; // Import Svelte transitions
 
-let url = "";
-let noUrl = true;
+  let url = "";
+  let pasteIcon = true;
+  let statusMessages = ["a"];
+  let showStatusContainer = false;
 
-function isUrlEntered() {
-  noUrl = url.trim() === "";
-}
-
-function download() {
-  invoke('download', { url })
-  url = ""
-  noUrl = true
-}
-
-// @ts-ignore
-function handleKeyPress(event) {
-  if (event.key === 'Enter') {
-    download();
+  function isUrlEntered() {
+    pasteIcon = url.trim() === "";
   }
-}
+
+  function download() {
+    invoke('download', { url });
+    url = "";
+    pasteIcon = true;
+    
+    if (!showStatusContainer) {
+      showStatusContainer = true;
+    }
+  }
+
+  // @ts-ignore
+  function handleKeyPress(event) {
+    if (event.key === 'Enter') {
+      download();
+    }
+  }
 </script>
 
 <svelte:head>
@@ -44,13 +51,26 @@ function handleKeyPress(event) {
         aria-label="Pastes from clipboard and downloads the URL"
         on:click={download}
       >
-        {#if noUrl === true}
+        {#if pasteIcon === true}
         <i class="fa-regular fa-clipboard fa-lg"></i>
         {:else}
         <i class="fa-solid fa-download fa-lg"></i>
         {/if}
       </button>
   </div>
+  
+  {#if showStatusContainer}
+    <div class="status-container" transition:slide|local={{ duration: 500 }}>
+      {#each statusMessages as message, index (index)}
+        <p 
+          class="status-message {index === statusMessages.length - 1 ? 'latest' : ''}"
+          in:fade={{ delay: index * 100, duration: 300 }}
+        >
+          {message}
+        </p>
+      {/each}
+    </div>
+  {/if}
 </main>
 
 <style>
@@ -94,5 +114,23 @@ function handleKeyPress(event) {
   .paste-btn:hover {
     background: #5a7df9;
     transition: 0.5s;
+  }
+  .status-container {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  .status-message {
+    color: white;
+    margin: 5px 0;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  .status-message.latest {
+    font-weight: bold;
+    color: #6e8efb;
   }
 </style>
