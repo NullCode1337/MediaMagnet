@@ -10,10 +10,16 @@ function isUrlEntered() {
 }
 
 function download() {
-  if (noUrl === true) {
-    url = "None"
-  }
   invoke('download', { url })
+  url = ""
+  noUrl = true
+}
+
+// @ts-ignore
+function handleKeyPress(event) {
+  if (event.key === 'Enter') {
+    download();
+  }
 }
 </script>
 
@@ -29,6 +35,7 @@ function download() {
       class="url-input" 
       bind:value={ url }
       on:input={isUrlEntered}
+      on:keypress={handleKeyPress}
       placeholder="Enter URL"
     >
       <button 
