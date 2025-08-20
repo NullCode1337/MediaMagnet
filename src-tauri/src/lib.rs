@@ -2,7 +2,7 @@ use tauri_plugin_clipboard_manager::ClipboardExt;
 
 #[tauri::command]
 fn download(app: tauri::AppHandle, mut url: String) {
-  if url == "None" {
+  if url == "" {
     let content = app.clipboard().read_text();
     url = content.unwrap();
   }
@@ -12,7 +12,6 @@ fn download(app: tauri::AppHandle, mut url: String) {
   else {
     println!("Download {}", url);
   }
-  
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
