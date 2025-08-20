@@ -75,6 +75,8 @@
 
 <style>
   .container {
+    user-select: none;
+    -webkit-user-select: none;
     position: fixed;
     top: 45%;
     left: 50%;
