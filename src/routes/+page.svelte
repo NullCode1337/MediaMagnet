@@ -6,11 +6,14 @@ let url = "";
 let noUrl = true;
 
 function isUrlEntered() {
-  if (url.trim() !== "") { noUrl = false; }
-  else { noUrl = true; }
+  noUrl = url.trim() === "";
 }
+
 function download() {
-  invoke('download')
+  if (noUrl === true) {
+    url = "None"
+  }
+  invoke('download', { url })
 }
 </script>
 
