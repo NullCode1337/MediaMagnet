@@ -5,12 +5,11 @@ fn download(app: tauri::AppHandle, mut url: String) {
   if url == "" {
     match app.clipboard().read_text() {
       Ok(content) => {
-          url = content;
+        url = content;
       }
       Err(e) => {
-          println!("Clipboard error: {}", e);
-          println!("Not a valid URL in clipboard");
-          return;
+        println!("Clipboard error: {}", e);
+        return;
       }
     }
   }
