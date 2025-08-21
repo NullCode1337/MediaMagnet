@@ -3,8 +3,16 @@ use tauri_plugin_clipboard_manager::ClipboardExt;
 #[tauri::command]
 fn download(app: tauri::AppHandle, mut url: String) {
   if url == "" {
-    let content = app.clipboard().read_text();
-    url = content.unwrap();
+    match app.clipboard().read_text() {
+      Ok(content) => {
+          url = content;
+      }
+      Err(e) => {
+          println!("Clipboard error: {}", e);
+          println!("Not a valid URL in clipboard");
+          return;
+      }
+    }
   }
   if !url.to_lowercase().contains("http") {
     println!("Not a url")
