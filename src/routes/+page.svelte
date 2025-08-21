@@ -1,7 +1,7 @@
 <script>
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import { invoke } from '@tauri-apps/api/core';
-  import { fade, slide } from 'svelte/transition'; // Import Svelte transitions
+  import { fade, slide } from 'svelte/transition';
 
   let url = "";
   let pasteIcon = true;
@@ -16,10 +16,6 @@
     invoke('download', { url });
     url = "";
     pasteIcon = true;
-    
-    if (!showStatusContainer) {
-      showStatusContainer = true;
-    }
   }
 
   // @ts-ignore
