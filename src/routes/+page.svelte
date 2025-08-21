@@ -4,10 +4,12 @@
   import { fade, slide } from 'svelte/transition';
 
   let url = "";
-  let pasteIcon = true;
   let statusMessages = ["a"];
-  let showStatusContainer = false;
 
+  let pasteIcon = true;
+  let isDownloading = false;
+  let showStatus = false;
+  
   function isUrlEntered() {
     pasteIcon = url.trim() === "";
   }
@@ -15,6 +17,7 @@
   function download() {
     invoke('download', { url });
     url = "";
+    isDownloading = true;
     pasteIcon = true;
   }
 
@@ -47,15 +50,17 @@
         aria-label="Pastes from clipboard and downloads the URL"
         on:click={download}
       >
-        {#if pasteIcon === true}
-        <i class="fa-regular fa-clipboard fa-lg"></i>
+        {#if isDownloading}
+          <i class="fas fa-spinner fa-spin fa-2xl"></i>
+        {:else if pasteIcon === true}
+          <i class="fa-regular fa-clipboard fa-lg"></i>
         {:else}
-        <i class="fa-solid fa-download fa-lg"></i>
+          <i class="fa-solid fa-download fa-lg"></i>
         {/if}
       </button>
   </div>
-  
-  {#if showStatusContainer}
+
+  {#if showStatus}
     <div class="status-container" transition:slide|local={{ duration: 500 }}>
       {#each statusMessages as message, index (index)}
         <p 
