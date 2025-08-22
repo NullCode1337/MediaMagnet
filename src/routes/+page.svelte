@@ -14,7 +14,6 @@
   let pasteIcon = true;
   let isDownloading = false;
   let downloadProgress = 0;
-  let showStatus = false;
   let expandStatus = false;
 
   function isUrlEntered() {
@@ -48,7 +47,6 @@
   listen('download-started', () => {
     addNotification(`Download started: ${url}`, 'info');
     isDownloading = true;
-    showStatus = true;
   });
   listen('download-progress', (event) => {
     downloadProgress = event.payload.progress;
@@ -56,7 +54,6 @@
   listen('download-finished', () => {
     addNotification('Download completed successfully', 'success');
     isDownloading = false;
-    showStatus = false;
     expandStatus = false;
   });
 
@@ -106,17 +103,15 @@
     <div class="progress-container">
       <progress value={downloadProgress} max="100" class="progress-bar"></progress>
       <span class="progress-text">{downloadProgress}%</span>
-      {#if showStatus}
-        <button 
-          class="expand-btn" 
-          on:click={() => expandStatus = !expandStatus}
-          class:expanded={expandStatus}
-          title="Show download progress"
-          aria-label="Button to expand status bar"
-        >
-          <i class="fas fa-chevron-down"></i>
-        </button>
-    {/if}
+      <button 
+        class="expand-btn" 
+        on:click={() => expandStatus = !expandStatus}
+        class:expanded={expandStatus}
+        title="Show download progress"
+        aria-label="Button to expand status bar"
+      >
+        <i class="fas fa-chevron-down"></i>
+      </button>
     </div>
   {/if}
 
@@ -154,7 +149,10 @@
 </div>
 
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap');
+  @font-face {
+    font-family: "Poppins"; 
+    src: url("/poppins-bold.ttf") format("truetype"); 
+  }
 
   .container {
     user-select: none;
@@ -251,7 +249,7 @@
   }
   .progress-text {
     color: white;
-    font-family: "Open Sans", sans-serif;
+    font-family: "Poppins", sans-serif;
     font-optical-sizing: auto;
     min-width: 30px;
     text-align: right;
