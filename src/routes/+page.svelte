@@ -1,7 +1,8 @@
 <script>
-  import '@fortawesome/fontawesome-free/css/all.min.css';
   import { invoke } from '@tauri-apps/api/core';
+  import { listen } from '@tauri-apps/api/event';
   import { fade, slide } from 'svelte/transition';
+  import '@fortawesome/fontawesome-free/css/all.min.css';
 
   let url = "";
   let statusMessages = ["a"];
@@ -21,11 +22,17 @@
     isDownloading = true;
     pasteIcon = true;
   }
+  
+  listen('download-finished', () => {
+    isDownloading = false;
+  });
 
   // @ts-ignore
   function handleKeyPress(event) {
-    if (event.key === 'Enter') {
-      download();
+    if (!isDownloading) {
+      if (event.key === 'Enter') {
+        download();
+      }
     }
   }
 </script>
@@ -50,6 +57,7 @@
         title="Paste and Download" 
         aria-label="Pastes from clipboard and downloads the URL"
         on:click={download}
+        disabled={isDownloading}
       >
         {#if isDownloading}
           <i class="fas fa-spinner fa-spin fa-2xl"></i>
@@ -118,6 +126,9 @@
   .paste-btn:hover {
     background: #5a7df9;
     transition: 0.5s;
+  }
+  .paste-btn:disabled {
+    background: rgba(255, 255, 255, 0.0)
   }
   .status-container {
     margin-top: 20px;

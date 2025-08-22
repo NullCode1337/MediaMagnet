@@ -1,10 +1,10 @@
 use tauri_plugin_clipboard_manager::ClipboardExt;
-
+use tauri::Emitter;
 use tokio::process::Command;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use dirs::download_dir;
 
-async fn async_dl(link: &str) -> Result<(), Box<dyn std::error::Error>> {
+async fn async_dl(app: tauri::AppHandle, link: &str) -> Result<(), Box<dyn std::error::Error>> {
     // TODO: backend and frontend for user-agent, cookies and oauth
     if let Some(downloads_path) = download_dir() {
       std::env::set_current_dir(&downloads_path)?;
@@ -24,6 +24,8 @@ async fn async_dl(link: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut stdout_reader = BufReader::new(stdout).lines();
     let mut stderr_reader = BufReader::new(stderr).lines();
     
+    app.emit("download-started", ()).unwrap();
+    
     tokio::spawn(async move {
         while let Ok(Some(line)) = stdout_reader.next_line().await {
             println!("STDOUT: {}", line);
@@ -41,6 +43,7 @@ async fn async_dl(link: &str) -> Result<(), Box<dyn std::error::Error>> {
     let status = child.wait().await?;
     
     if status.success() {
+        app.emit("download-finished", ()).unwrap();
         Ok(())
     } else {
         Err("gallery-dl failed".into())
@@ -66,7 +69,7 @@ async fn download(app: tauri::AppHandle, mut url: String) {
   }
 
   // Start download
-  let _ = async_dl(&url).await;
+  let _ = async_dl(app, &url).await;
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
