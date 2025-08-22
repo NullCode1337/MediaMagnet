@@ -13,8 +13,8 @@
   let pasteIcon = true;
   let isDownloading = false;
   let downloadProgress = 0;
-  let showProgressBar = false;
   let showStatus = false;
+  let expandStatus = false;
 
   function isUrlEntered() {
     pasteIcon = url.trim() === "";
@@ -24,17 +24,20 @@
   function download() {
     invoke('download', { url });
     url = "";
-    isDownloading = true;
     pasteIcon = true;
   }
 
+  listen('download-started', () => {
+    isDownloading = true;
+    showStatus = true;
+  });
   listen('download-progress', (event) => {
     downloadProgress = event.payload.progress;
-    showProgressBar = true;
   });
-
   listen('download-finished', () => {
     isDownloading = false;
+    showStatus = false;
+    expandStatus = false;
   });
 
   // @ts-ignore
@@ -80,7 +83,7 @@
   </div>
 
   <div class="expand-container">
-    {#if showProgressBar}
+    {#if isDownloading}
       <div class="progress-container">
         <progress value={downloadProgress} max="100" class="progress-bar"></progress>
         <span class="progress-text">{downloadProgress}%</span>
@@ -89,8 +92,8 @@
     {#if showStatus}
       <button 
         class="expand-btn" 
-        on:click={() => showStatus = !showStatus}
-        class:expanded={showStatus}
+        on:click={() => expandStatus = !expandStatus}
+        class:expanded={expandStatus}
         aria-label="Button to expand status bar"
       >
         <i class="fas fa-chevron-down"></i>
@@ -98,7 +101,7 @@
     {/if}
   </div>
 
-  {#if showStatus}
+  {#if expandStatus}
     <div class="status-container" transition:slide|local={{ duration: 500 }}>
       {#each statusMessages as message, index (index)}
         <p 

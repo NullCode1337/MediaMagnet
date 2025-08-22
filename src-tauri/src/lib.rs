@@ -69,6 +69,7 @@ async fn download(app: tauri::AppHandle, mut url: String) {
   }
 
   // Start download
+  app.emit("download-started", ()).unwrap();
   let _ = async_dl(app, &url).await;
 }
 
