@@ -14,6 +14,7 @@
     pasteIcon = url.trim() === "";
   }
 
+  // TODO: Implement block in the frontend with isDownloading
   function download() {
     invoke('download', { url });
     url = "";
