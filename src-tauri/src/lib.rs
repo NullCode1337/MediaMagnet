@@ -6,6 +6,20 @@ use dirs::download_dir;
 
 // TODO: backend and frontend for user-agent, cookies and oauth
 async fn async_dl(app: tauri::AppHandle, link: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let mut downloaded: Vec<String> = Vec::new();
+
+    let url_list = Command::new("gallery-dl")
+      .args(["-g", link])
+      .output()
+      .await?;
+    
+    let urls_list = String::from_utf8_lossy(&url_list.stdout);
+    
+    let total_urls: usize = urls_list
+        .lines()
+        .filter(|line| !line.trim_start().starts_with('|'))
+        .count();
+
     if let Some(downloads_path) = download_dir() {
       std::env::set_current_dir(&downloads_path)?;
     } else {
@@ -29,7 +43,10 @@ async fn async_dl(app: tauri::AppHandle, link: &str) -> Result<(), Box<dyn std::
 
     tokio::spawn(async move {
       while let Ok(Some(line)) = stdout_reader.next_line().await {
-        app_stdout.emit("download-progress", line).unwrap();
+        app_stdout.emit("download-status", &line).unwrap();
+        downloaded.push(line);
+        let progress = (downloaded.len() as f64 / total_urls as f64) * 100.0;
+        app_stdout.emit("download-progress", progress).unwrap();
       }
     });
     

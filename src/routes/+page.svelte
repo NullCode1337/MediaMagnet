@@ -44,17 +44,21 @@
     addNotification("Task started");
     isDownloading = true;
   });
-  listen('download-progress', (event) => {
+  listen('download-status', (event) => {
     statusMessages = [...statusMessages, event.payload];
+  });
+  listen('download-progress', (event) => {
+    downloadProgress = parseInt(event.payload);
   });
   listen('download-finished', () => {
     addNotification("Task completed")
     isDownloading = false;
     expandStatus = false;
-    statusMessages = []
+    statusMessages = [];
+    downloadProgress = 0;
   });
   listen('notification', (event) => {
-    addNotification(event.payload, 'info');
+    addNotification(event.payload);
   });
 
   // @ts-ignore
