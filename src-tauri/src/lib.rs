@@ -4,8 +4,8 @@ use tokio::process::Command;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use dirs::download_dir;
 
+// TODO: backend and frontend for user-agent, cookies and oauth
 async fn async_dl(app: tauri::AppHandle, link: &str) -> Result<(), Box<dyn std::error::Error>> {
-    // TODO: backend and frontend for user-agent, cookies and oauth
     if let Some(downloads_path) = download_dir() {
       std::env::set_current_dir(&downloads_path)?;
     } else {
@@ -13,10 +13,10 @@ async fn async_dl(app: tauri::AppHandle, link: &str) -> Result<(), Box<dyn std::
     }
 
     let mut child = Command::new("gallery-dl")
-        .arg(link)
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .spawn()?;
+      .arg(link)
+      .stdout(std::process::Stdio::piped())
+      .stderr(std::process::Stdio::piped())
+      .spawn()?;
     
     let stdout = child.stdout.take().unwrap();
     let stderr = child.stderr.take().unwrap();
@@ -24,53 +24,52 @@ async fn async_dl(app: tauri::AppHandle, link: &str) -> Result<(), Box<dyn std::
     let mut stdout_reader = BufReader::new(stdout).lines();
     let mut stderr_reader = BufReader::new(stderr).lines();
     
+    let app_stdout = app.clone();
+    let app_stderr = app.clone();
+
     tokio::spawn(async move {
-        while let Ok(Some(line)) = stdout_reader.next_line().await {
-            println!("STDOUT: {}", line);
-        }
+      while let Ok(Some(line)) = stdout_reader.next_line().await {
+        app_stdout.emit("download-progress", line).unwrap();
+      }
     });
     
     tokio::spawn(async move {
-        // TODO: Implement frontend for "[gallery-dl][error] Unsupported URL"
-        // TODO: Emit global event to deal with this in the frontend
-        while let Ok(Some(line)) = stderr_reader.next_line().await {
-            eprintln!("STDERR: {}", line);
-        }
+      while let Ok(Some(line)) = stderr_reader.next_line().await {
+        app_stderr.emit("notification", line).unwrap();
+      }
     });
-    
-    let status = child.wait().await?;
-    
-    if status.success() {
-        app.emit("download-finished", ()).unwrap();
-        Ok(())
-    } else {
-        Err("gallery-dl failed".into())
-    }
+        
+    let _status = child.wait().await?;
+    Ok(())
 }
 
 #[tauri::command]
 async fn download(app: tauri::AppHandle, mut url: String) {
   if url == "" {
-    match app.clipboard().read_text() {
+    let result = app.clipboard()
+      .read_text()
+      .map_err(|e| e.to_string());
+
+    match result {
       Ok(content) => {
         url = content;
       }
-      Err(e) => {
-        println!("Clipboard error: {}", e); // TODO: Implement frontend
-        app.emit("download-finished", ()).unwrap();
+      Err(err) => {
+        app.emit("notification", err).unwrap();
         return;
       }
     }
   }
+
   if !url.to_lowercase().contains("http") {
-    println!("Not a url"); // TODO: Implement frontend
-    app.emit("download-finished", ()).unwrap();
+    app.emit("notification", "Not a valid url").unwrap();
     return;
   }
 
   // Start download
   app.emit("download-started", ()).unwrap();
-  let _ = async_dl(app, &url).await;
+  let _ = async_dl(app.clone(), &url).await;
+  app.emit("download-finished", ()).unwrap();
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
