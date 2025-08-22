@@ -24,8 +24,6 @@ async fn async_dl(app: tauri::AppHandle, link: &str) -> Result<(), Box<dyn std::
     let mut stdout_reader = BufReader::new(stdout).lines();
     let mut stderr_reader = BufReader::new(stderr).lines();
     
-    app.emit("download-started", ()).unwrap();
-    
     tokio::spawn(async move {
         while let Ok(Some(line)) = stdout_reader.next_line().await {
             println!("STDOUT: {}", line);
@@ -59,12 +57,14 @@ async fn download(app: tauri::AppHandle, mut url: String) {
       }
       Err(e) => {
         println!("Clipboard error: {}", e); // TODO: Implement frontend
+        app.emit("download-finished", ()).unwrap();
         return;
       }
     }
   }
   if !url.to_lowercase().contains("http") {
     println!("Not a url"); // TODO: Implement frontend
+    app.emit("download-finished", ()).unwrap();
     return;
   }
 

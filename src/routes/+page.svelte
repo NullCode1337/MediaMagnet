@@ -4,13 +4,18 @@
   import { fade, slide } from 'svelte/transition';
   import '@fortawesome/fontawesome-free/css/all.min.css';
 
+  /**
+   * @type {string | any[]}
+   */
+  let statusMessages = [];
   let url = "";
-  let statusMessages = ["a"];
 
   let pasteIcon = true;
   let isDownloading = false;
+  let downloadProgress = 0;
+  let showProgressBar = false;
   let showStatus = false;
-  
+
   function isUrlEntered() {
     pasteIcon = url.trim() === "";
   }
@@ -22,7 +27,12 @@
     isDownloading = true;
     pasteIcon = true;
   }
-  
+
+  listen('download-progress', (event) => {
+    downloadProgress = event.payload.progress;
+    showProgressBar = true;
+  });
+
   listen('download-finished', () => {
     isDownloading = false;
   });
@@ -67,6 +77,25 @@
           <i class="fa-solid fa-download fa-lg"></i>
         {/if}
       </button>
+  </div>
+
+  <div class="expand-container">
+    {#if showProgressBar}
+      <div class="progress-container">
+        <progress value={downloadProgress} max="100" class="progress-bar"></progress>
+        <span class="progress-text">{downloadProgress}%</span>
+      </div>
+    {/if}
+    {#if showStatus}
+      <button 
+        class="expand-btn" 
+        on:click={() => showStatus = !showStatus}
+        class:expanded={showStatus}
+        aria-label="Button to expand status bar"
+      >
+        <i class="fas fa-chevron-down"></i>
+      </button>
+    {/if}
   </div>
 
   {#if showStatus}
@@ -147,5 +176,51 @@
   .status-message.latest {
     font-weight: bold;
     color: #6e8efb;
+  }
+  .expand-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+  }
+  .progress-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 15px;
+    width: 100%;
+  }
+  .progress-bar {
+    flex: 1;
+    height: 8px;
+    width: 50vw;
+    border-radius: 4px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.2);
+  }
+  .progress-bar::-webkit-progress-bar {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+  }
+  .progress-bar::-webkit-progress-value {
+    background: #6e8efb;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+  }
+  .progress-text {
+    color: white;
+    font-size: 14px;
+    min-width: 40px;
+    text-align: right;
+  }
+  .expand-btn {
+    background: transparent;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 5px;
+    transition: transform 0.3s ease;
+  }
+  .expand-btn.expanded {
+    transform: rotate(180deg);
   }
 </style>
