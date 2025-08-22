@@ -4,12 +4,8 @@
   import { fade, slide } from 'svelte/transition';
   import '@fortawesome/fontawesome-free/css/all.min.css';
 
-  /**
-   * @type {string | any[]}
-   */
-  let statusMessages = [];
-  
   let url = "";
+  var statusMessages = []; // STDOUT
 
   let pasteIcon = true;
   let isDownloading = false;
@@ -20,7 +16,7 @@
     pasteIcon = url.trim() === "";
   }
 
-  let notifications = []
+  let notifications = [] // STDERR
   function addNotification(message, type = 'info') {
     const id = Date.now(); 
     const newNotification = {
@@ -45,16 +41,20 @@
   }
 
   listen('download-started', () => {
-    addNotification(`Download started: ${url}`, 'info');
+    addNotification("Task started");
     isDownloading = true;
   });
   listen('download-progress', (event) => {
-    downloadProgress = event.payload.progress;
+    statusMessages = [...statusMessages, event.payload];
   });
   listen('download-finished', () => {
-    addNotification('Download completed successfully', 'success');
+    addNotification("Task completed")
     isDownloading = false;
     expandStatus = false;
+    statusMessages = []
+  });
+  listen('notification', (event) => {
+    addNotification(event.payload, 'info');
   });
 
   // @ts-ignore
