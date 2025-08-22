@@ -8,6 +8,7 @@
    * @type {string | any[]}
    */
   let statusMessages = [];
+  
   let url = "";
 
   let pasteIcon = true;
@@ -20,7 +21,24 @@
     pasteIcon = url.trim() === "";
   }
 
-  // TODO: Implement block in the frontend with isDownloading
+  let notifications = []
+  function addNotification(message, type = 'info') {
+    const id = Date.now(); 
+    const newNotification = {
+      id,
+      message,
+      type,
+      timestamp: new Date()
+    };
+    notifications = [newNotification, ...notifications].slice(0, 3);
+    setTimeout(() => {
+        notifications = notifications.filter(n => n.id !== id);
+      }, 3000);
+  }
+  function removeNotification(id) {
+    notifications = notifications.filter(n => n.id !== id);
+  }
+
   function download() {
     invoke('download', { url });
     url = "";
@@ -28,6 +46,7 @@
   }
 
   listen('download-started', () => {
+    addNotification(`Download started: ${url}`, 'info');
     isDownloading = true;
     showStatus = true;
   });
@@ -35,6 +54,7 @@
     downloadProgress = event.payload.progress;
   });
   listen('download-finished', () => {
+    addNotification('Download completed successfully', 'success');
     isDownloading = false;
     showStatus = false;
     expandStatus = false;
@@ -82,24 +102,23 @@
       </button>
   </div>
 
-  <div class="expand-container">
-    {#if isDownloading}
-      <div class="progress-container">
-        <progress value={downloadProgress} max="100" class="progress-bar"></progress>
-        <span class="progress-text">{downloadProgress}%</span>
-      </div>
+  {#if isDownloading}
+    <div class="progress-container">
+      <progress value={downloadProgress} max="100" class="progress-bar"></progress>
+      <span class="progress-text">{downloadProgress}%</span>
+      {#if showStatus}
+        <button 
+          class="expand-btn" 
+          on:click={() => expandStatus = !expandStatus}
+          class:expanded={expandStatus}
+          title="Show download progress"
+          aria-label="Button to expand status bar"
+        >
+          <i class="fas fa-chevron-down"></i>
+        </button>
     {/if}
-    {#if showStatus}
-      <button 
-        class="expand-btn" 
-        on:click={() => expandStatus = !expandStatus}
-        class:expanded={expandStatus}
-        aria-label="Button to expand status bar"
-      >
-        <i class="fas fa-chevron-down"></i>
-      </button>
-    {/if}
-  </div>
+    </div>
+  {/if}
 
   {#if expandStatus}
     <div class="status-container" transition:slide|local={{ duration: 500 }}>
@@ -115,7 +134,28 @@
   {/if}
 </main>
 
+<div class="notification-panel">
+  {#each notifications as notification (notification.id)}
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div 
+      class="notification {notification.type}"
+      in:fade={{ duration: 300 }}
+      out:slide|local={{ duration: 300, offset: 20 }}
+      on:click={() => removeNotification(notification.id)}
+    >
+      <div class="notification-content">
+        <i class="fas {notification.type === 'success' ? 'fa-check-circle' : notification.type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
+        <span>{notification.message}</span>
+      </div>
+      <div class="notification-progress"></div>
+    </div>
+  {/each}
+</div>
+
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap');
+
   .container {
     user-select: none;
     -webkit-user-select: none;
@@ -163,7 +203,7 @@
     background: rgba(255, 255, 255, 0.0)
   }
   .status-container {
-    margin-top: 20px;
+    margin-top: 10px;
     padding: 15px;
     background-color: rgba(255, 255, 255, 0.1);
     border-radius: 8px;
@@ -189,7 +229,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-top: 15px;
+    margin-top: 20px;
     width: 100%;
   }
   .progress-bar {
@@ -211,8 +251,9 @@
   }
   .progress-text {
     color: white;
-    font-size: 14px;
-    min-width: 40px;
+    font-family: "Open Sans", sans-serif;
+    font-optical-sizing: auto;
+    min-width: 30px;
     text-align: right;
   }
   .expand-btn {
@@ -225,5 +266,42 @@
   }
   .expand-btn.expanded {
     transform: rotate(180deg);
+  }
+  .notification-panel {
+    position: fixed;
+    bottom: 20px;
+    right: 20px; 
+    z-index: 1000;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 10px;
+    max-width: 350px;
+  }
+  .notification {
+    background: #f0f0f5;
+    border-radius: 8px;
+    padding: 12px 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    cursor: pointer;
+    overflow: hidden;
+    position: relative;
+  }
+  .notification-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .notification-progress {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    height: 3px;
+    width: 100%;
+    background: rgba(0, 0, 0, 0.1);
+    animation: progress 5s linear forwards;
+  }
+  @keyframes progress {
+    from { width: 100%; }
+    to { width: 0%; }
   }
 </style>
