@@ -154,8 +154,12 @@
 
 <style>
   @font-face {
-    font-family: "Poppins"; 
+    font-family: "Poppins-bold"; 
     src: url("/poppins-bold.ttf") format("truetype"); 
+  }
+  @font-face {
+    font-family: "Noto-Sans"; 
+    src: url("/notosans-semibold.ttf") format("truetype"); 
   }
 
   .container {
@@ -168,6 +172,7 @@
   }
   #header {
     color: white;
+    font-family: "Noto-Sans", sans-serif;
   }
   .input {
     display: flex;
@@ -253,7 +258,7 @@
   }
   .progress-text {
     color: white;
-    font-family: "Poppins", sans-serif;
+    font-family: "Poppins-bold", sans-serif;
     font-optical-sizing: auto;
     min-width: 30px;
     text-align: right;
