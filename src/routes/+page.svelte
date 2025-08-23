@@ -81,7 +81,15 @@
 
 <div class="toolbar">
   <button 
-    class="night"
+    class="toolbar-button pending"
+    aria-label="Press to view all pending downloads yet to be done"
+    title="Show pending tasks"
+  >
+    <i class="fa-solid fa-file-arrow-down fa-lg" style="color: white;"></i>
+  </button>
+
+  <button 
+    class="toolbar-button night"
     aria-label="Press to switch between light and dark modes"
     title="Switch theme"
     on:click={toggleMode}
@@ -186,12 +194,15 @@
     right: 16px;
     top: 16px;
   }
-  .night {
+  .toolbar-button {
     cursor: pointer;
     border-radius: 16px;
     background: #6e8efb;
     border: none;
     padding: 16px;
+  }
+  .pending {
+    margin-right: 10px;
   }
   .container {
     user-select: none;
