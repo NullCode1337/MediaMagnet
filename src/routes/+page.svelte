@@ -7,13 +7,33 @@
   let url = "";
   var statusMessages = []; // STDOUT
 
-  let darkMode = true; // TODO
   let pasteIcon = true;
   let isDownloading = false;
   let downloadProgress = 0;
   let expandStatus = false;
+  
+  let darkMode = true;
+  function toggleMode() {
+    // TODO with json config file that will also host cookies and stuff
+  }
+
+  let showPendingPanel = false;
+  let pendingDownloads = []; // TODO
+  function togglePendingPanel() {
+    showPendingPanel = !showPendingPanel;
+    if (showPendingPanel && pendingDownloads.length === 0) {
+      pendingDownloads = [
+        { id: 1, url: "https://example.com/image1.jpg", status: "Queued" },
+        { id: 2, url: "https://example.com/gallery2", status: "Preparing" },
+        { id: 3, url: "https://example.com/album3", status: "Downloading" }
+      ];
+    }
+  }
 
   let notifications = [] // STDERR
+  function removeNotification(id) {
+    notifications = notifications.filter(n => n.id !== id);
+  }
   function addNotification(message, type = 'info') {
     const id = Date.now(); 
     const newNotification = {
@@ -26,13 +46,6 @@
     setTimeout(() => {
       notifications = notifications.filter(n => n.id !== id);
     }, 3000);
-  }
-  function removeNotification(id) {
-    notifications = notifications.filter(n => n.id !== id);
-  }
-
-  function toggleMode() {
-    // TODO with json config file that will also host cookies and stuff
   }
 
   function isUrlEntered() {
@@ -80,13 +93,40 @@
 </svelte:head>
 
 <div class="toolbar">
-  <button 
-    class="toolbar-button pending"
-    aria-label="Press to view all pending downloads yet to be done"
-    title="Show pending tasks"
-  >
-    <i class="fa-solid fa-file-arrow-down fa-lg" style="color: white;"></i>
-  </button>
+  <div class="pending-container">
+    <!-- button on click gonna hide, the div with less z index below will show up and do the zoomy animation bit, we gonna act like the button just morphed it'll be cool-->
+    <button 
+      class="toolbar-button pending {showPendingPanel ? 'active' : ''}"
+      aria-label="Press to view all pending downloads yet to be done"
+      title="Show pending tasks"
+      on:click={togglePendingPanel}
+    >
+      <i class="fa-solid fa-file-arrow-down fa-lg" style="color: white;"></i>
+    </button>
+    
+    {#if showPendingPanel}
+      <div class="pending-panel" transition:slide|local={{ duration: 300 }}>
+        <div class="panel-header">
+          <h3>Pending Downloads</h3>
+          <button class="close-panel" on:click={togglePendingPanel} aria-label="Close panel">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="panel-content">
+          {#if pendingDownloads.length > 0}
+            {#each pendingDownloads as download (download.id)}
+              <div class="pending-item">
+                <div class="download-url">{download.url}</div>
+                <div class="download-status">{download.status}</div>
+              </div>
+            {/each}
+          {:else}
+            <div class="empty-state">No pending downloads</div>
+          {/if}
+        </div>
+      </div>
+    {/if}
+  </div>
 
   <button 
     class="toolbar-button night"
@@ -193,6 +233,13 @@
     position: absolute;
     right: 16px;
     top: 16px;
+    display: flex;
+    align-items: flex-start;
+    z-index: 100;
+  }
+  .pending-container {
+    position: relative;
+    margin-right: 5px;
   }
   .toolbar-button {
     cursor: pointer;
@@ -200,9 +247,78 @@
     background: #6e8efb;
     border: none;
     padding: 16px;
+    transition: all 0.3s ease;
   }
-  .pending {
-    margin-right: 10px;
+  .toolbar-button.pending.active {
+    background: #404045;
+    border-radius: 16px 16px 0 0;
+  }
+  .pending-panel {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    width: 350px;
+    background: #2c2c30;
+    border-radius: 16px 0 16px 16px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    z-index: 101;
+  }
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: #404045;
+    border-bottom: 1px solid #555;
+  }
+  .panel-header h3 {
+    margin: 0;
+    color: white;
+    font-size: 16px;
+    font-family: "Noto-Sans", sans-serif;
+  }
+  .close-panel {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px 8px;
+  }
+  .panel-content {
+    max-height: 300px;
+    overflow-y: auto;
+  }
+  .pending-item {
+    padding: 12px 16px;
+    border-bottom: 1px solid #404045;
+  }
+  .pending-item:last-child {
+    border-bottom: none;
+  }
+  .download-url {
+    color: #ddd;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+  }
+  .download-status {
+    color: #6e8efb;
+    font-size: 12px;
+    text-transform: uppercase;
+    font-weight: bold;
+  }
+  .empty-state {
+    padding: 24px 16px;
+    text-align: center;
+    color: #888;
+    font-style: italic;
+  }
+  .night {
+    margin-left: 10px;
   }
   .container {
     user-select: none;
