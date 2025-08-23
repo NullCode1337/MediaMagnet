@@ -32,6 +32,9 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "externalBin": [
+      "../prebuilts/"
+    ],
     "resources": [
       "../static/poppins-bold.ttf",
       "../static/notosans-semibold.ttf"
