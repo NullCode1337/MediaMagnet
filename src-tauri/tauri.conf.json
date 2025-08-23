@@ -9,6 +9,11 @@
     "beforeBuildCommand": "bun run build",
     "frontendDist": "../build"
   },
+  "plugins": {
+    "shell": {
+      "open": true
+    }
+  },
   "app": {
     "withGlobalTauri": true,
     "windows": [
@@ -32,9 +37,7 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "externalBin": [
-      "../prebuilts/"
-    ],
+    "externalBin": ["../prebuilts/gallery-dl"],
     "resources": [
       "../static/poppins-bold.ttf",
       "../static/notosans-semibold.ttf"
