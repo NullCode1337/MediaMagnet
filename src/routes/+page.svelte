@@ -12,10 +12,6 @@
   let downloadProgress = 0;
   let expandStatus = false;
 
-  function isUrlEntered() {
-    pasteIcon = url.trim() === "";
-  }
-
   let notifications = [] // STDERR
   function addNotification(message, type = 'info') {
     const id = Date.now(); 
@@ -25,19 +21,22 @@
       type,
       timestamp: new Date()
     };
-    notifications = [newNotification, ...notifications].slice(0, 3);
+    notifications = [newNotification, ...notifications].slice(0, 4);
     setTimeout(() => {
-        notifications = notifications.filter(n => n.id !== id);
-      }, 3000);
+      notifications = notifications.filter(n => n.id !== id);
+    }, 3000);
   }
   function removeNotification(id) {
     notifications = notifications.filter(n => n.id !== id);
   }
 
+  function isUrlEntered() {
+    pasteIcon = url.trim() === "";
+  }
+
   function download() {
     invoke('download', { url });
     url = "";
-    pasteIcon = true;
   }
 
   listen('download-started', () => {
@@ -108,9 +107,8 @@
       <progress value={downloadProgress} max="100" class="progress-bar"></progress>
       <span class="progress-text">{downloadProgress}%</span>
       <button 
-        class="expand-btn" 
+        class="expand-btn {expandStatus ? 'expanded' : ''}" 
         on:click={() => expandStatus = !expandStatus}
-        class:expanded={expandStatus}
         title="Show download progress"
         aria-label="Button to expand status bar"
       >
@@ -193,7 +191,7 @@
   .paste-btn {
     width: 56px;
     height: 56px;
-    border-radius: 50%;
+    border-radius: 16px;
     background: #6e8efb;
     color: white;
     border: none;
@@ -207,7 +205,8 @@
     transition: 0.5s;
   }
   .paste-btn:disabled {
-    background: rgba(255, 255, 255, 0.0)
+    background: rgba(255, 255, 255, 0.0);
+    cursor: not-allowed;
   }
   .status-container {
     margin-top: 10px;
