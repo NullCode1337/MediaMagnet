@@ -10,6 +10,7 @@
     "opener:default",
     "clipboard-manager:default",
     "clipboard-manager:allow-read-text",
-    "clipboard-manager:allow-read-image"
+    "clipboard-manager:allow-read-image",
+    "shell:default"
   ]
 }
