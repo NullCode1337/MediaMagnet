@@ -7,6 +7,7 @@
   let url = "";
   var statusMessages = []; // STDOUT
 
+  let darkMode = true; // TODO
   let pasteIcon = true;
   let isDownloading = false;
   let downloadProgress = 0;
@@ -28,6 +29,10 @@
   }
   function removeNotification(id) {
     notifications = notifications.filter(n => n.id !== id);
+  }
+
+  function toggleMode() {
+    // TODO with json config file that will also host cookies and stuff
   }
 
   function isUrlEntered() {
@@ -74,12 +79,28 @@
   <title>gallery-gui</title>
 </svelte:head>
 
+<div class="toolbar">
+  <button 
+    class="night"
+    aria-label="Press to switch between light and dark modes"
+    title="Switch theme"
+    on:click={toggleMode}
+  >
+    {#if !darkMode}
+      <i class="fa-solid fa-moon fa-lg" style="color: white;"></i>
+    {:else if darkMode}
+      <i class="fa-solid fa-sun fa-lg" style="color: white;"></i>
+    {/if}
+  </button>
+</div>
+
 <main class="container">
   <h1 id="header">gallery-dl GUI</h1>
   <div class="input">
     <input 
       type="text" 
       class="url-input" 
+      id="urlInput"
       bind:value={ url }
       on:input={isUrlEntered}
       on:keypress={handleKeyPress}
@@ -160,6 +181,18 @@
     src: url("/notosans-semibold.ttf") format("truetype"); 
   }
 
+  .toolbar {
+    position: absolute;
+    right: 16px;
+    top: 16px;
+  }
+  .night {
+    cursor: pointer;
+    border-radius: 16px;
+    background: #6e8efb;
+    border: none;
+    padding: 16px;
+  }
   .container {
     user-select: none;
     -webkit-user-select: none;
