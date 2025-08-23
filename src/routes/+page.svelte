@@ -184,7 +184,7 @@
     width: 50vw;
     font-size: 16px;
     outline: none;
-    background: white;
+    background: #404045;
     color: #333;
     border-radius: 16px;
   }
