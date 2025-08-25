@@ -48,6 +48,9 @@
   listen('download-progress', (event) => {
     $downloadProgress = parseInt(event.payload);
   });
+  listen('download-error', (event) => {
+    addNotification(event.payload);
+  });
   listen('download-finished', () => {
     addNotification("Task completed")
     $isDownloading = false;

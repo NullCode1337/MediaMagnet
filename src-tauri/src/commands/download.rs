@@ -53,7 +53,7 @@ async fn async_dl(app: tauri::AppHandle, link: &str) -> Result<(), Box<dyn std::
       while let Ok(Some(line)) = stderr_reader.next_line().await {
         app_stderr.emit("notification", &line).unwrap();
         if line.contains("error") {
-          app_stderr.emit("download-finished", ()).unwrap();
+          app_stderr.emit("download-error", &line).unwrap();
         }
       }
     });
