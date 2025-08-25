@@ -31,10 +31,9 @@
       </div>
       <div class="panel-content">
         {#if $pendingDownloads.length > 0}
-          {#each $pendingDownloads as download (download.id)}
+          {#each $pendingDownloads as download}
             <div class="pending-item">
-              <div class="download-url">{download.url}</div>
-              <div class="download-status">{download.status}</div>
+              <div class="download-url">{download}</div>
             </div>
           {/each}
         {:else}
@@ -92,7 +91,7 @@
     overflow-y: auto;
   }
   .pending-item {
-    padding: 12px 16px;
+    padding: 16px 16px;
     border-bottom: 1px solid #404045;
   }
   .pending-item:last-child {
@@ -105,12 +104,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     margin-bottom: 4px;
-  }
-  .download-status {
-    color: #6e8efb;
-    font-size: 12px;
-    text-transform: uppercase;
-    font-weight: bold;
   }
   .empty-state {
     padding: 24px 16px;
