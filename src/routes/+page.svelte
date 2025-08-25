@@ -93,21 +93,21 @@
       on:keypress={handleKeyPress}
       placeholder="Enter URL"
     >
-      <button 
-        class="paste-btn" 
-        title="Paste and Download" 
-        aria-label="Pastes from clipboard and downloads the URL"
-        on:click={download}
-        disabled={$isDownloading}
-      >
-        {#if $isDownloading}
-          <i class="fas fa-spinner fa-spin fa-2xl"></i>
-        {:else if pasteIcon === true}
-          <i class="fa-regular fa-clipboard fa-lg"></i>
-        {:else}
-          <i class="fa-solid fa-download fa-lg"></i>
-        {/if}
-      </button>
+    <button 
+      class="paste-btn" 
+      title="Paste and Download" 
+      aria-label="Pastes from clipboard and downloads the URL"
+      on:click={download}
+      disabled={$isDownloading}
+    >
+      {#if $isDownloading}
+        <i class="fas fa-spinner fa-spin fa-2xl"></i>
+      {:else if pasteIcon === true}
+        <i class="fa-regular fa-clipboard fa-lg"></i>
+      {:else}
+        <i class="fa-solid fa-download fa-lg"></i>
+      {/if}
+    </button>
   </div>
 
   <Progress />
@@ -169,7 +169,7 @@
     font-size: 16px;
     outline: none;
     background: #404045;
-    color: #333;
+    color: #FFF;
     border-radius: 16px;
   }
   .paste-btn {
