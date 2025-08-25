@@ -53,7 +53,7 @@
   }
 
   function download() {
-    invoke('download', { url });
+    invoke('gallery_dl', { url });
     url = "";
   }
 
