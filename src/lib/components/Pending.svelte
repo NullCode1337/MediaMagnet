@@ -1,17 +1,34 @@
 <script>
   import { pendingDownloads } from "$lib/stores/store";
   import { slide } from "svelte/transition";
+  import { onMount } from "svelte";
   import '@fortawesome/fontawesome-free/css/all.min.css';
 
   let showPendingPanel = false;
+  // @ts-ignore
+  let pendingContainer;
   
   function togglePendingPanel() {
     showPendingPanel = !showPendingPanel;
   }
+  
+  // @ts-ignore
+  function handleClickOutside(event) {
+    // @ts-ignore
+    if (showPendingPanel && pendingContainer && !pendingContainer.contains(event.target)) {
+      showPendingPanel = false;
+    }
+  }
+  
+  onMount(() => {
+    document.addEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  });
 </script>
 
-<div class="pending-container">
-  <!-- button on click gonna hide, the div with less z index below will show up and do the zoomy animation bit, we gonna act like the button just morphed it'll be cool-->
+<div class="pending-container" bind:this={pendingContainer}>
   <button 
     class="toolbar-button pending {showPendingPanel ? 'active' : ''}"
     aria-label="Press to view all pending downloads yet to be done"
@@ -48,6 +65,7 @@
   .pending-container {
     position: relative;
     margin-right: 5px;
+    display: inline-block;
   }
   .toolbar-button.pending.active {
     background: #404045;
