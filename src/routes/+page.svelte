@@ -1,91 +1,63 @@
 <script>
   import { invoke } from '@tauri-apps/api/core';
   import { listen } from '@tauri-apps/api/event';
-  import { fade, slide } from 'svelte/transition';
+
+  import {
+    addNotification,
+    isDownloading,
+    statusMessages,
+    downloadProgress,
+    expandStatus,
+    darkMode
+  } from '$lib/stores/store';
+
+  import Pending from '$lib/components/Pending.svelte';
+  import Notification from '$lib/components/Notification.svelte';
+  import Progress from '$lib/components/Progress.svelte';
+
   import '@fortawesome/fontawesome-free/css/all.min.css';
 
   let url = "";
-  var statusMessages = []; // STDOUT
-
   let pasteIcon = true;
-  let isDownloading = false;
-  let downloadProgress = 0;
-  let expandStatus = false;
-  
-  let darkMode = true;
-  function toggleMode() {
-    // TODO with json config file that will also host cookies and stuff
-  }
 
-  let showPendingPanel = false;
-  let pendingDownloads = []; // TODO
-  function togglePendingPanel() {
-    showPendingPanel = !showPendingPanel;
-    if (showPendingPanel && pendingDownloads.length === 0) {
-      pendingDownloads = [
-        { id: 1, url: "https://example.com/image1.jpg", status: "Queued" },
-        { id: 2, url: "https://example.com/gallery2", status: "Preparing" },
-        { id: 3, url: "https://example.com/album3", status: "Downloading" }
-      ];
-    }
-  }
-
-  let notifications = [] // STDERR
-  function removeNotification(id) {
-    notifications = notifications.filter(n => n.id !== id);
-  }
-  function addNotification(message, type = 'info') {
-    const id = Date.now(); 
-    const newNotification = {
-      id,
-      message,
-      type,
-      timestamp: new Date()
-    };
-    notifications = [newNotification, ...notifications].slice(0, 4);
-    setTimeout(() => {
-      notifications = notifications.filter(n => n.id !== id);
-    }, 3000);
-  }
-
-  function isUrlEntered() {
-    pasteIcon = url.trim() === "";
-  }
+  function toggleMode() { $darkMode = !$darkMode; }
+  function isUrlEntered() { pasteIcon = url.trim() === ""; }
 
   function download() {
     invoke('gallery_dl', { url });
     url = "";
   }
 
-  listen('download-started', () => {
-    addNotification("Task started");
-    isDownloading = true;
-  });
-  listen('download-status', (event) => {
-    statusMessages = [...statusMessages, event.payload];
-  });
-  listen('download-progress', (event) => {
-    downloadProgress = parseInt(event.payload);
-  });
-  listen('download-finished', () => {
-    addNotification("Task completed")
-    isDownloading = false;
-    expandStatus = false;
-    statusMessages = [];
-    downloadProgress = 0;
-  });
-  listen('notification', (event) => {
-    addNotification(event.payload);
-  });
-
   // @ts-ignore
   function handleKeyPress(event) {
-    if (!isDownloading) {
+    if (!$isDownloading) {
       if (event.key === 'Enter') {
         download();
       }
     }
   }
+
+  // Event Listeners
+  listen('download-started', () => {
+    addNotification("Task started");
+    $isDownloading = true;
+  });
+  listen('download-status', (event) => {
+    $statusMessages = [...$statusMessages, event.payload];
+  });
+  listen('download-progress', (event) => {
+    $downloadProgress = parseInt(event.payload);
+  });
+  listen('download-finished', () => {
+    addNotification("Task completed")
+    $isDownloading = false;
+    $expandStatus = false;
+    $statusMessages = [];
+    $downloadProgress = 0;
+  });
+  listen('notification', (event) => {
+    addNotification(event.payload);
+  });
 </script>
 
 <svelte:head>
@@ -93,40 +65,7 @@
 </svelte:head>
 
 <div class="toolbar">
-  <div class="pending-container">
-    <!-- button on click gonna hide, the div with less z index below will show up and do the zoomy animation bit, we gonna act like the button just morphed it'll be cool-->
-    <button 
-      class="toolbar-button pending {showPendingPanel ? 'active' : ''}"
-      aria-label="Press to view all pending downloads yet to be done"
-      title="Show pending tasks"
-      on:click={togglePendingPanel}
-    >
-      <i class="fa-solid fa-file-arrow-down fa-lg" style="color: white;"></i>
-    </button>
-    
-    {#if showPendingPanel}
-      <div class="pending-panel" transition:slide|local={{ duration: 300 }}>
-        <div class="panel-header">
-          <h3>Pending Downloads</h3>
-          <button class="close-panel" on:click={togglePendingPanel} aria-label="Close panel">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-        <div class="panel-content">
-          {#if pendingDownloads.length > 0}
-            {#each pendingDownloads as download (download.id)}
-              <div class="pending-item">
-                <div class="download-url">{download.url}</div>
-                <div class="download-status">{download.status}</div>
-              </div>
-            {/each}
-          {:else}
-            <div class="empty-state">No pending downloads</div>
-          {/if}
-        </div>
-      </div>
-    {/if}
-  </div>
+  <Pending />
 
   <button 
     class="toolbar-button night"
@@ -134,9 +73,9 @@
     title="Switch theme"
     on:click={toggleMode}
   >
-    {#if !darkMode}
+    {#if !$darkMode}
       <i class="fa-solid fa-moon fa-lg" style="color: white;"></i>
-    {:else if darkMode}
+    {:else if $darkMode}
       <i class="fa-solid fa-sun fa-lg" style="color: white;"></i>
     {/if}
   </button>
@@ -159,9 +98,9 @@
         title="Paste and Download" 
         aria-label="Pastes from clipboard and downloads the URL"
         on:click={download}
-        disabled={isDownloading}
+        disabled={$isDownloading}
       >
-        {#if isDownloading}
+        {#if $isDownloading}
           <i class="fas fa-spinner fa-spin fa-2xl"></i>
         {:else if pasteIcon === true}
           <i class="fa-regular fa-clipboard fa-lg"></i>
@@ -171,53 +110,10 @@
       </button>
   </div>
 
-  {#if isDownloading}
-    <div class="progress-container">
-      <progress value={downloadProgress} max="100" class="progress-bar"></progress>
-      <span class="progress-text">{downloadProgress}%</span>
-      <button 
-        class="expand-btn {expandStatus ? 'expanded' : ''}" 
-        on:click={() => expandStatus = !expandStatus}
-        title="Show download progress"
-        aria-label="Button to expand status bar"
-      >
-        <i class="fas fa-chevron-down"></i>
-      </button>
-    </div>
-  {/if}
-
-  {#if expandStatus}
-    <div class="status-container" transition:slide|local={{ duration: 500 }}>
-      {#each statusMessages as message, index (index)}
-        <p 
-          class="status-message {index === statusMessages.length - 1 ? 'latest' : ''}"
-          in:fade={{ delay: index * 100, duration: 300 }}
-        >
-          {message}
-        </p>
-      {/each}
-    </div>
-  {/if}
+  <Progress />
 </main>
 
-<div class="notification-panel">
-  {#each notifications as notification (notification.id)}
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div 
-      class="notification {notification.type}"
-      in:fade={{ duration: 300 }}
-      out:slide|local={{ duration: 300, offset: 20 }}
-      on:click={() => removeNotification(notification.id)}
-    >
-      <div class="notification-content">
-        <i class="fas {notification.type === 'success' ? 'fa-check-circle' : notification.type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
-        <span>{notification.message}</span>
-      </div>
-      <div class="notification-progress"></div>
-    </div>
-  {/each}
-</div>
+<Notification />
 
 <style>
   @font-face {
@@ -237,10 +133,6 @@
     align-items: flex-start;
     z-index: 100;
   }
-  .pending-container {
-    position: relative;
-    margin-right: 5px;
-  }
   .toolbar-button {
     cursor: pointer;
     border-radius: 16px;
@@ -248,74 +140,6 @@
     border: none;
     padding: 16px;
     transition: all 0.3s ease;
-  }
-  .toolbar-button.pending.active {
-    background: #404045;
-    border-radius: 16px 16px 0 0;
-  }
-  .pending-panel {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    width: 350px;
-    background: #2c2c30;
-    border-radius: 16px 0 16px 16px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-    overflow: hidden;
-    z-index: 101;
-  }
-  .panel-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px;
-    background: #404045;
-    border-bottom: 1px solid #555;
-  }
-  .panel-header h3 {
-    margin: 0;
-    color: white;
-    font-size: 16px;
-    font-family: "Noto-Sans", sans-serif;
-  }
-  .close-panel {
-    background: none;
-    border: none;
-    color: white;
-    cursor: pointer;
-    font-size: 16px;
-    padding: 4px 8px;
-  }
-  .panel-content {
-    max-height: 300px;
-    overflow-y: auto;
-  }
-  .pending-item {
-    padding: 12px 16px;
-    border-bottom: 1px solid #404045;
-  }
-  .pending-item:last-child {
-    border-bottom: none;
-  }
-  .download-url {
-    color: #ddd;
-    font-size: 14px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-bottom: 4px;
-  }
-  .download-status {
-    color: #6e8efb;
-    font-size: 12px;
-    text-transform: uppercase;
-    font-weight: bold;
-  }
-  .empty-state {
-    padding: 24px 16px;
-    text-align: center;
-    color: #888;
-    font-style: italic;
   }
   .night {
     margin-left: 10px;
@@ -367,107 +191,5 @@
   .paste-btn:disabled {
     background: rgba(255, 255, 255, 0.0);
     cursor: not-allowed;
-  }
-  .status-container {
-    margin-top: 10px;
-    padding: 15px;
-    background-color: rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    max-height: 200px;
-    overflow-y: auto;
-  }
-  .status-message {
-    color: white;
-    margin: 5px 0;
-    font-size: 14px;
-    line-height: 1.4;
-  }
-  .status-message.latest {
-    font-weight: bold;
-    color: #6e8efb;
-  }
-  .expand-container {
-    display: flex;
-    justify-content: center;
-    margin-top: 10px;
-  }
-  .progress-container {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: 20px;
-    width: 100%;
-  }
-  .progress-bar {
-    flex: 1;
-    height: 8px;
-    width: 50vw;
-    border-radius: 4px;
-    overflow: hidden;
-    background: rgba(255, 255, 255, 0.2);
-  }
-  .progress-bar::-webkit-progress-bar {
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 4px;
-  }
-  .progress-bar::-webkit-progress-value {
-    background: #6e8efb;
-    border-radius: 4px;
-    transition: width 0.3s ease;
-  }
-  .progress-text {
-    color: white;
-    font-family: "Poppins-bold", sans-serif;
-    font-optical-sizing: auto;
-    min-width: 30px;
-    text-align: right;
-  }
-  .expand-btn {
-    background: transparent;
-    border: none;
-    color: white;
-    cursor: pointer;
-    padding: 5px;
-    transition: transform 0.3s ease;
-  }
-  .expand-btn.expanded {
-    transform: rotate(180deg);
-  }
-  .notification-panel {
-    position: fixed;
-    bottom: 20px;
-    right: 20px; 
-    z-index: 1000;
-    display: flex;
-    flex-direction: column-reverse;
-    gap: 10px;
-    max-width: 350px;
-  }
-  .notification {
-    background: #f0f0f5;
-    border-radius: 8px;
-    padding: 12px 16px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    cursor: pointer;
-    overflow: hidden;
-    position: relative;
-  }
-  .notification-content {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .notification-progress {
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    height: 3px;
-    width: 100%;
-    background: rgba(0, 0, 0, 0.1);
-    animation: progress 5s linear forwards;
-  }
-  @keyframes progress {
-    from { width: 100%; }
-    to { width: 0%; }
   }
 </style>
