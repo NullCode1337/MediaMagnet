@@ -8,6 +8,7 @@
     statusMessages,
     downloadProgress,
     expandStatus,
+    pendingDownloads,
     darkMode
   } from '$lib/stores/store';
 
@@ -16,12 +17,15 @@
   import Progress from '$lib/components/Progress.svelte';
 
   import '@fortawesome/fontawesome-free/css/all.min.css';
+  import { onMount } from 'svelte';
 
   let url = "";
   let pasteIcon = true;
 
   function toggleMode() { $darkMode = !$darkMode; }
   function isUrlEntered() { pasteIcon = url.trim() === ""; }
+
+  onMount(() => { invoke("check_links"); });
 
   function download() {
     invoke('gallery_dl', { url });
@@ -57,6 +61,14 @@
     $expandStatus = false;
     $statusMessages = [];
     $downloadProgress = 0;
+  });
+  listen('link-event', (event) => {      
+    if (event.payload.message === 'Nothing') {
+        console.log('- No links');
+    } else {
+        console.log('- Links found:', event.payload.links);
+        $pendingDownloads = event.payload.links;
+    }
   });
   listen('notification', (event) => {
     addNotification(event.payload);
