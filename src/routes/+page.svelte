@@ -35,13 +35,17 @@
     if ($isDownloading) {
       if (url.trim() !== "") {
         $pendingDownloads = [...$pendingDownloads, url];
+        addNotification("Link added to queue");
       }
       else {
         try {
           const clip = await readText();
           if (clip.trim() !== "") {
-            addNotification("Not a valid url");
             $pendingDownloads = [...$pendingDownloads, clip];
+            addNotification("Link added to queue");
+          }
+          else {
+            addNotification("Not a valid url");
           }
         } catch (error) {
           addNotification("Failed to read clipboard");
