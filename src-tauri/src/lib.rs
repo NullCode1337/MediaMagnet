@@ -7,11 +7,14 @@ pub fn run() {
             commands::init::init_config(app.handle().clone());
             Ok(())
         })
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             commands::download::gallery_dl,
-            commands::init::check_links
+            commands::init::check_links,
+            commands::queue::save_to_disk
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
