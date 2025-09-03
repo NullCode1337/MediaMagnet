@@ -24,13 +24,7 @@
 
   function toggleMode() { $darkMode = !$darkMode; }
   function isUrlEntered() { pasteIcon = url.trim() === ""; }
-
-  onMount(() => { invoke("check_links"); });
-
-  function download() {
-    invoke('gallery_dl', { url });
-    url = "";
-  }
+  function download() { invoke('gallery_dl', { url }); url = ""; }
 
   // @ts-ignore
   function handleKeyPress(event) {
@@ -39,7 +33,16 @@
         download();
       }
     }
+    else {
+      if (url.trim() !== "") {
+        if (event.key === 'Enter') {
+          $pendingDownloads = [...$pendingDownloads, url];
+        }
+      }
+    }
   }
+
+  onMount(() => { invoke("check_links"); });
 
   // Event Listeners
   listen('download-started', () => {
@@ -63,11 +66,8 @@
     $downloadProgress = 0;
   });
   listen('link-event', (event) => {      
-    if (event.payload.message === 'Nothing') {
-        console.log('- No links');
-    } else {
-        console.log('- Links found:', event.payload.links);
-        $pendingDownloads = event.payload.links;
+    if (event.payload.message !== 'Nothing') {
+      $pendingDownloads.set(event.payload.links);
     }
   });
   listen('notification', (event) => {
