@@ -9,4 +9,4 @@ It is still only a functional prototype, currently Pixiv can be downloaded, and 
 ## Requirements
 - 64 bit system
 
-<img width="1022" height="859" alt="image" src="https://github.com/user-attachments/assets/4104a718-3d4a-4c1b-b527-7fb0e77e331b" />
+<img width="1022" height="859" alt="image" src="https://github.com/user-attachments/assets/e437d2ab-2e5a-4576-9d3f-b4e75b58bd52" />
