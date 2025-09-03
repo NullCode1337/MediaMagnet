@@ -1,6 +1,9 @@
 <script>
   import { invoke } from '@tauri-apps/api/core';
   import { listen } from '@tauri-apps/api/event';
+  import { getCurrentWindow } from "@tauri-apps/api/window";
+  import { ask } from '@tauri-apps/plugin-dialog';
+  import { exit } from '@tauri-apps/plugin-process';
 
   import {
     addNotification,
@@ -21,6 +24,7 @@
 
   let url = "";
   let pasteIcon = true;
+  let closeHandlerSet = false;
 
   function toggleMode() { $darkMode = !$darkMode; }
   function isUrlEntered() { pasteIcon = url.trim() === ""; }
@@ -42,14 +46,44 @@
     }
   }
 
-  onMount(() => { invoke("check_links"); });
+  onMount(() => {
+    invoke("check_links");
+    
+    if (!closeHandlerSet) {
+      const unlisten = getCurrentWindow().onCloseRequested(async (event) => {
+        if ($isDownloading) {
+          const confirmed = await ask('A download is currently in progress. Do you want to quit?', {
+            title: 'Tauri',
+            kind: 'warning',
+          });
+          
+          if (!confirmed) {
+            event.preventDefault();
+          }
+          else {
+            // TODO: Add logic to get currently downloading file and make it max priority
+            const dl = $pendingDownloads;
+            await invoke("save_to_disk", { links: dl });
+            await exit(1);
+          }
+        }
+        else {
+          const dl = $pendingDownloads;
+          await invoke("save_to_disk", { links: dl });
+          await exit(0);
+        }
+      });
+      
+      closeHandlerSet = true;
+    }
+  });
 
   // Event Listeners
   listen('download-started', () => {
     addNotification("Task started");
     $isDownloading = true;
   });
-  
+
   listen('download-status', (event) => { $statusMessages = [...$statusMessages, event.payload]; });
   listen('download-progress', (event) => { $downloadProgress = parseInt(event.payload); });
   listen('download-error', (event) => { addNotification(event.payload); });
