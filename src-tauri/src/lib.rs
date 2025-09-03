@@ -9,8 +9,10 @@ pub fn run() {
         })
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![commands::download::gallery_dl])
-        .invoke_handler(tauri::generate_handler![commands::init::check_links])
+        .invoke_handler(tauri::generate_handler![
+            commands::download::gallery_dl,
+            commands::init::check_links
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
