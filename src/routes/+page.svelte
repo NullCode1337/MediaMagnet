@@ -27,6 +27,7 @@
   let url = "";
   let pasteIcon = true;
   let closeHandlerSet = false;
+  let pendingChecked = false;
 
   function toggleMode() { $darkMode = !$darkMode; }
   function isUrlEntered() { pasteIcon = url.trim() === ""; }
@@ -60,6 +61,7 @@
     }
   }
 
+  // @ts-ignore
   async function handleKeyPress(event) {
     if (!$isDownloading) {
       if (event.key === 'Enter') {
@@ -70,7 +72,36 @@
       if (url.trim() !== "") {
         if (event.key === 'Enter') {
           $pendingDownloads = [...$pendingDownloads, url];
+          addNotification("Link added to queue");
+          url = "";
         }
+      }
+    }
+  }
+
+  async function checkPendingDownloads() {
+    if ($pendingDownloads.length > 0 && !pendingChecked) {
+      pendingChecked = true;
+      
+      const download_old = await ask(
+        `You have ${$pendingDownloads.length} pending download(s) from your last session. Would you like to download them now?`,
+        {
+          title: 'Last Startup',
+          kind: 'info',
+        }
+      );
+      
+      if (download_old) {
+        const pendingUrls = [...$pendingDownloads];
+        $pendingDownloads = [];
+        
+        for (const pendingUrl of pendingUrls) {
+          invoke('gallery_dl', { url: pendingUrl });
+          $currentlyDownloading = pendingUrl;
+        }
+      } else {
+        $pendingDownloads = [];
+        await invoke("overwrite_json", { links: [] });
       }
     }
   }
@@ -93,15 +124,14 @@
             event.preventDefault();
           }
           else {
-            // TODO: Add logic to get currently downloading file and make it max priority
             const dl = $pendingDownloads;
-            await invoke("save_to_disk", { links: dl });
+            await invoke("overwrite_json", { links: dl });
             await exit(1);
           }
         }
         else {
           const dl = $pendingDownloads;
-          await invoke("save_to_disk", { links: dl });
+          await invoke("overwrite_json", { links: dl });
           await exit(0);
         }
       });
@@ -133,6 +163,12 @@
   listen('link-event', (event) => {      
     if (event.payload.message !== 'Nothing') {
       $pendingDownloads = event.payload.links;
+      
+      setTimeout(() => {
+        checkPendingDownloads();
+      }, 100);
+    } else {
+      pendingChecked = true;
     }
   });
 </script>
