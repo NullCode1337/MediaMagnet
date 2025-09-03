@@ -49,15 +49,12 @@
     addNotification("Task started");
     $isDownloading = true;
   });
-  listen('download-status', (event) => {
-    $statusMessages = [...$statusMessages, event.payload];
-  });
-  listen('download-progress', (event) => {
-    $downloadProgress = parseInt(event.payload);
-  });
-  listen('download-error', (event) => {
-    addNotification(event.payload);
-  });
+  
+  listen('download-status', (event) => { $statusMessages = [...$statusMessages, event.payload]; });
+  listen('download-progress', (event) => { $downloadProgress = parseInt(event.payload); });
+  listen('download-error', (event) => { addNotification(event.payload); });
+  listen('notification', (event) => { addNotification(event.payload); });
+
   listen('download-finished', () => {
     addNotification("Task completed")
     $isDownloading = false;
@@ -65,13 +62,11 @@
     $statusMessages = [];
     $downloadProgress = 0;
   });
+
   listen('link-event', (event) => {      
     if (event.payload.message !== 'Nothing') {
       $pendingDownloads.set(event.payload.links);
     }
-  });
-  listen('notification', (event) => {
-    addNotification(event.payload);
   });
 </script>
 
