@@ -4,6 +4,7 @@
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import { ask } from '@tauri-apps/plugin-dialog';
   import { exit } from '@tauri-apps/plugin-process';
+  import { readText } from '@tauri-apps/plugin-clipboard-manager';
 
   import {
     addNotification,
@@ -12,6 +13,7 @@
     downloadProgress,
     expandStatus,
     pendingDownloads,
+    currentlyDownloading,
     darkMode
   } from '$lib/stores/store';
 
@@ -28,10 +30,33 @@
 
   function toggleMode() { $darkMode = !$darkMode; }
   function isUrlEntered() { pasteIcon = url.trim() === ""; }
-  function download() { invoke('gallery_dl', { url }); url = ""; }
+  
+  async function download() { 
+    if ($isDownloading) {
+      if (url.trim() !== "") {
+        $pendingDownloads = [...$pendingDownloads, url];
+      }
+      else {
+        try {
+          const clip = await readText();
+          if (clip.trim() !== "") {
+            addNotification("Not a valid url");
+            $pendingDownloads = [...$pendingDownloads, clip];
+          }
+        } catch (error) {
+          addNotification("Failed to read clipboard");
+        }
+      }
+      url = "";
+    }
+    else {
+      invoke('gallery_dl', { url }); 
+      $currentlyDownloading = url;
+      url = ""; 
+    }
+  }
 
-  // @ts-ignore
-  function handleKeyPress(event) {
+  async function handleKeyPress(event) {
     if (!$isDownloading) {
       if (event.key === 'Enter') {
         download();
@@ -50,8 +75,11 @@
     invoke("check_links");
     
     if (!closeHandlerSet) {
-      const unlisten = getCurrentWindow().onCloseRequested(async (event) => {
+      const unlisten = getCurrentWindow().onCloseRequested(async (event) => {        
         if ($isDownloading) {
+          if ($currentlyDownloading != "") {
+            $pendingDownloads = [...$pendingDownloads, $currentlyDownloading];
+          }
           const confirmed = await ask('A download is currently in progress. Do you want to quit?', {
             title: 'Tauri',
             kind: 'warning',
@@ -95,11 +123,12 @@
     $expandStatus = false;
     $statusMessages = [];
     $downloadProgress = 0;
+    $currentlyDownloading = "";
   });
 
   listen('link-event', (event) => {      
     if (event.payload.message !== 'Nothing') {
-      $pendingDownloads.set(event.payload.links);
+      $pendingDownloads = event.payload.links;
     }
   });
 </script>
@@ -133,19 +162,18 @@
       class="url-input" 
       id="urlInput"
       bind:value={ url }
-      on:input={isUrlEntered}
+      on:input={() => isUrlEntered()}
       on:keypress={handleKeyPress}
       placeholder="Enter URL"
     >
     <button 
       class="paste-btn" 
-      title="Paste and Download" 
+      title={$isDownloading ? "Add link to queue (clipboard supported)" : "Paste from clipboard and download"}
       aria-label="Pastes from clipboard and downloads the URL"
       on:click={download}
-      disabled={$isDownloading}
     >
       {#if $isDownloading}
-        <i class="fas fa-spinner fa-spin fa-2xl"></i>
+        <i class="fa-solid fa-plus"></i>
       {:else if pasteIcon === true}
         <i class="fa-regular fa-clipboard fa-lg"></i>
       {:else}
@@ -231,9 +259,5 @@
   .paste-btn:hover {
     background: #5a7df9;
     transition: 0.5s;
-  }
-  .paste-btn:disabled {
-    background: rgba(255, 255, 255, 0.0);
-    cursor: not-allowed;
   }
 </style>

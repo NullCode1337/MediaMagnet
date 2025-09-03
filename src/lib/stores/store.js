@@ -7,6 +7,7 @@ export let statusMessages = writable([]);
 
 export let pendingDownloads = writable([]);
 export let isDownloading = writable(false);
+export let currentlyDownloading = writable();
 export let downloadProgress = writable(0);
 export let expandStatus = writable(false);
 
