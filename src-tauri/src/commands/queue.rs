@@ -1,5 +1,4 @@
 use std::io::{Read, Write};
-
 use tauri::Manager;
 
 #[tauri::command]
@@ -21,7 +20,21 @@ pub fn save_to_disk(app: tauri::AppHandle, links: Vec<String>) {
         serde_json::from_str(&old).unwrap()
     };
 
-    file_links.extend(links);
+    let mut existing_links: std::collections::HashSet<String> = file_links.iter().cloned().collect();
+    
+    let links_dedup: Vec<String> = links
+        .into_iter()
+        .filter(|link| {
+            if existing_links.contains(link) {
+                false 
+            } else {
+                existing_links.insert(link.clone());
+                true
+            }
+        })
+        .collect();
+
+    file_links.extend(links_dedup);
 
     let json_data = serde_json::to_string_pretty(&file_links).unwrap();
 
