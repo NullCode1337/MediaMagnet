@@ -1,7 +1,9 @@
 <script>
+  import { onMount } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
   import { listen } from '@tauri-apps/api/event';
   import { getCurrentWindow } from "@tauri-apps/api/window";
+
   import { ask } from '@tauri-apps/plugin-dialog';
   import { exit } from '@tauri-apps/plugin-process';
   import { readText } from '@tauri-apps/plugin-clipboard-manager';
@@ -20,16 +22,16 @@
   import Pending from '$lib/components/Pending.svelte';
   import Notification from '$lib/components/Notification.svelte';
   import Progress from '$lib/components/Progress.svelte';
+  import Dark from '$lib/components/Dark.svelte';
+  import Settings from '$lib/components/Settings.svelte';
 
   import '@fortawesome/fontawesome-free/css/all.min.css';
-  import { onMount } from 'svelte';
 
   let url = "";
   let pasteIcon = true;
   let closeHandlerSet = false;
   let pendingChecked = false;
 
-  function toggleMode() { $darkMode = !$darkMode; }
   function isUrlEntered() { pasteIcon = url.trim() === ""; }
   
   async function download() { 
@@ -179,19 +181,8 @@
 
 <div class="toolbar">
   <Pending />
-
-  <button 
-    class="toolbar-button night"
-    aria-label="Press to switch between light and dark modes"
-    title="Switch theme"
-    on:click={toggleMode}
-  >
-    {#if !$darkMode}
-      <i class="fa-solid fa-moon fa-lg" style="color: white;"></i>
-    {:else if $darkMode}
-      <i class="fa-solid fa-sun fa-lg" style="color: white;"></i>
-    {/if}
-  </button>
+  <Settings />
+  <Dark />
 </div>
 
 <main class="container">
@@ -244,17 +235,6 @@
     display: flex;
     align-items: flex-start;
     z-index: 100;
-  }
-  .toolbar-button {
-    cursor: pointer;
-    border-radius: 16px;
-    background: #6e8efb;
-    border: none;
-    padding: 16px;
-    transition: all 0.3s ease;
-  }
-  .night {
-    margin-left: 10px;
   }
   .container {
     user-select: none;
