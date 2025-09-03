@@ -11,6 +11,8 @@
     "clipboard-manager:default",
     "clipboard-manager:allow-read-text",
     "clipboard-manager:allow-read-image",
-    "shell:default"
+    "shell:default",
+    "dialog:default",
+    "process:default"
   ]
 }
