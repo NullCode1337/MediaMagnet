@@ -66,8 +66,9 @@
   }
 
   async function checkPending() {
-    if ($pendingDownloads.length === 0 || pendingChecked) return;
+    if ($pendingDownloads.length === 0 || pendingChecked) { return };
     
+    let currentDownloadActive = false;
     pendingChecked = true;
     
     const confirm = await ask(
@@ -75,33 +76,47 @@
       { title: 'Last Startup', kind: 'info' }
     );
     
-    if (!confirm) return;
+    if (!confirm) { return };
     
-    const processDownload = async (/** @type {any} */ url) => {
-      $currentlyDownloading = url;
-      
-      try {
-        await invoke('gallery_dl', { url });
-        await Promise.race([
-          /** @type {Promise<void>} */(new Promise(resolve => {
-            listen('download-finished', () => resolve()).then(unsubscribe => 
-              setTimeout(() => unsubscribe(), 6000)
-            );
-          })),
-          new Promise(resolve => setTimeout(resolve, 6000))
-        ]);
-      } catch (error) {
-        addNotification(`Download failed for ${url}:`);
+    const unsubscribe = await listen('download-finished', () => {
+      currentDownloadActive = false;
+    });
+    
+    try {
+      for (const url of [...$pendingDownloads]) {
+        $currentlyDownloading = url;
+        currentDownloadActive = true;
+        
+        try {
+          await invoke('gallery_dl', { url });          
+          let attempts = 0;
+          
+          while (currentDownloadActive && attempts < 300) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            attempts++;
+          }
+          
+          if (currentDownloadActive) {
+            addNotification('Download timeout');
+          }
+          
+          addNotification(`Download completed: ${url}`);
+        } catch (error) {
+          addNotification(`Download failed for ${url}`);
+          currentDownloadActive = false;
+          continue;
+        } finally {
+          $pendingDownloads = $pendingDownloads.filter(item => item !== url);
+          await invoke("overwrite_json", { links: $pendingDownloads });
+        }
       }
-    };
-    
-    for (const url of [...$pendingDownloads]) {
-      await processDownload(url);
-      $pendingDownloads = $pendingDownloads.filter(item => item !== url);
-      await invoke("overwrite_json", { $pendingDownloads });
+    } catch (error) {
+      addNotification(`Error while processing pending downloads!`);
+    } finally {
+      $currentlyDownloading = null;
+      currentDownloadActive = false;
+      unsubscribe();
     }
-    
-    $currentlyDownloading = null;
   }
 
   // @ts-ignore
@@ -160,7 +175,9 @@
   });
 
   listen('download-finished', () => {
-    addNotification("Task completed");
+    if ($pendingDownloads.length == 0) {
+      addNotification("Task completed"); // Otherwise it is processing other dls
+    }
     $isDownloading = false;
     $expandStatus = false;
     $statusMessages = [];
