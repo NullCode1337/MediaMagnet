@@ -1,4 +1,5 @@
 <script>
+  // =================== Imports ===============================
   import { onMount } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
   import { listen } from '@tauri-apps/api/event';
@@ -15,8 +16,7 @@
     downloadProgress,
     expandStatus,
     pendingDownloads,
-    currentlyDownloading,
-    darkMode
+    currentlyDownloading
   } from '$lib/stores/store';
 
   import Pending from '$lib/components/Pending.svelte';
@@ -26,135 +26,141 @@
   import Settings from '$lib/components/Settings.svelte';
 
   import '@fortawesome/fontawesome-free/css/all.min.css';
+  // =========================================================
 
   let url = "";
   let pasteIcon = true;
   let closeHandlerSet = false;
   let pendingChecked = false;
 
-  function isUrlEntered() { pasteIcon = url.trim() === ""; }
+  $: pasteIcon = url.trim() === "";
   
-  async function download() { 
+  async function handleDownload() { 
     if ($isDownloading) {
-      if (url.trim() !== "") {
-        $pendingDownloads = [...$pendingDownloads, url];
-        addNotification("Link added to queue");
-      }
-      else {
-        try {
+      let downloadUrl = url.trim();
+      
+      if (downloadUrl == "") {  // No url in text box
+        try {                   // Copy from clipboard
           const clip = await readText();
-          if (clip.trim() !== "") {
-            $pendingDownloads = [...$pendingDownloads, clip];
-            addNotification("Link added to queue");
-          }
-          else {
-            addNotification("Not a valid url");
-          }
+          downloadUrl = clip.trim();
         } catch (error) {
           addNotification("Failed to read clipboard");
+          return;
         }
       }
-      url = "";
-    }
-    else {
+      
+      try {
+        new URL(downloadUrl);
+      } catch (_) {
+        addNotification("Not a valid URL");
+        return;
+      }
+
+      $pendingDownloads = [...$pendingDownloads, downloadUrl];
+      addNotification("Link added to queue");
+    } else {
       invoke('gallery_dl', { url }); 
       $currentlyDownloading = url;
-      url = ""; 
     }
+    url = "";
+  }
+
+  async function checkPending() {
+    if ($pendingDownloads.length === 0 || pendingChecked) return;
+    
+    pendingChecked = true;
+    
+    const confirm = await ask(
+      `You have ${$pendingDownloads.length} pending download(s). Download now?`,
+      { title: 'Last Startup', kind: 'info' }
+    );
+    
+    if (!confirm) return;
+    
+    const processDownload = async (/** @type {any} */ url) => {
+      $currentlyDownloading = url;
+      
+      try {
+        await invoke('gallery_dl', { url });
+        await Promise.race([
+          /** @type {Promise<void>} */(new Promise(resolve => {
+            listen('download-finished', () => resolve()).then(unsubscribe => 
+              setTimeout(() => unsubscribe(), 6000)
+            );
+          })),
+          new Promise(resolve => setTimeout(resolve, 6000))
+        ]);
+      } catch (error) {
+        addNotification(`Download failed for ${url}:`);
+      }
+    };
+    
+    for (const url of [...$pendingDownloads]) {
+      await processDownload(url);
+      $pendingDownloads = $pendingDownloads.filter(item => item !== url);
+      await invoke("overwrite_json", { $pendingDownloads });
+    }
+    
+    $currentlyDownloading = null;
   }
 
   // @ts-ignore
-  async function handleKeyPress(event) {
-    if (!$isDownloading) {
-      if (event.key === 'Enter') {
-        download();
-      }
-    }
-    else {
-      if (url.trim() !== "") {
-        if (event.key === 'Enter') {
-          $pendingDownloads = [...$pendingDownloads, url];
-          addNotification("Link added to queue");
-          url = "";
-        }
-      }
-    }
-  }
-
-  async function checkPendingDownloads() {
-    if ($pendingDownloads.length > 0 && !pendingChecked) {
-      pendingChecked = true;
-      
-      const download_old = await ask(
-        `You have ${$pendingDownloads.length} pending download(s) from your last session. Would you like to download them now?`,
-        {
-          title: 'Last Startup',
-          kind: 'info',
-        }
-      );
-      
-      if (download_old) {
-        const pendingUrls = [...$pendingDownloads];
-        $pendingDownloads = [];
-        
-        for (const pendingUrl of pendingUrls) {
-          invoke('gallery_dl', { url: pendingUrl });
-          $currentlyDownloading = pendingUrl;
-        }
-      } else {
-        $pendingDownloads = [];
-        await invoke("overwrite_json", { links: [] });
-      }
-    }
+  function handleKeyPress(event) {
+    if (event.key !== 'Enter') { return };
+    handleDownload();
   }
 
   onMount(() => {
     invoke("check_links");
     
     if (!closeHandlerSet) {
-      const unlisten = getCurrentWindow().onCloseRequested(async (event) => {        
+      getCurrentWindow().onCloseRequested(async (event) => {
         if ($isDownloading) {
-          if ($currentlyDownloading != "") {
-            $pendingDownloads = [...$pendingDownloads, $currentlyDownloading];
-          }
-          const confirmed = await ask('A download is currently in progress. Do you want to quit?', {
+          const confirm = await ask('A download is currently in progress. Do you want to quit?', {
             title: 'Tauri',
             kind: 'warning',
           });
           
-          if (!confirmed) {
+          if (!confirm) {
             event.preventDefault();
+            return;
           }
-          else {
-            const dl = $pendingDownloads;
-            await invoke("overwrite_json", { links: dl });
-            await exit(1);
+
+          if ($currentlyDownloading) {
+            $pendingDownloads = [$currentlyDownloading, ...$pendingDownloads];
           }
         }
-        else {
-          const dl = $pendingDownloads;
-          await invoke("overwrite_json", { links: dl });
-          await exit(0);
-        }
+    
+        await invoke("overwrite_json", { links: $pendingDownloads });
+        await exit($isDownloading ? 1 : 0);
       });
-      
       closeHandlerSet = true;
     }
   });
 
-  // Event Listeners
   listen('download-started', () => {
     addNotification("Task started");
     $isDownloading = true;
   });
 
-  listen('download-status', (event) => { $statusMessages = [...$statusMessages, event.payload]; });
-  listen('download-progress', (event) => { $downloadProgress = parseInt(event.payload); });
-  listen('download-error', (event) => { addNotification(event.payload); });
-  listen('notification', (event) => { addNotification(event.payload); });
+  listen('download-status', (event) => {
+    $statusMessages = [...$statusMessages, event.payload];
+  });
+
+  listen('download-progress', (event) => {
+    $downloadProgress = parseInt(event.payload);
+  });
+
+  listen('download-error', (event) => {
+    addNotification(event.payload);
+  });
+
+  listen('notification', (event) => {
+    addNotification(event.payload);
+  });
 
   listen('download-finished', () => {
-    addNotification("Task completed")
+    addNotification("Task completed");
     $isDownloading = false;
     $expandStatus = false;
     $statusMessages = [];
@@ -166,9 +172,9 @@
     if (event.payload.message !== 'Nothing') {
       $pendingDownloads = event.payload.links;
       
-      setTimeout(() => {
-        checkPendingDownloads();
-      }, 100);
+      if ($pendingDownloads.length > 0 && !pendingChecked) {
+        setTimeout(checkPending, 100);
+      }
     } else {
       pendingChecked = true;
     }
@@ -192,8 +198,7 @@
       type="text" 
       class="url-input" 
       id="urlInput"
-      bind:value={ url }
-      on:input={() => isUrlEntered()}
+      bind:value={url}
       on:keypress={handleKeyPress}
       placeholder="Enter URL"
     >
@@ -201,11 +206,11 @@
       class="paste-btn" 
       title={$isDownloading ? "Add link to queue (clipboard supported)" : "Paste from clipboard and download"}
       aria-label="Pastes from clipboard and downloads the URL"
-      on:click={download}
+      on:click={handleDownload}
     >
       {#if $isDownloading}
-        <i class="fa-solid fa-plus"></i>
-      {:else if pasteIcon === true}
+        <i class="fa-solid fa-plus fa-lg"></i>
+      {:else if pasteIcon}
         <i class="fa-regular fa-clipboard fa-lg"></i>
       {:else}
         <i class="fa-solid fa-download fa-lg"></i>
@@ -223,6 +228,7 @@
     font-family: "Poppins-bold"; 
     src: url("/poppins-bold.ttf") format("truetype"); 
   }
+  
   @font-face {
     font-family: "Noto-Sans"; 
     src: url("/notosans-semibold.ttf") format("truetype"); 
@@ -236,23 +242,26 @@
     align-items: flex-start;
     z-index: 100;
   }
+  
   .container {
     user-select: none;
-    -webkit-user-select: none;
     position: fixed;
     top: 45%;
     left: 50%;
     transform: translate(-50%, -50%);
   }
+  
   #header {
     color: white;
     font-family: "Noto-Sans", sans-serif;
   }
+  
   .input {
     display: flex;
     gap: 12px;
     align-items: center;
   }
+  
   .url-input {
     flex: 1;
     border: none;
@@ -264,6 +273,7 @@
     color: #FFF;
     border-radius: 16px;
   }
+  
   .paste-btn {
     width: 56px;
     height: 56px;
@@ -275,9 +285,10 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    transition: background 0.3s ease;
   }
+  
   .paste-btn:hover {
     background: #5a7df9;
-    transition: 0.5s;
   }
 </style>
