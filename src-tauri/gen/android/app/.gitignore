@@ -1,0 +1,6 @@
+/src/main/java/com/nullcode1337/gallery_gui/generated
+/src/main/jniLibs/**/*.so
+/src/main/assets/tauri.conf.json
+/tauri.build.gradle.kts
+/proguard-tauri.pro
+/tauri.properties
