@@ -22,7 +22,6 @@
   import Pending from '$lib/components/Pending.svelte';
   import Notification from '$lib/components/Notification.svelte';
   import Progress from '$lib/components/Progress.svelte';
-  import Dark from '$lib/components/Dark.svelte';
   import Settings from '$lib/components/Settings.svelte';
 
   import '@fortawesome/fontawesome-free/css/all.min.css';
@@ -220,7 +219,6 @@
 <div class="toolbar">
   <Pending />
   <Settings />
-  <Dark />
 </div>
 
 <main class="container">
