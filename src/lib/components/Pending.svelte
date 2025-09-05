@@ -1,6 +1,5 @@
 <script>
   import { pendingDownloads } from "$lib/stores/store";
-  import { elasticOut } from 'svelte/easing';
   import { onMount } from "svelte";
   import '@fortawesome/fontawesome-free/css/all.min.css';
 
@@ -26,29 +25,12 @@
   }
   
   // @ts-ignore
-  function smoothPop(node, { duration = 250 }) {
+  function fadeAnimation(node, { duration = 250 }) {
     return {
       duration,
       // @ts-ignore
       css: t => {
-        const scale = t < 0.5 ? 0.9 + (t * 0.2) : 1 + (t - 0.5) * 0.05;
         return `
-          transform: scale(${scale});
-          opacity: ${t};
-        `;
-      }
-    };
-  }
-  
-  // @ts-ignore
-  function mobilePop(node, { duration = 300 }) {
-    return {
-      duration,
-      // @ts-ignore
-      css: t => {
-        const scale = 0.95 + (t * 0.05);
-        return `
-          transform: scale(${scale});
           opacity: ${t};
         `;
       }
@@ -83,9 +65,8 @@
     <div 
       class="pending-panel" 
       class:mobile={windowWidth <= 520}
-      in={windowWidth <= 520 ? mobilePop : smoothPop}
-      out={windowWidth <= 520 ? mobilePop : smoothPop}
-      style="transform-origin: {windowWidth <= 520 ? 'center' : 'top right'}"
+      in:fadeAnimation
+      out:fadeAnimation
     >
       <div class="panel-header">
         <h3>Downloads {#if $pendingDownloads.length > 0}({$pendingDownloads.length}){/if}</h3>
@@ -167,7 +148,6 @@
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
     overflow: hidden;
     z-index: 101;
-    transform-origin: top right;
     border: 1px solid #404045;
   }
   
@@ -181,7 +161,6 @@
     height: 100%;
     border-radius: 0;
     z-index: 1000;
-    transform-origin: center;
     border: none;
   }
   
