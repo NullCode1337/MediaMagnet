@@ -25,7 +25,7 @@
   }
   
   // @ts-ignore
-  function fadeAnimation(node, { duration = 250 }) {
+  function fadeAnimation(node, { duration = 100 }) {
     return {
       duration,
       // @ts-ignore
@@ -195,11 +195,6 @@
     cursor: pointer;
     font-size: 16px;
     padding: 4px 8px;
-    transition: transform 0.2s;
-  }
-  
-  .close-panel:hover {
-    transform: rotate(90deg);
   }
   
   .pending-panel.mobile .close-panel {
