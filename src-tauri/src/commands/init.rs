@@ -36,7 +36,14 @@ pub fn check_links(app: tauri::AppHandle) {
 }
 
 pub fn init_config(app: tauri::AppHandle) {
-    let file_path = app.path().app_data_dir().unwrap().join("links.json");
+    let app_data_dir = app.path().app_data_dir().unwrap();
+    let file_path = app_data_dir.join("links.json");
+
+    if !app_data_dir.exists() {
+        std::fs::create_dir_all(&app_data_dir)
+            .map_err(|e| format!("Failed to create app data directory: {}", e))
+            .unwrap();
+    }
 
     if file_path.exists() {
         if let Ok(content) = std::fs::read_to_string(&file_path) {
