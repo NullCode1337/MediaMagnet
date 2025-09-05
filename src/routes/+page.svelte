@@ -30,10 +30,12 @@
 
   let url = "";
   let pasteIcon = true;
-  let closeHandlerSet = false;
+  let dlActive = false;
+  let isStartup = true;
   let pendingChecked = false;
+  let closeHandlerSet = false;
 
-  /** @type {HTMLInputElement} */ let urlInput; // Binds focus
+  /** @type {HTMLInputElement} */ let urlInput;
 
   $: pasteIcon = url.trim() === "";
   
@@ -67,30 +69,25 @@
     url = "";
   }
 
-  async function checkPending() {
-    if ($pendingDownloads.length === 0 || pendingChecked) { return };
+  async function downloadPending() {
+    if (dlActive || $pendingDownloads.length === 0) return;
     
+    dlActive = true;
     let currentDownloadActive = false;
-    pendingChecked = true;
-    
-    const confirm = await ask(
-      `You have ${$pendingDownloads.length} pending download(s). Download now?`,
-      { title: 'Last Startup', kind: 'info' }
-    );
-    
-    if (!confirm) { return };
     
     const unsubscribe = await listen('download-finished', () => {
       currentDownloadActive = false;
     });
     
     try {
-      for (const url of [...$pendingDownloads]) {
+      while ($pendingDownloads.length > 0) {
+        const url = $pendingDownloads[0];
+        let tailUrl = url.substring(url.lastIndexOf('/') + 1);
         $currentlyDownloading = url;
         currentDownloadActive = true;
         
         try {
-          await invoke('gallery_dl', { url });          
+          await invoke('gallery_dl', { url });
           let attempts = 0;
           
           while (currentDownloadActive && attempts < 300) {
@@ -99,31 +96,30 @@
           }
           
           if (currentDownloadActive) {
-            addNotification('Download timeout');
+            addNotification('Download timeout for pending item');
           }
           
-          addNotification(`Download completed: ${url}`);
+          addNotification(`Download completed: ${tailUrl}`);
         } catch (error) {
-          addNotification(`Download failed for ${url}`);
+          addNotification(`Download failed: ${tailUrl}`);
           currentDownloadActive = false;
-          continue;
         } finally {
           $pendingDownloads = $pendingDownloads.filter(item => item !== url);
           await invoke("overwrite_json", { links: $pendingDownloads });
+          currentDownloadActive = false;
         }
       }
     } catch (error) {
       addNotification(`Error while processing pending downloads!`);
     } finally {
-      $currentlyDownloading = null;
-      currentDownloadActive = false;
+      dlActive = false;
       unsubscribe();
     }
   }
 
   // @ts-ignore
   function handleKeyPress(event) {
-    if (event.key !== 'Enter') { return };
+    if (event.key !== 'Enter') return;
     handleDownload();
   }
 
@@ -146,7 +142,7 @@
             return;
           }
 
-          if ($currentlyDownloading) {
+          if ($isDownloading) {
             $pendingDownloads = [$currentlyDownloading, ...$pendingDownloads];
           }
         }
@@ -180,25 +176,39 @@
   });
 
   listen('download-finished', () => {
-    if ($pendingDownloads.length == 0) {
-      addNotification("Task completed"); // Otherwise it is processing other dls
-    }
+    if ($pendingDownloads.length == 0) addNotification("All tasks completed");
+
     $isDownloading = false;
     $expandStatus = false;
     $statusMessages = [];
     $downloadProgress = 0;
     $currentlyDownloading = "";
+    
+    if ($pendingDownloads.length > 0 && !dlActive) downloadPending();
   });
 
   listen('link-event', (event) => {      
     if (event.payload.message !== 'Nothing') {
       $pendingDownloads = event.payload.links;
       
-      if ($pendingDownloads.length > 0 && !pendingChecked) {
-        setTimeout(checkPending, 100);
+      if (isStartup) {
+        isStartup = false;
+        setTimeout(async () => {
+          if ($pendingDownloads.length === 0 || pendingChecked) return;
+          pendingChecked = true;
+          
+          const confirm = await ask(
+            `You have ${$pendingDownloads.length} pending download(s) from last session. Download now?`,
+            { title: 'Pending Downloads', kind: 'info' }
+          );
+          
+          if (confirm) {
+            downloadPending();
+          }
+        }, 100);
       }
     } else {
-      pendingChecked = true;
+      isStartup = false;
     }
   });
 </script>
