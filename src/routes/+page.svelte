@@ -1,6 +1,6 @@
 <script>
   // =================== Imports ===============================
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
   import { listen } from '@tauri-apps/api/event';
   import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -32,6 +32,8 @@
   let pasteIcon = true;
   let closeHandlerSet = false;
   let pendingChecked = false;
+
+  /** @type {HTMLInputElement} */ let urlInput; // Binds focus
 
   $: pasteIcon = url.trim() === "";
   
@@ -125,8 +127,11 @@
     handleDownload();
   }
 
-  onMount(() => {
+  onMount(async () => {
     invoke("check_links");
+    
+    await tick();
+    if (urlInput) urlInput.focus();
     
     if (!closeHandlerSet) {
       getCurrentWindow().onCloseRequested(async (event) => {
@@ -216,6 +221,7 @@
       class="url-input" 
       id="urlInput"
       bind:value={url}
+      bind:this={urlInput}
       on:keypress={handleKeyPress}
       placeholder="Enter URL"
     >
@@ -289,6 +295,11 @@
     background: #404045;
     color: #FFF;
     border-radius: 16px;
+    transition: box-shadow 0.3s ease;
+  }
+  
+  .url-input:focus {
+    box-shadow: 0 0 0 3px rgba(110, 142, 251, 0.5);
   }
   
   .paste-btn {
