@@ -45,6 +45,7 @@
     background: #f0f0f5;
     border-radius: 8px;
     padding: 12px 16px;
+    font-family: 'Noto-Sans', Courier, monospace;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     cursor: pointer;
     overflow: hidden;
