@@ -255,16 +255,6 @@
 <Notification />
 
 <style>
-  @font-face {
-    font-family: "Poppins-bold"; 
-    src: url("/poppins-bold.ttf") format("truetype"); 
-  }
-  
-  @font-face {
-    font-family: "Noto-Sans"; 
-    src: url("/notosans-semibold.ttf") format("truetype"); 
-  }
-
   .toolbar {
     position: absolute;
     right: 16px;
