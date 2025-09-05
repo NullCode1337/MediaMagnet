@@ -1,7 +1,7 @@
 [package]
 name = "gallery-gui"
-version = "0.2.0"
-description = "Cross-platform imageboards and media downloader, wrappper for gallery-dl"
+version = "0.2.1"
+description = "Cross-platform GUI for gallery-dl, an imageboard/media downloader"
 authors = ["NullCode1337"]
 edition = "2021"
 

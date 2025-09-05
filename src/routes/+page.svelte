@@ -289,6 +289,7 @@
     padding: 18px 20px;
     width: 50vw;
     font-size: 16px;
+    font-family: 'Noto-Sans', Courier, monospace;
     outline: none;
     background: #404045;
     color: #FFF;
