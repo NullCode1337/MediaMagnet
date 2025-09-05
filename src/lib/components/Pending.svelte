@@ -90,7 +90,7 @@
         {:else}
           <div class="empty-state">
             <i class="fas fa-check-circle"></i>
-            <p>No pending downloads</p>
+            <p id="blankText">No pending downloads</p>
           </div>
         {/if}
       </div>
@@ -138,13 +138,18 @@
     z-index: 103;
   }
   
+  #blankText {
+    font-family: 'Noto-Sans', Courier, monospace;
+    font-style: normal;
+  }
+
   .pending-panel {
     position: absolute;
     top: calc(0%);
     right: 0;
     width: 350px;
     background: #2c2c30;
-    border-radius: 16px; /* Fully rounded corners */
+    border-radius: 16px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
     overflow: hidden;
     z-index: 101;

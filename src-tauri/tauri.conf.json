@@ -40,7 +40,8 @@
     "externalBin": ["../prebuilts/gallery-dl"],
     "resources": [
       "../static/poppins-bold.ttf",
-      "../static/notosans-semibold.ttf"
+      "../static/notosans-semibold.ttf",
+      "../static/app.css"
     ]
   }
 }
