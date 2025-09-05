@@ -219,6 +219,7 @@
   
   .pending-item {
     padding: 12px 16px;
+    font-family: 'Noto-Sans', Courier, monospace;
     border-bottom: 1px solid #404045;
     display: flex;
     justify-content: space-between;
