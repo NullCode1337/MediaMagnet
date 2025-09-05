@@ -69,8 +69,8 @@
 <div class="pending-container" bind:this={pendingContainer}>
   <button 
     class="toolbar-button pending {showPendingPanel ? 'active' : ''}"
-    aria-label="Press to view all pending downloads yet to be done"
-    title="Show pending tasks"
+    aria-label="Click to view all pending downloads"
+    title="Show pending downloads"
     on:click={togglePendingPanel}
   >
     <i class="fa-solid fa-file-arrow-down fa-lg" style="color: white;"></i>
@@ -88,7 +88,7 @@
       style="transform-origin: {windowWidth <= 520 ? 'center' : 'top right'}"
     >
       <div class="panel-header">
-        <h3>Pending Downloads {#if $pendingDownloads.length > 0}({$pendingDownloads.length}){/if}</h3>
+        <h3>Downloads {#if $pendingDownloads.length > 0}({$pendingDownloads.length}){/if}</h3>
         <button class="close-panel" on:click={togglePendingPanel} aria-label="Close panel">
           <i class="fas fa-times"></i>
         </button>
@@ -130,13 +130,14 @@
     background: #6e8efb;
     border: none;
     padding: 16px;
-    transition: all 0.3s ease;
     position: relative;
+    z-index: 102; 
   }
   
   .toolbar-button.pending.active {
     background: #404045;
-    border-radius: 16px 16px 0 0;
+    border-radius: 16px;
+    visibility: hidden;
   }
   
   .pending-badge {
@@ -153,19 +154,21 @@
     align-items: center;
     justify-content: center;
     font-weight: bold;
+    z-index: 103;
   }
   
   .pending-panel {
     position: absolute;
-    top: 100%;
+    top: calc(0%);
     right: 0;
     width: 350px;
     background: #2c2c30;
-    border-radius: 16px 0 16px 16px;
+    border-radius: 16px; /* Fully rounded corners */
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
     overflow: hidden;
     z-index: 101;
     transform-origin: top right;
+    border: 1px solid #404045;
   }
   
   .pending-panel.mobile {
@@ -179,6 +182,7 @@
     border-radius: 0;
     z-index: 1000;
     transform-origin: center;
+    border: none;
   }
   
   .panel-header {
