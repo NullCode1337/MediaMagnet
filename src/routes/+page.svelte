@@ -40,7 +40,7 @@
   
   async function handleDownload() { 
     let downloadUrl = url.trim();
-    
+
     if (downloadUrl == "") {
       try {
         const clip = await readText();
@@ -62,10 +62,11 @@
       $pendingDownloads = [...$pendingDownloads, downloadUrl];
       addNotification("Link added to queue", "success");
     } else {
-      invoke('gallery_dl', { url }); 
-      $currentlyDownloading = url;
+      invoke('gallery_dl', { url: downloadUrl }); 
+      $currentlyDownloading = downloadUrl;
     }
     
+    downloadUrl = "";
     url = "";
   }
 
