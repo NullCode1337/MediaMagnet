@@ -1,5 +1,4 @@
 use tauri::Emitter;
-use tauri_plugin_clipboard_manager::ClipboardExt;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
@@ -64,23 +63,9 @@ async fn async_dl(app: tauri::AppHandle, link: &str) -> Result<(), Box<dyn std::
 }
 
 #[tauri::command]
-pub async fn gallery_dl(app: tauri::AppHandle, mut url: String) {
-    if url == "" {
-        let result = app.clipboard().read_text().map_err(|e| e.to_string());
-
-        match result {
-            Ok(content) => {
-                url = content;
-            }
-            Err(err) => {
-                app.emit("notification", err).unwrap();
-                return;
-            }
-        }
-    }
-
+pub async fn gallery_dl(app: tauri::AppHandle, url: String) {
     if !url.to_lowercase().contains("http") {
-        app.emit("notification", "Not a valid url").unwrap();
+        app.emit("download-error", "Not a valid url").unwrap();
         return;
     }
 

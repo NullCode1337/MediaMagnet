@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { writable } from "svelte/store";
 
 export let darkMode = writable(true);
@@ -11,7 +12,6 @@ export let currentlyDownloading = writable();
 export let downloadProgress = writable(0);
 export let expandStatus = writable(false);
 
-// @ts-ignore
 export function addNotification(message, type = "info") {
     const id = Date.now();
     const newNotification = {
@@ -22,13 +22,11 @@ export function addNotification(message, type = "info") {
     };
 
     notifications.update(($notifications) =>
-        // @ts-ignore
         [newNotification, ...$notifications].slice(0, 4)
     );
 
     setTimeout(() => {
         notifications.update(($notifications) =>
-            // @ts-ignore
             $notifications.filter((n) => n.id !== id)
         );
     }, 3000);

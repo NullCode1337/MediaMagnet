@@ -3,11 +3,11 @@
 </script>
 
 <button 
-    class="toolbar-button settings"
-    aria-label="Configuration settings for app"
-    title="Settings"
+  class="toolbar-button settings"
+  aria-label="Configuration options for app"
+  title="Settings"
 >
-    <i class="fa-solid fa-gear fa-lg" style="color: white;"></i>
+  <i class="fa-solid fa-gear fa-lg" style="color: white;"></i>
 </button>
 
 <style>
