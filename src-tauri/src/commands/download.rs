@@ -6,8 +6,13 @@ use tokio::process::Command;
 async fn async_dl(app: tauri::AppHandle, link: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut downloaded: Vec<String> = Vec::new();
 
-    let url_list = Command::new("gallery-dl")
-        .args(["-g", link])
+    let mut url_list_cmd = Command::new("gallery-dl");
+    url_list_cmd.args(["-g", link]);
+
+    #[cfg(target_os = "windows")]
+    url_list_cmd.creation_flags(winapi::um::winbase::CREATE_NO_WINDOW); 
+
+    let url_list = url_list_cmd
         .output()
         .await?;
 
@@ -22,8 +27,13 @@ async fn async_dl(app: tauri::AppHandle, link: &str) -> Result<(), Box<dyn std::
         eprintln!("Could not find Downloads directory");
     }
 
-    let mut downloader = Command::new("gallery-dl")
-        .arg(link)
+    let mut downloader_cmd = Command::new("gallery-dl");
+    downloader_cmd.arg(link);
+    
+    #[cfg(target_os = "windows")]
+    downloader_cmd.creation_flags(winapi::um::winbase::CREATE_NO_WINDOW); 
+
+    let mut downloader = downloader_cmd
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
         .spawn()?;
