@@ -39,32 +39,33 @@
   $: pasteIcon = url.trim() === "";
   
   async function handleDownload() { 
-    if ($isDownloading) {
-      let downloadUrl = url.trim();
-      
-      if (downloadUrl == "") {  // No url in text box
-        try {                   // Copy from clipboard
-          const clip = await readText();
-          downloadUrl = clip.trim();
-        } catch (error) {
-          addNotification("Failed to read clipboard");
-          return;
-        }
-      }
-      
+    let downloadUrl = url.trim();
+    
+    if (downloadUrl == "") {
       try {
-        new URL(downloadUrl);
-      } catch (_) {
-        addNotification("Not a valid URL");
+        const clip = await readText();
+        downloadUrl = clip.trim();
+      } catch (error) {
+        addNotification("Failed to read clipboard", "error");
         return;
       }
+    }
+    
+    try {
+      new URL(downloadUrl);
+    } catch (_) {
+      addNotification("Not a valid URL", "error");
+      return;
+    }
 
+    if ($isDownloading) {
       $pendingDownloads = [...$pendingDownloads, downloadUrl];
-      addNotification("Link added to queue");
+      addNotification("Link added to queue", "success");
     } else {
       invoke('gallery_dl', { url }); 
       $currentlyDownloading = url;
     }
+    
     url = "";
   }
 
@@ -95,12 +96,12 @@
           }
           
           if (currentDownloadActive) {
-            addNotification('Download timeout for pending item');
+            addNotification(`Download timeout: ${tailUrl}. Removing from list...`, "error");
           }
           
-          addNotification(`Download completed: ${tailUrl}`);
+          addNotification(`Download completed: ${tailUrl}`, "success");
         } catch (error) {
-          addNotification(`Download failed: ${tailUrl}`);
+          addNotification(`Download failed: ${tailUrl}`, "error");
           currentDownloadActive = false;
         } finally {
           $pendingDownloads = $pendingDownloads.filter(item => item !== url);
@@ -109,7 +110,7 @@
         }
       }
     } catch (error) {
-      addNotification(`Error while processing pending downloads!`);
+      addNotification(`Error while processing pending downloads!`, "error");
     } finally {
       dlActive = false;
       unsubscribe();
@@ -167,15 +168,11 @@
   });
 
   listen('download-error', (event) => {
-    addNotification(event.payload);
-  });
-
-  listen('notification', (event) => {
-    addNotification(event.payload);
+    addNotification(event.payload, "error");
   });
 
   listen('download-finished', () => {
-    if ($pendingDownloads.length == 0) addNotification("All tasks completed");
+    if ($pendingDownloads.length == 0) addNotification("All tasks completed", "success");
 
     $isDownloading = false;
     $expandStatus = false;
@@ -209,6 +206,10 @@
     } else {
       isStartup = false;
     }
+  });
+
+  listen('notification', (event) => {
+    addNotification(event.payload);
   });
 </script>
 

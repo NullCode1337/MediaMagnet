@@ -22,7 +22,7 @@
       on:click={() => removeNotification(notification.id)}
     >
       <div class="notification-content">
-        <i class="fas {notification.type === 'success' ? 'fa-check-circle' : notification.type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
+        <i class="fas {notification.type === 'success' ? 'fa-check-circle' : notification.type === 'error' ? 'fa-triangle-exclamation' : 'fa-info-circle'}"></i>
         <span>{notification.message}</span>
       </div>
       <div class="notification-progress"></div>
