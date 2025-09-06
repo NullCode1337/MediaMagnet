@@ -20,7 +20,8 @@
       {
         "title": "gallery-gui",
         "width": 900,
-        "height": 700
+        "height": 700,
+        "backgroundColor": "#2e2e32"
       }
     ],
     "security": {
