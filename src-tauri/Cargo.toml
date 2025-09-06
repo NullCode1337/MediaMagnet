@@ -28,4 +28,5 @@ dirs = "6.0.0"
 tauri-plugin-shell = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-process = "2"
+winapi = { version = "0.3.9", features = ["winbase"] }
 
