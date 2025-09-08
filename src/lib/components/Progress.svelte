@@ -49,6 +49,7 @@
   }
   .status-message {
     color: white;
+    font-family: "Noto-Sans", Cambria, sans-serif;
     margin: 5px 0;
     font-size: 14px;
     line-height: 1.4;

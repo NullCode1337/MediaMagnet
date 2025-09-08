@@ -89,8 +89,7 @@
           {/each}
         {:else}
           <div class="empty-state">
-            <i class="fas fa-check-circle"></i>
-            <p id="blankText">No pending downloads</p>
+            <p id="blankText"><i class="fas fa-check"></i> No pending downloads</p>
           </div>
         {/if}
       </div>
@@ -141,6 +140,7 @@
   #blankText {
     font-family: 'Noto-Sans', Courier, monospace;
     font-style: normal;
+    color: white;
   }
 
   .pending-panel {
@@ -276,19 +276,14 @@
   }
   
   .empty-state {
-    padding: 40px 16px;
+    padding: 20px 16px;
     text-align: center;
     color: #888;
     font-style: italic;
     display: flex;
-    flex-direction: column;
+    justify-content: center;
+    flex-direction: row;
     align-items: center;
-  }
-  
-  .empty-state i {
-    font-size: 32px;
-    margin-bottom: 10px;
-    color: #6e8efb;
   }
   
   .pending-panel.mobile .empty-state {
