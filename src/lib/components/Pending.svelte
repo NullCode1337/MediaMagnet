@@ -20,6 +20,13 @@
     }
   }
   
+  // @ts-ignore
+  function handleKeyDown(event) {
+    if (event.key === 'Escape' && showPendingPanel) {
+      showPendingPanel = false;
+    }
+  }
+
   function handleResize() {
     windowWidth = window.innerWidth;
   }
@@ -41,9 +48,11 @@
     windowWidth = window.innerWidth;
     window.addEventListener('resize', handleResize);
     document.addEventListener('click', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('resize', handleResize);
       document.removeEventListener('click', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown); 
     };
   });
 </script>
