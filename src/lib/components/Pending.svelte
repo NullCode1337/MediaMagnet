@@ -1,7 +1,8 @@
 <script>
-  import { pendingDownloads } from "$lib/stores/store";
+  import { pendingDownloads, addNotification } from "$lib/stores/store";
   import { onMount } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
+  import { ask } from '@tauri-apps/plugin-dialog';
   import '@fortawesome/fontawesome-free/css/all.min.css';
 
   let showPendingPanel = false;
@@ -14,8 +15,16 @@
   }
   
   async function clearAllDownloads() {
+    const confirm = await ask('Are you sure? This action is irreversible!', {
+      title: 'Clear all downloads',
+      kind: 'warning',
+    });
+    
+    if (!confirm) return;
+
     $pendingDownloads = [];
     await invoke("overwrite_json", { links: $pendingDownloads });
+    addNotification("Cleared all pending downloads and removed from data file", "success")
   }
   
   // @ts-ignore
