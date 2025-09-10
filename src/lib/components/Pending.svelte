@@ -1,6 +1,7 @@
 <script>
   import { pendingDownloads } from "$lib/stores/store";
   import { onMount } from "svelte";
+  import { invoke } from "@tauri-apps/api/core";
   import '@fortawesome/fontawesome-free/css/all.min.css';
 
   let showPendingPanel = false;
@@ -10,6 +11,11 @@
   
   function togglePendingPanel() {
     showPendingPanel = !showPendingPanel;
+  }
+  
+  async function clearAllDownloads() {
+    $pendingDownloads = [];
+    await invoke("overwrite_json", { links: $pendingDownloads });
   }
   
   // @ts-ignore
@@ -79,9 +85,21 @@
     >
       <div class="panel-header">
         <h3>Downloads {#if $pendingDownloads.length > 0}({$pendingDownloads.length}){/if}</h3>
-        <button class="close-panel" on:click={togglePendingPanel} aria-label="Close panel">
-          <i class="fas fa-times"></i>
-        </button>
+        <div class="header-actions">
+          {#if $pendingDownloads.length > 0}
+            <button 
+              class="clear-all" 
+              on:click={clearAllDownloads}
+              aria-label="Clear all downloads"
+              title="Clear all downloads"
+            >
+              <i class="fas fa-trash-alt"></i>Clear All
+            </button>
+          {/if}
+          <button class="close-panel" on:click={togglePendingPanel} aria-label="Close panel">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
       </div>
       <div class="panel-content">
         {#if $pendingDownloads.length > 0}
@@ -187,6 +205,28 @@
     border-bottom: 1px solid #555;
   }
   
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .clear-all {
+    background: rgba(255, 71, 87, 0.2);
+    color: #ff4757;
+    border: 1px solid #ff4757;
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Noto-Sans', sans-serif;
+  }
+  
+  .clear-all:hover {
+    background: rgba(255, 71, 87, 0.3);
+  }
+  
   .pending-panel.mobile .panel-header {
     padding: 20px 16px;
   }
@@ -219,11 +259,13 @@
   .panel-content {
     max-height: 300px;
     overflow-y: auto;
+    overflow-x: hidden
   }
   
   .pending-panel.mobile .panel-content {
     max-height: none;
     height: calc(100% - 60px);
+    overflow-x: hidden;
   }
   
   .pending-item {
@@ -260,6 +302,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    max-width: 230px;
   }
   
   .download-status {
@@ -279,11 +322,12 @@
   .pending-item:last-child {
     border-bottom: none;
   }
-  
+
   .pending-panel.mobile .download-url {
     font-size: 16px;
+    max-width: calc(100vw - 120px);
   }
-  
+
   .empty-state {
     padding: 20px 16px;
     text-align: center;
@@ -304,6 +348,11 @@
     .toolbar-button.pending.active {
       border-radius: 16px;
     }
+    
+    .clear-all {
+      padding: 8px 12px;
+      font-size: 14px;
+    }
   }
   
   .panel-content::-webkit-scrollbar {
@@ -321,5 +370,10 @@
   
   .panel-content::-webkit-scrollbar-thumb:hover {
     background: #5d7ce0;
+  }
+  
+  .panel-content::-webkit-scrollbar:horizontal {
+    display: none;
+    height: 0;
   }
 </style>
