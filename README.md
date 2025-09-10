@@ -3,10 +3,13 @@ A user-friendly, cross-platform desktop application for downloading image links.
 Built with Svelte and Tauri
 
 ## Roadmap
-It is still only a functional prototype, currently Pixiv can be downloaded, and no configuration options are present
-- TODO: Making a Settings panel where I can set Cookies, User Agent, and a dedicated page for oauth which Pixiv uses
+Majority of the backend code is done, I need suggestions on how I can make the UI look better (if at all)
+- TODO: Queue all the downloads and make it persistent ✅
+- TODO: Settings panel where I can set Cookies, User Agent, and a dedicated page for oauth which Pixiv uses
+- TODO: Separate page for managing all the Cookies for different sites
 
 ## Requirements
 - 64 bit system
 
-<img width="1022" height="859" alt="image" src="https://github.com/user-attachments/assets/e437d2ab-2e5a-4576-9d3f-b4e75b58bd52" />
+## Screenshots
+<img width="1022" height="859" alt="Screenshot From 2025-09-10 21-15-42" src="https://github.com/user-attachments/assets/104e36e3-66d2-478b-a27a-8b25cbc3065e" />
