@@ -19,8 +19,4 @@
     padding: 16px;
     transition: all 0.3s ease;
   }
-  .settings {
-    margin-right: 5px;
-    margin-left: 10px;
-  }
 </style>
