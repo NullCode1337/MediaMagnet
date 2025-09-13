@@ -19,8 +19,8 @@
     "windows": [
       {
         "title": "gallery-gui",
-        "width": 900,
-        "height": 700,
+        "width": 850,
+        "height": 680,
         "backgroundColor": "#2e2e32"
       }
     ],
