@@ -259,11 +259,13 @@
 <style>
   .toolbar {
     position: absolute;
+    padding-right: 5px;
     right: 16px;
     top: 16px;
     display: flex;
     align-items: flex-start;
     z-index: 100;
+    gap: 15px;
   }
   
   .container {
@@ -277,6 +279,10 @@
   #header {
     color: white;
     font-family: "Noto-Sans", sans-serif;
+    font-weight: 300;
+    font-size: 28px;
+    margin-bottom: 24px;
+    text-align: center;
   }
   
   .input {
@@ -288,25 +294,32 @@
   .url-input {
     flex: 1;
     border: none;
-    padding: 18px 20px;
+    padding: 16px 20px;
     width: 50vw;
     font-size: 16px;
-    font-family: 'Noto-Sans', Courier, monospace;
+    font-family: 'Noto-Sans', sans-serif;
     outline: none;
-    background: #404045;
+    background: rgba(255, 255, 255, 0.08);
     color: #FFF;
-    border-radius: 16px;
-    transition: box-shadow 0.3s ease;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
   
   .url-input:focus {
-    box-shadow: 0 0 0 3px rgba(110, 142, 251, 0.5);
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 0 0 2px rgba(110, 142, 251, 0.6);
+    border-color: rgba(110, 142, 251, 0.3);
+  }
+  
+  .url-input::placeholder {
+    color: rgba(255, 255, 255, 0.6);
   }
   
   .paste-btn {
     width: 56px;
     height: 56px;
-    border-radius: 16px;
+    border-radius: 12px;
     background: #6e8efb;
     color: white;
     border: none;
@@ -314,7 +327,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    transition: background 0.3s ease;
+    transition: background 0.2s ease;
   }
   
   .paste-btn:hover {
