@@ -136,7 +136,6 @@
 <style>
   .pending-container {
     position: relative;
-    margin-right: 5px;
     display: inline-block;
   }
   
