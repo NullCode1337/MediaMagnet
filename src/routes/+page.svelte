@@ -220,7 +220,7 @@
 </script>
 
 <svelte:head>
-  <title>gallery-gui</title>
+  <title>MediaMagnet</title>
 </svelte:head>
 
 <div class="toolbar">
@@ -229,7 +229,7 @@
 </div>
 
 <main class="container">
-  <h1 id="header">gallery-dl GUI</h1>
+  <h1 id="header">MediaMagnet</h1>
   <div class="input">
     <input 
       type="text" 
