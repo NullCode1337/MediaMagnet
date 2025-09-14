@@ -1,5 +1,5 @@
 <script>
-  // =================== Imports ===============================
+  //#region Importts
   import { onMount, tick } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
   import { listen } from '@tauri-apps/api/event';
@@ -25,7 +25,7 @@
   import Settings from '$lib/components/Settings.svelte';
 
   import '@fortawesome/fontawesome-free/css/all.min.css';
-  // =========================================================
+  //#endregion
 
   let url = "";
   let pasteIcon = true;
@@ -38,6 +38,7 @@
 
   $: pasteIcon = url.trim() === "";
   
+  //#region Download Functions
   async function handleDownload() { 
     let downloadUrl = url.trim();
 
@@ -117,6 +118,7 @@
       unsubscribe();
     }
   }
+  //#endregion
 
   // @ts-ignore
   function handleKeyPress(event) {
@@ -124,6 +126,7 @@
     handleDownload();
   }
 
+  //#region On Mount
   onMount(async () => {
     invoke("check_links");
     
@@ -155,6 +158,7 @@
     }
   });
 
+  //#region Event Listeners
   listen('download-started', () => {
     addNotification("Task started");
     $isDownloading = true;
@@ -212,6 +216,7 @@
   listen('notification', (event) => {
     addNotification(event.payload);
   });
+  //#endregion
 </script>
 
 <svelte:head>
@@ -257,6 +262,7 @@
 <Notification />
 
 <style>
+  /*#region /*Stylesheet*/ 
   .toolbar {
     position: absolute;
     padding-right: 5px;
@@ -333,4 +339,5 @@
   .paste-btn:hover {
     background: #5a7df9;
   }
+  /*#endregion */
 </style>
