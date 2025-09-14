@@ -1,5 +1,5 @@
 [package]
-name = "gallery-gui"
+name = "mediamagnet"
 version = "0.2.2"
 description = "Cross-platform GUI for gallery-dl, an imageboard/media downloader"
 authors = ["NullCode1337"]
