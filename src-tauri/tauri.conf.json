@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "gallery-gui",
+  "productName": "mediamagnet",
   "version": "0.2.2",
-  "identifier": "com.nullcode1337.gallery-gui",
+  "identifier": "com.nullcode1337.mediamagnet",
   "build": {
     "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:1420",
@@ -18,7 +18,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "gallery-gui",
+        "title": "MediaMagnet",
         "width": 850,
         "height": 680,
         "backgroundColor": "#2e2e32"
