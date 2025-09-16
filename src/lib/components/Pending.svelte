@@ -1,6 +1,5 @@
 <script>
   import { pendingDownloads, addNotification } from "$lib/stores/store";
-  import { onMount } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { ask } from "@tauri-apps/plugin-dialog";
   import "@fortawesome/fontawesome-free/css/all.min.css";
@@ -8,7 +7,6 @@
   let showPendingPanel = false;
   // @ts-ignore
   let pendingContainer;
-  let windowWidth = 0;
 
   function togglePendingPanel() {
     showPendingPanel = !showPendingPanel;
@@ -29,39 +27,6 @@
       "success",
     );
   }
-
-  // @ts-ignore
-  function handleClickOutside(event) {
-    // @ts-ignore
-    if (showPendingPanel && pendingContainer &&
-      !pendingContainer.contains(event.target)
-    ) {
-      showPendingPanel = false;
-    }
-  }
-
-  // @ts-ignore
-  function handleKeyDown(event) {
-    if (event.key === "Escape" && showPendingPanel) {
-      showPendingPanel = false;
-    }
-  }
-
-  function handleResize() {
-    windowWidth = window.innerWidth;
-  }
-
-  onMount(() => {
-    windowWidth = window.innerWidth;
-    window.addEventListener("resize", handleResize);
-    document.addEventListener("click", handleClickOutside);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      document.removeEventListener("click", handleClickOutside);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  });
 </script>
 
 <div class="pending-container" bind:this={pendingContainer}>
@@ -275,14 +240,14 @@
   }
 
   .empty-state {
-    padding: 20px 16px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     text-align: center;
     color: #888;
     font-style: italic;
-    display: flex;
-    justify-content: center;
-    flex-direction: row;
-    align-items: center;
+    width: 100%;
   }
 
   @media (max-width: 600px) {
