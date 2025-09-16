@@ -388,5 +388,33 @@
   .paste-btn:hover {
     background: #5a7df9;
   }
+
+  @media (max-width: 600px) {
+    .sidebar-container {
+      flex-direction: column;
+    }
+
+    .sidebar-content {
+      flex-direction: row;
+      justify-content: right;
+      margin-right: 20px;
+      gap: 24px;
+      padding: 0;
+    }
+
+    .sidebar {
+      width: 100%;
+      height: auto;
+      padding: 8px 0;
+    }
+
+    .box {
+      width: 90vw;
+    }
+
+    .url-input {
+      width: 100%;
+    }
+  }
   /*#endregion */
 </style>
