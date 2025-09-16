@@ -299,7 +299,7 @@
   }
 
   .box {
-    width: 60vw;
+    width: 70vw;
     max-width: 700px;
     display: flex;
     flex-direction: column;
@@ -330,7 +330,7 @@
     font-weight: 300;
     user-select: none;
     font-size: 20px;
-    margin-bottom: 24px;
+    margin-bottom: 14px;
     text-align: center;
   }
 
