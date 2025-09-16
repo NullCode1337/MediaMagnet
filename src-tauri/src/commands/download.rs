@@ -75,7 +75,7 @@ async fn async_dl(app: tauri::AppHandle, link: &str) -> Result<(), Box<dyn std::
 #[tauri::command]
 pub async fn gallery_dl(app: tauri::AppHandle, url: String) {
     if !url.to_lowercase().contains("http") {
-        app.emit("download-error", "Not a valid url").unwrap();
+        app.emit("download-error", "Invalid URL").unwrap();
         return;
     }
 
