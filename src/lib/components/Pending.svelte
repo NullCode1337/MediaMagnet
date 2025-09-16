@@ -142,17 +142,11 @@
   .toolbar-button {
     cursor: pointer;
     border-radius: 16px;
-    background: #6e8efb;
+    background: transparent;
     border: none;
     padding: 16px;
     position: relative;
     z-index: 102; 
-  }
-  
-  .toolbar-button.pending.active {
-    background: #404045;
-    border-radius: 16px;
-    visibility: hidden;
   }
   
   .pending-badge {
