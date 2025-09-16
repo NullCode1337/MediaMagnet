@@ -42,10 +42,12 @@
     max-width: 350px;
   }
   .notification {
-    background: #f0f0f5;
+    background: #252525;
     border-radius: 8px;
+    min-width: 130px;
     padding: 12px 16px;
-    font-family: 'Noto-Sans', Courier, monospace;
+    font-family: 'ubuntu-regular', Courier, monospace;
+    border-radius: 16px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     cursor: pointer;
     overflow: hidden;
@@ -53,7 +55,10 @@
   }
   .notification-content {
     display: flex;
+    color: white;
+    font-size: 16px;
     align-items: center;
+    padding: 3px 0 3px 0;
     gap: 10px;
   }
   .notification-progress {
@@ -68,5 +73,11 @@
   @keyframes progress {
     from { width: 100%; }
     to { width: 0%; }
+  }
+  .fa-check-circle {
+    color: #4DD682
+  }
+  .fa-triangle-exclamation {
+    color: #F7706E;
   }
 </style>

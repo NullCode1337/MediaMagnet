@@ -1,9 +1,14 @@
 @font-face {
-  font-family: "Poppins-bold"; 
-  src: url("/poppins-bold.ttf") format("truetype"); 
+  font-family: "poppins-bold";
+  src: url("/poppins-bold.ttf") format("truetype");
 }
 
 @font-face {
-  font-family: "Noto-Sans"; 
-  src: url("/notosans-semibold.ttf") format("truetype"); 
+  font-family: "noto-sans-semibold";
+  src: url("/notosans-semibold.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "ubuntu-regular";
+  src: url("/ubuntu-regular.ttf") format("truetype");
 }

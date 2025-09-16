@@ -173,7 +173,7 @@
   }
   
   #blankText {
-    font-family: 'Noto-Sans', Courier, monospace;
+    font-family: 'noto-sans-semibold', Courier, monospace;
     font-style: normal;
     color: white;
   }
@@ -228,7 +228,7 @@
     font-size: 12px;
     cursor: pointer;
     transition: all 0.2s ease;
-    font-family: 'Noto-Sans', sans-serif;
+    font-family: 'noto-sans-semibold', sans-serif;
   }
   
   .clear-all:hover {
@@ -243,7 +243,7 @@
     margin: 0;
     color: white;
     font-size: 16px;
-    font-family: "Noto-Sans", sans-serif;
+    font-family: "noto-sans-semibold", sans-serif;
   }
   
   .pending-panel.mobile .panel-header h3 {
@@ -278,7 +278,7 @@
   
   .pending-item {
     padding: 12px 16px;
-    font-family: 'Noto-Sans', Courier, monospace;
+    font-family: 'noto-sans-semibold', Courier, monospace;
     border-bottom: 1px solid #404045;
     display: flex;
     justify-content: space-between;
