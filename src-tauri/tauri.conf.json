@@ -21,7 +21,8 @@
         "title": "MediaMagnet",
         "width": 850,
         "height": 680,
-        "backgroundColor": "#2e2e32"
+        "backgroundColor": "#2e2e32",
+        "alwaysOnTop": true
       }
     ],
     "security": {

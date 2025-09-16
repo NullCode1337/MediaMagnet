@@ -1,5 +1,5 @@
 <script>
-  //#region Importts
+  //#region Imports
   import { onMount, tick } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
   import { listen } from '@tauri-apps/api/event';
@@ -223,80 +223,113 @@
   <title>MediaMagnet</title>
 </svelte:head>
 
-<div class="toolbar">
-  <Pending />
-  <Settings />
+<div class="sidebar-container">
+  <aside class="sidebar">
+    <div class="sidebar-content">
+      <Pending />
+      <Settings />
+    </div>
+  </aside>
+
+  <main class="container">
+    <div class="input-container">
+      <h1 class="header">What to download today?</h1>
+      <div class="input">
+        <input 
+          type="text" 
+          class="url-input" 
+          id="urlInput"
+          bind:value={url}
+          bind:this={urlInput}
+          on:keypress={handleKeyPress}
+          placeholder="Enter URL"
+        >
+        <button 
+          class="paste-btn" 
+          title={$isDownloading ? "Add link to queue (clipboard supported)" : "Paste from clipboard and download"}
+          aria-label="Pastes from clipboard and downloads the URL"
+          on:click={handleDownload}
+        >
+          {#if $isDownloading}
+            <i class="fa-solid fa-plus fa-lg"></i>
+          {:else if pasteIcon}
+            <i class="fa-regular fa-clipboard fa-lg"></i>
+          {:else}
+            <i class="fa-solid fa-download fa-lg"></i>
+          {/if}
+        </button>
+      </div>
+
+      <Progress />
+    </div>
+  </main>
 </div>
-
-<main class="container">
-  <h1 id="header">MediaMagnet</h1>
-  <div class="input">
-    <input 
-      type="text" 
-      class="url-input" 
-      id="urlInput"
-      bind:value={url}
-      bind:this={urlInput}
-      on:keypress={handleKeyPress}
-      placeholder="Enter URL"
-    >
-    <button 
-      class="paste-btn" 
-      title={$isDownloading ? "Add link to queue (clipboard supported)" : "Paste from clipboard and download"}
-      aria-label="Pastes from clipboard and downloads the URL"
-      on:click={handleDownload}
-    >
-      {#if $isDownloading}
-        <i class="fa-solid fa-plus fa-lg"></i>
-      {:else if pasteIcon}
-        <i class="fa-regular fa-clipboard fa-lg"></i>
-      {:else}
-        <i class="fa-solid fa-download fa-lg"></i>
-      {/if}
-    </button>
-  </div>
-
-  <Progress />
-</main>
 
 <Notification />
 
 <style>
   /*#region /*Stylesheet*/ 
-  .toolbar {
-    position: absolute;
-    padding-right: 5px;
-    right: 16px;
-    top: 16px;
+  :global(body) {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+  
+  .sidebar-container {
     display: flex;
-    align-items: flex-start;
-    z-index: 100;
-    gap: 15px;
+    height: 100vh;
+    overflow: hidden;
   }
-  
+
+  .sidebar {
+    width: 88px;
+    background: rgba(30, 30, 40, 0.95);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    padding: 16px 0;
+  }
+
+  .sidebar-content {
+    padding: 0 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
   .container {
-    user-select: none;
-    position: fixed;
-    top: 45%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(25, 25, 35, 0.98);
+    overflow: hidden;
   }
-  
-  #header {
+
+  .input-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 700px;
+    padding: 0 20px;
+  }
+
+  .header {
     color: white;
     font-family: "Noto-Sans", sans-serif;
     font-weight: 300;
-    font-size: 28px;
+    font-size: 20px;
     margin-bottom: 24px;
     text-align: center;
   }
-  
+
   .input {
     display: flex;
     gap: 12px;
     align-items: center;
   }
-  
+
   .url-input {
     flex: 1;
     border: none;
@@ -311,17 +344,17 @@
     transition: all 0.2s ease;
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
-  
+
   .url-input:focus {
     background: rgba(255, 255, 255, 0.12);
     box-shadow: 0 0 0 2px rgba(110, 142, 251, 0.6);
     border-color: rgba(110, 142, 251, 0.3);
   }
-  
+
   .url-input::placeholder {
     color: rgba(255, 255, 255, 0.6);
   }
-  
+
   .paste-btn {
     width: 56px;
     height: 56px;
@@ -335,7 +368,7 @@
     align-items: center;
     transition: background 0.2s ease;
   }
-  
+
   .paste-btn:hover {
     background: #5a7df9;
   }
