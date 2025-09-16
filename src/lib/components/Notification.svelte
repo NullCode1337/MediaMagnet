@@ -35,6 +35,7 @@
     position: fixed;
     bottom: 20px;
     right: 20px; 
+    pointer-events: none;
     z-index: 1000;
     display: flex;
     flex-direction: column-reverse;
