@@ -10,6 +10,7 @@
     import '@fortawesome/fontawesome-free/css/all.min.css';
 </script>
 
+<div class="progress">
 {#if $isDownloading}
     <div class="progress-container">
         <progress value={$downloadProgress} max="100" class="progress-bar"></progress>
@@ -37,9 +38,17 @@
         {/each}
     </div>
 {/if}
+</div>
 
 <style>
+  .progress {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
   .status-container {
+    width: 100%;
     margin-top: 10px;
     padding: 15px;
     background-color: rgba(255, 255, 255, 0.1);
@@ -68,7 +77,7 @@
   .progress-bar {
     flex: 1;
     height: 8px;
-    width: 50vw;
+    width: 100%;
     border-radius: 4px;
     overflow: hidden;
     background: rgba(255, 255, 255, 0.2);
