@@ -55,7 +55,7 @@
     try {
       new URL(downloadUrl);
     } catch (_) {
-      addNotification("Not a valid URL", "error");
+      addNotification("Invalid URL", "error");
       return;
     }
 
@@ -224,7 +224,7 @@
 </svelte:head>
 
 <div class="sidebar-container">
-  <aside class="sidebar">
+  <aside class="sidebar" data-tauri-drag-region>
     <div class="sidebar-content">
       <Pending />
       <Settings />
@@ -310,15 +310,16 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: 100%;
+    width: 80%;
     max-width: 700px;
     padding: 0 20px;
   }
 
   .header {
     color: white;
-    font-family: "Noto-Sans", sans-serif;
+    font-family: "noto-sans-semibold", sans-serif;
     font-weight: 300;
+    user-select: none;
     font-size: 20px;
     margin-bottom: 24px;
     text-align: center;
@@ -336,7 +337,7 @@
     padding: 16px 20px;
     width: 50vw;
     font-size: 16px;
-    font-family: 'Noto-Sans', sans-serif;
+    font-family: 'noto-sans-semibold', sans-serif;
     outline: none;
     background: rgba(255, 255, 255, 0.08);
     color: #FFF;
@@ -346,9 +347,13 @@
   }
 
   .url-input:focus {
-    background: rgba(255, 255, 255, 0.12);
-    box-shadow: 0 0 0 2px rgba(110, 142, 251, 0.6);
-    border-color: rgba(110, 142, 251, 0.3);
+    background: rgba(255, 255, 255, 0.087);
+    border: 1px solid rgba(110, 142, 251, 0.4);
+    outline: none;
+    box-shadow: 
+      0 4px 20px rgba(110, 142, 251, 0.15),
+      0 2px 6px rgba(110, 142, 251, 0.1);
+    transition: all 0.25s ease-in-out;
   }
 
   .url-input::placeholder {
