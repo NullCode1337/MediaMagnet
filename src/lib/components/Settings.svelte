@@ -14,7 +14,7 @@
   .toolbar-button {
     cursor: pointer;
     border-radius: 16px;
-    background: #6e8efb;
+    background: transparent;
     border: none;
     padding: 16px;
     transition: all 0.3s ease;

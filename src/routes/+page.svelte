@@ -283,7 +283,7 @@
   }
 
   .sidebar {
-    width: 88px;
+    width: 85px;
     background: rgba(30, 30, 40, 0.95);
     border-right: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
