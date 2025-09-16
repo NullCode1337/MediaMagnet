@@ -2,42 +2,47 @@
   import { pendingDownloads, addNotification } from "$lib/stores/store";
   import { onMount } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
-  import { ask } from '@tauri-apps/plugin-dialog';
-  import '@fortawesome/fontawesome-free/css/all.min.css';
+  import { ask } from "@tauri-apps/plugin-dialog";
+  import "@fortawesome/fontawesome-free/css/all.min.css";
 
   let showPendingPanel = false;
   // @ts-ignore
   let pendingContainer;
   let windowWidth = 0;
-  
+
   function togglePendingPanel() {
     showPendingPanel = !showPendingPanel;
   }
-  
+
   async function clearAllDownloads() {
-    const confirm = await ask('Are you sure? This action is irreversible!', {
-      title: 'Clear all downloads',
-      kind: 'warning',
+    const confirm = await ask("Are you sure? This action is irreversible!", {
+      title: "Clear all downloads",
+      kind: "warning",
     });
-    
+
     if (!confirm) return;
 
     $pendingDownloads = [];
     await invoke("overwrite_json", { links: $pendingDownloads });
-    addNotification("Cleared all pending downloads and removed from data file", "success")
+    addNotification(
+      "Cleared all pending downloads and removed from data file",
+      "success",
+    );
   }
-  
+
   // @ts-ignore
   function handleClickOutside(event) {
     // @ts-ignore
-    if (showPendingPanel && pendingContainer && !pendingContainer.contains(event.target)) {
+    if (showPendingPanel && pendingContainer &&
+      !pendingContainer.contains(event.target)
+    ) {
       showPendingPanel = false;
     }
   }
-  
+
   // @ts-ignore
   function handleKeyDown(event) {
-    if (event.key === 'Escape' && showPendingPanel) {
+    if (event.key === "Escape" && showPendingPanel) {
       showPendingPanel = false;
     }
   }
@@ -45,35 +50,22 @@
   function handleResize() {
     windowWidth = window.innerWidth;
   }
-  
-  // @ts-ignore
-  function fadeAnimation(node, { duration = 100 }) {
-    return {
-      duration,
-      // @ts-ignore
-      css: t => {
-        return `
-          opacity: ${t};
-        `;
-      }
-    };
-  }
-  
+
   onMount(() => {
     windowWidth = window.innerWidth;
-    window.addEventListener('resize', handleResize);
-    document.addEventListener('click', handleClickOutside);
-    document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener("resize", handleResize);
+    document.addEventListener("click", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
     return () => {
-      window.removeEventListener('resize', handleResize);
-      document.removeEventListener('click', handleClickOutside);
-      document.addEventListener('keydown', handleKeyDown); 
+      window.removeEventListener("resize", handleResize);
+      document.removeEventListener("click", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
     };
   });
 </script>
 
 <div class="pending-container" bind:this={pendingContainer}>
-  <button 
+  <button
     class="toolbar-button pending {showPendingPanel ? 'active' : ''}"
     aria-label="Click to view all pending downloads"
     title="Show pending downloads"
@@ -84,20 +76,17 @@
       <span class="pending-badge">{$pendingDownloads.length}</span>
     {/if}
   </button>
-  
+
   {#if showPendingPanel}
-    <div 
-      class="pending-panel" 
-      class:mobile={windowWidth <= 520}
-      in:fadeAnimation
-      out:fadeAnimation
-    >
+    <div class="pending-panel">
       <div class="panel-header">
-        <h3>Downloads {#if $pendingDownloads.length > 0}({$pendingDownloads.length}){/if}</h3>
+        <h3>
+          Downloads {#if $pendingDownloads.length > 0}({$pendingDownloads.length}){/if}
+        </h3>
         <div class="header-actions">
           {#if $pendingDownloads.length > 0}
-            <button 
-              class="clear-all" 
+            <button
+              class="clear-all"
               on:click={clearAllDownloads}
               aria-label="Clear all downloads"
               title="Clear all downloads"
@@ -105,9 +94,6 @@
               <i class="fas fa-trash-alt"></i>Clear All
             </button>
           {/if}
-          <button class="close-panel" on:click={togglePendingPanel} aria-label="Close panel">
-            <i class="fas fa-times"></i>
-          </button>
         </div>
       </div>
       <div class="panel-content">
@@ -125,7 +111,9 @@
           {/each}
         {:else}
           <div class="empty-state">
-            <p id="blankText"><i class="fas fa-check"></i> No pending downloads</p>
+            <p id="blankText">
+              <i class="fas fa-check"></i> No pending downloads
+            </p>
           </div>
         {/if}
       </div>
@@ -138,7 +126,7 @@
     position: relative;
     display: inline-block;
   }
-  
+
   .toolbar-button {
     cursor: pointer;
     border-radius: 16px;
@@ -146,9 +134,9 @@
     border: none;
     padding: 16px;
     position: relative;
-    z-index: 102; 
+    z-index: 102;
   }
-  
+
   .pending-badge {
     position: absolute;
     top: -5px;
@@ -165,54 +153,40 @@
     font-weight: bold;
     z-index: 103;
   }
-  
+
   #blankText {
-    font-family: 'noto-sans-semibold', Courier, monospace;
+    font-family: "noto-sans-semibold", Courier, monospace;
     font-style: normal;
     color: white;
   }
 
   .pending-panel {
-    position: absolute;
-    top: calc(0%);
-    right: 0;
-    width: 350px;
-    background: #2c2c30;
-    border-radius: 16px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-    overflow: hidden;
-    z-index: 101;
-    border: 1px solid #404045;
-  }
-  
-  .pending-panel.mobile {
     position: fixed;
     top: 0;
-    left: 0;
-    right: 0;
+    left: 85px;
     bottom: 0;
-    width: 100%;
-    height: 100%;
-    border-radius: 0;
-    z-index: 1000;
-    border: none;
+    right: 0;
+    background: rgb(25, 25, 35);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    z-index: 10;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
   }
-  
+
   .panel-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 16px;
-    background: #404045;
-    border-bottom: 1px solid #555;
+    background: rgb(25, 25, 35);
   }
-  
+
   .header-actions {
     display: flex;
     align-items: center;
     gap: 10px;
   }
-  
+
   .clear-all {
     background: rgba(255, 71, 87, 0.2);
     color: #ff4757;
@@ -222,57 +196,30 @@
     font-size: 12px;
     cursor: pointer;
     transition: all 0.2s ease;
-    font-family: 'noto-sans-semibold', sans-serif;
+    font-family: "noto-sans-semibold", sans-serif;
   }
-  
+
   .clear-all:hover {
     background: rgba(255, 71, 87, 0.3);
   }
-  
-  .pending-panel.mobile .panel-header {
-    padding: 20px 16px;
-  }
-  
+
   .panel-header h3 {
     margin: 0;
     color: white;
     font-size: 16px;
     font-family: "noto-sans-semibold", sans-serif;
   }
-  
-  .pending-panel.mobile .panel-header h3 {
-    font-size: 18px;
-  }
-  
-  .close-panel {
-    background: none;
-    border: none;
-    color: white;
-    cursor: pointer;
-    font-size: 16px;
-    padding: 4px 8px;
-  }
-  
-  .pending-panel.mobile .close-panel {
-    font-size: 20px;
-    padding: 8px 12px;
-  }
-  
+
+
   .panel-content {
-    max-height: 300px;
+    max-height: 100%;
     overflow-y: auto;
-    overflow-x: hidden
-  }
-  
-  .pending-panel.mobile .panel-content {
-    max-height: none;
-    height: calc(100% - 60px);
     overflow-x: hidden;
   }
-  
+
   .pending-item {
     padding: 12px 16px;
-    font-family: 'noto-sans-semibold', Courier, monospace;
+    font-family: "noto-sans-semibold", Courier, monospace;
     border-bottom: 1px solid #404045;
     display: flex;
     justify-content: space-between;
@@ -280,24 +227,30 @@
     animation: fadeIn 0.3s forwards;
     opacity: 0;
   }
-  
+
   @keyframes fadeIn {
-    from { opacity: 0; transform: translateX(10px); }
-    to { opacity: 1; transform: translateX(0); }
+    from {
+      opacity: 0;
+      transform: translateX(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
   }
-  
+
   .download-info {
     display: flex;
     align-items: center;
     flex: 1;
     min-width: 0;
   }
-  
+
   .download-icon {
     margin-right: 10px;
     color: #6e8efb;
   }
-  
+
   .download-url {
     color: #ddd;
     font-size: 14px;
@@ -306,7 +259,7 @@
     text-overflow: ellipsis;
     max-width: 230px;
   }
-  
+
   .download-status {
     font-size: 12px;
     color: #ffa502;
@@ -316,18 +269,9 @@
     margin-left: 10px;
     flex-shrink: 0;
   }
-  
-  .pending-panel.mobile .pending-item {
-    padding: 16px;
-  }
-  
+
   .pending-item:last-child {
     border-bottom: none;
-  }
-
-  .pending-panel.mobile .download-url {
-    font-size: 16px;
-    max-width: calc(100vw - 120px);
   }
 
   .empty-state {
@@ -340,40 +284,33 @@
     flex-direction: row;
     align-items: center;
   }
-  
-  .pending-panel.mobile .empty-state {
-    padding: 60px 16px;
-    font-size: 18px;
-  }
-  
-  @media (max-width: 520px) {
-    .toolbar-button.pending.active {
-      border-radius: 16px;
+
+  @media (max-width: 600px) {
+    .pending-panel {
+      left: 0;
     }
-    
-    .clear-all {
-      padding: 8px 12px;
-      font-size: 14px;
+    .download-url {
+      max-width: calc(100vw - 160px);
     }
   }
-  
+
   .panel-content::-webkit-scrollbar {
     width: 6px;
   }
-  
+
   .panel-content::-webkit-scrollbar-track {
     background: #1e1e22;
   }
-  
+
   .panel-content::-webkit-scrollbar-thumb {
     background: #6e8efb;
     border-radius: 3px;
   }
-  
+
   .panel-content::-webkit-scrollbar-thumb:hover {
     background: #5d7ce0;
   }
-  
+
   .panel-content::-webkit-scrollbar:horizontal {
     display: none;
     height: 0;
