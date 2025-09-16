@@ -234,33 +234,34 @@
   <main class="container">
     <div class="input-container">
       <h1 class="header">What to download today?</h1>
-      <div class="input">
-        <input 
-          type="text" 
-          class="url-input" 
-          id="urlInput"
-          bind:value={url}
-          bind:this={urlInput}
-          on:keypress={handleKeyPress}
-          placeholder="Enter URL"
-        >
-        <button 
-          class="paste-btn" 
-          title={$isDownloading ? "Add link to queue (clipboard supported)" : "Paste from clipboard and download"}
-          aria-label="Pastes from clipboard and downloads the URL"
-          on:click={handleDownload}
-        >
-          {#if $isDownloading}
-            <i class="fa-solid fa-plus fa-lg"></i>
-          {:else if pasteIcon}
-            <i class="fa-regular fa-clipboard fa-lg"></i>
-          {:else}
-            <i class="fa-solid fa-download fa-lg"></i>
-          {/if}
-        </button>
+      <div class="box">
+        <div class="input">
+          <input 
+            type="text" 
+            class="url-input" 
+            id="urlInput"
+            bind:value={url}
+            bind:this={urlInput}
+            on:keypress={handleKeyPress}
+            placeholder="Enter URL"
+          >
+          <button 
+            class="paste-btn" 
+            title={$isDownloading ? "Add link to queue (clipboard supported)" : "Paste from clipboard and download"}
+            aria-label="Pastes from clipboard and downloads the URL"
+            on:click={handleDownload}
+          >
+            {#if $isDownloading}
+              <i class="fa-solid fa-plus fa-lg"></i>
+            {:else if pasteIcon}
+              <i class="fa-regular fa-clipboard fa-lg"></i>
+            {:else}
+              <i class="fa-solid fa-download fa-lg"></i>
+            {/if}
+          </button>
+        </div>
+        <Progress />
       </div>
-
-      <Progress />
     </div>
   </main>
 </div>
@@ -297,6 +298,14 @@
     gap: 12px;
   }
 
+  .box {
+    width: 60vw;
+    max-width: 700px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
   .container {
     flex: 1;
     display: flex;
@@ -310,7 +319,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: 80%;
+    width: 100%;
     max-width: 700px;
     padding: 0 20px;
   }
@@ -329,13 +338,15 @@
     display: flex;
     gap: 12px;
     align-items: center;
+    width: 100%;
   }
 
   .url-input {
     flex: 1;
     border: none;
     padding: 16px 20px;
-    width: 50vw;
+    width: 100%;
+    max-width: 100%;
     font-size: 16px;
     font-family: 'noto-sans-semibold', sans-serif;
     outline: none;
