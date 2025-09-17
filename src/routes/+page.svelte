@@ -243,6 +243,7 @@
             bind:value={url}
             bind:this={urlInput}
             on:keypress={handleKeyPress}
+            autocomplete="off"
             placeholder="Enter URL"
           >
           <button 
