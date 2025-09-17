@@ -86,9 +86,9 @@
             id="alwaysOnTop" 
             type="checkbox" 
             bind:checked={$settings.alwaysOnTop}
-            on:change={() => updateSetting('darkMode', $settings.alwaysOnTop)}
+            on:change={() => updateSetting('alwaysOnTop', $settings.alwaysOnTop)}
           />
-          <label for="darkMode">Always on Top</label>
+          <label for="alwaysOnTop">Always on Top</label>
         </div>
       </div>
       
