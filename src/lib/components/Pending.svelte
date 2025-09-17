@@ -100,6 +100,11 @@
     padding: 16px;
     position: relative;
     z-index: 102;
+    transition: background-color 0.2s ease;
+  }
+
+  .toolbar-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
   }
 
   .pending-badge {
@@ -142,8 +147,9 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px;
+    padding: 20px;
     background: rgb(25, 25, 35);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   .header-actions {
@@ -174,7 +180,6 @@
     font-size: 16px;
     font-family: "noto-sans-semibold", sans-serif;
   }
-
 
   .panel-content {
     max-height: 100%;
