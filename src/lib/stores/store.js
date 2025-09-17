@@ -2,6 +2,12 @@
 import { writable } from "svelte/store";
 
 export let darkMode = writable(true);
+export let settings = writable({
+    downloadPath: "",
+    darkMode: true,
+    alwaysOnTop: true,
+    notifications: true
+});
 
 export let notifications = writable([]);
 export let statusMessages = writable([]);
