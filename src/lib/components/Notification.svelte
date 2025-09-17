@@ -50,7 +50,7 @@
     font-family: 'ubuntu-regular', Courier, monospace;
     border-radius: 16px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    cursor: pointer;
+    user-select: none;
     overflow: hidden;
     position: relative;
   }
