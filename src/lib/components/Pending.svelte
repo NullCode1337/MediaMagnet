@@ -159,7 +159,6 @@
   }
 
   .clear-all {
-    background: rgba(255, 71, 87, 0.2);
     color: #ff4757;
     border: 1px solid #ff4757;
     border-radius: 4px;
