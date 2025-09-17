@@ -1,14 +1,17 @@
 <script>
-  import { settings, addNotification } from "$lib/stores/store";
+  import { 
+    settings, addNotification,
+    activePanel, openPanel, closePanel 
+  } from "$lib/stores/store";
   import { ask } from "@tauri-apps/plugin-dialog";
   import "@fortawesome/fontawesome-free/css/all.min.css";
 
-  let showSettingsPanel = false;
-  // @ts-ignore
-  let settingsContainer;
-
   function toggleSettingsPanel() {
-    showSettingsPanel = !showSettingsPanel;
+    if ($activePanel === 'settings') {
+      closePanel();
+    } else {
+      openPanel('settings');
+    }
   }
 
   // @ts-ignore
@@ -35,9 +38,9 @@
   }
 </script>
 
-<div class="settings-container" bind:this={settingsContainer}>
+<div class="settings-container">
   <button
-    class="toolbar-button settings {showSettingsPanel ? 'active' : ''}"
+    class="toolbar-button settings {$activePanel === 'settings' ? 'active' : ''}"
     aria-label="Click to view settings"
     title="Show settings"
     on:click={toggleSettingsPanel}
@@ -45,86 +48,85 @@
     <i class="fa-solid fa-gear fa-lg" style="color: white;"></i>
   </button>
 
-  {#if showSettingsPanel}
-    <div class="settings-panel">
-      <div class="panel-header">
+  {#if $activePanel === 'settings'}
+  <div class="settings-panel">
+    <div class="panel-header">
+      <h3>Settings</h3>
 
-        <h3>Settings</h3>
-
-        <div class="header-actions">
-          <button
-            class="reset-settings"
-            on:click={resetSettings}
-            aria-label="Reset all settings to default"
-            title="Reset settings"
-          >
-            <i class="fas fa-undo"></i>
-            Reset Defaults
-          </button>
-        </div>
-
+      <div class="header-actions">
+        <button
+          class="reset-settings"
+          on:click={resetSettings}
+          aria-label="Reset all settings to default"
+          title="Reset settings"
+        >
+          <i class="fas fa-undo"></i>
+          Reset Defaults
+        </button>
       </div>
 
-      <div class="panel-content">
-        <div class="settings-group">
-          <h4>Appearance</h4>
-          
-          <div class="setting-item checkbox">
-            <input 
-              id="darkMode" 
-              type="checkbox" 
-              bind:checked={$settings.darkMode}
-              on:change={() => updateSetting('darkMode', $settings.darkMode)}
-            />
-            <label for="darkMode">Dark Mode</label>
-          </div>
+    </div>
 
-          <div class="setting-item checkbox">
-            <input 
-              id="alwaysOnTop" 
-              type="checkbox" 
-              bind:checked={$settings.alwaysOnTop}
-              on:change={() => updateSetting('darkMode', $settings.alwaysOnTop)}
-            />
-            <label for="darkMode">Always on Top</label>
-          </div>
-        </div>
+    <div class="panel-content">
+      <div class="settings-group">
+        <h4>Appearance</h4>
         
-        <div class="settings-group">
-          <h4>Notifications</h4>
-          
-          <div class="setting-item checkbox">
-            <input 
-              id="notifications" 
-              type="checkbox" 
-              bind:checked={$settings.notifications}
-              on:change={() => updateSetting('notifications', $settings.notifications)}
-            />
-            <label for="notifications">Enable system notifications</label>
-          </div>
+        <div class="setting-item checkbox">
+          <input 
+            id="darkMode" 
+            type="checkbox" 
+            bind:checked={$settings.darkMode}
+            on:change={() => updateSetting('darkMode', $settings.darkMode)}
+          />
+          <label for="darkMode">Dark Mode</label>
         </div>
 
-        
-        <div class="settings-group">
-          <h4>Download Settings</h4>
-          
-          <div class="setting-item">
-            <label for="downloadPath">Where to save downloads?</label>
-            <div class="input-group">
-              <input 
-                id="downloadPath" 
-                type="text" 
-                bind:value={$settings.downloadPath}
-                on:change={() => updateSetting('downloadPath', $settings.downloadPath)}
-              />
-              <!-- svelte-ignore a11y_consider_explicit_label -->
-              <button class="browse-button" title="Browse">
-                <i class="fas fa-folder-open"></i>
-              </button>
-            </div>
-          </div>
-        </div> 
+        <div class="setting-item checkbox">
+          <input 
+            id="alwaysOnTop" 
+            type="checkbox" 
+            bind:checked={$settings.alwaysOnTop}
+            on:change={() => updateSetting('darkMode', $settings.alwaysOnTop)}
+          />
+          <label for="darkMode">Always on Top</label>
+        </div>
       </div>
+      
+      <div class="settings-group">
+        <h4>Notifications</h4>
+        
+        <div class="setting-item checkbox">
+          <input 
+            id="notifications" 
+            type="checkbox" 
+            bind:checked={$settings.notifications}
+            on:change={() => updateSetting('notifications', $settings.notifications)}
+          />
+          <label for="notifications">Enable system notifications</label>
+        </div>
+      </div>
+
+      
+      <div class="settings-group">
+        <h4>Download Settings</h4>
+        
+        <div class="setting-item">
+          <label for="downloadPath">Where to save downloads?</label>
+          <div class="input-group">
+            <input 
+              id="downloadPath" 
+              type="text" 
+              bind:value={$settings.downloadPath}
+              on:change={() => updateSetting('downloadPath', $settings.downloadPath)}
+            />
+            <!-- svelte-ignore a11y_consider_explicit_label -->
+            <button class="browse-button" title="Browse">
+              <i class="fas fa-folder-open"></i>
+            </button>
+          </div>
+        </div>
+      </div> 
+    </div>
   </div>
   {/if}
 </div>
