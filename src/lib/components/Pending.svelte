@@ -1,15 +1,21 @@
 <script>
-  import { pendingDownloads, addNotification } from "$lib/stores/store";
+  import { 
+    pendingDownloads, addNotification,
+    activePanel, openPanel, closePanel
+  } from "$lib/stores/store";
   import { invoke } from "@tauri-apps/api/core";
   import { ask } from "@tauri-apps/plugin-dialog";
   import "@fortawesome/fontawesome-free/css/all.min.css";
 
-  let showPendingPanel = false;
   // @ts-ignore
   let pendingContainer;
 
   function togglePendingPanel() {
-    showPendingPanel = !showPendingPanel;
+    if ($activePanel === 'pending') {
+      closePanel();
+    } else {
+      openPanel('pending');
+    }
   }
 
   async function clearAllDownloads() {
@@ -26,12 +32,14 @@
       "Cleared all pending downloads and removed from data file",
       "success",
     );
+
+    closePanel();
   }
 </script>
 
 <div class="pending-container" bind:this={pendingContainer}>
   <button
-    class="toolbar-button pending {showPendingPanel ? 'active' : ''}"
+    class="toolbar-button pending {$activePanel === 'pending' ? 'active' : ''}"
     aria-label="Click to view all pending downloads"
     title="Show pending downloads"
     on:click={togglePendingPanel}
@@ -42,7 +50,7 @@
     {/if}
   </button>
 
-  {#if showPendingPanel}
+  {#if $activePanel === 'pending'}
     <div class="pending-panel">
       <div class="panel-header">
         <h3>
