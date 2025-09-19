@@ -12,4 +12,4 @@ Majority of the backend code is done, I need suggestions on how I can make the U
 - 64 bit system
 
 ## Screenshots
-<img width="1022" height="859" alt="Screenshot From 2025-09-10 21-15-42" src="https://github.com/user-attachments/assets/104e36e3-66d2-478b-a27a-8b25cbc3065e" />
+<img width="752" height="582" alt="image" src="https://github.com/user-attachments/assets/58f8d898-ae07-4269-b2f0-0ce8f5211c53" />
