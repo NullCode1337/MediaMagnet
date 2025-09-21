@@ -23,6 +23,7 @@
   import Notification from '$lib/components/Notification.svelte';
   import Progress from '$lib/components/Progress.svelte';
   import Settings from '$lib/components/Settings.svelte';
+  import OpenFolder from '$lib/components/OpenFolder.svelte';
 
   import '@fortawesome/fontawesome-free/css/all.min.css';
   //#endregion
@@ -223,11 +224,14 @@
   <title>MediaMagnet</title>
 </svelte:head>
 
+<!-- #region <-- HTML -->
 <div class="sidebar-container">
   <aside class="sidebar" data-tauri-drag-region>
     <div class="sidebar-content">
       <Pending />
       <Settings />
+      <div class="spacer"></div>
+      <OpenFolder />
     </div>
   </aside>
 
@@ -268,6 +272,7 @@
 </div>
 
 <Notification />
+<!-- #endregion -->
 
 <style>
   /*#region /*Stylesheet*/ 
@@ -292,9 +297,15 @@
     padding: 16px 0;
   }
 
+  .spacer {
+    flex-grow: 1;
+  }
+
   .sidebar-content {
     padding: 0 16px;
     display: flex;
+    justify-content: flex-start; 
+    height: 100%; 
     flex-direction: column;
     gap: 12px;
   }
