@@ -168,6 +168,7 @@
 
   .clear-all {
     color: #ff4757;
+    background-color: #191923;
     border: 1px solid #ff4757;
     border-radius: 4px;
     padding: 6px 10px;
