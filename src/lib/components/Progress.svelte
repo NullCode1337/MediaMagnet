@@ -1,43 +1,46 @@
 <script>
-    import {
-        isDownloading, 
-        downloadProgress, 
-        expandStatus, 
-        statusMessages
-    } from "$lib/stores/store";
+  import {
+    isDownloading,
+    downloadProgress,
+    expandStatus,
+    statusMessages,
+  } from "$lib/stores/store";
 
-    import { fade, slide } from "svelte/transition";
-    import '@fortawesome/fontawesome-free/css/all.min.css';
+  import { fade, slide } from "svelte/transition";
+  import "@fortawesome/fontawesome-free/css/all.min.css";
 </script>
 
 <div class="progress">
-{#if $isDownloading}
+  {#if $isDownloading}
     <div class="progress-container">
-        <progress value={$downloadProgress} max="100" class="progress-bar"></progress>
-        <span class="progress-text">{$downloadProgress}%</span>
-        <button 
-        class="expand-btn {$expandStatus ? 'expanded' : ''}" 
-        on:click={() => $expandStatus = !$expandStatus}
+      <progress value={$downloadProgress} max="100" class="progress-bar"
+      ></progress>
+      <span class="progress-text">{$downloadProgress}%</span>
+      <button
+        class="expand-btn {$expandStatus ? 'expanded' : ''}"
+        on:click={() => ($expandStatus = !$expandStatus)}
         title="Show download progress"
         aria-label="Button to expand status bar"
-        >
-            <i class="fas fa-chevron-down"></i>
-        </button>
+      >
+        <i class="fas fa-chevron-down"></i>
+      </button>
     </div>
-{/if}
+  {/if}
 
-{#if $expandStatus}
+  {#if $expandStatus}
     <div class="status-container" transition:slide|local={{ duration: 500 }}>
-        {#each $statusMessages as message, index (index)}
-        <p 
-            class="status-message {index === $statusMessages.length - 1 ? 'latest' : ''}"
-            in:fade={{ delay: index * 100, duration: 300 }}
+      {#each $statusMessages as message, index (index)}
+        <p
+          class="status-message {index === $statusMessages.length - 1
+            ? 'latest'
+            : ''}"
+          in:fade={{ delay: index * 100, duration: 300 }}
         >
-            {message}
+          {message}
         </p>
-        {/each}
+      {/each}
     </div>
-{/if}
+  {/if}
 </div>
 
 <style>

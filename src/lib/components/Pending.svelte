@@ -137,6 +137,10 @@
     background-color: rgba(255, 255, 255, 0.1);
   }
 
+  i {
+    pointer-events: none;
+  }
+  
   .pending-badge {
     position: absolute;
     top: -5px;
