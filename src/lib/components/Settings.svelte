@@ -182,6 +182,7 @@
 
   .reset-settings {
     color: #ffa502;
+    background-color: #191923;
     border: 1px solid #ffa502;
     border-radius: 4px;
     padding: 6px 10px;
