@@ -29,21 +29,16 @@
   //#endregion
 
   let url = "";
-  let pasteIcon = true;
-  let dlActive = false;
-  let isStartup = true;
-  let pendingChecked = false;
-  let closeHandlerSet = false;
-
   /** @type {HTMLInputElement} */ let urlInput;
-
+  let closeHandlerSet = false;
+  let pasteIcon = true;
   $: pasteIcon = url.trim() === "";
-  
+
   //#region Download Functions
-  async function handleDownload() { 
+  async function download() {
     let downloadUrl = url.trim();
 
-    if (downloadUrl == "") {
+    if (downloadUrl === "") {
       try {
         const clip = await readText();
         downloadUrl = clip.trim();
@@ -61,62 +56,32 @@
     }
 
     if ($isDownloading) {
+      if ($pendingDownloads.includes(downloadUrl) || $currentlyDownloading === downloadUrl) {
+        addNotification("URL already in the queue", "error");
+        return;
+      }
       $pendingDownloads = [...$pendingDownloads, downloadUrl];
       addNotification("Link added to queue", "success");
+      await invoke("overwrite_json", { links: $pendingDownloads });
     } else {
-      invoke('gallery_dl', { url: downloadUrl }); 
+      $isDownloading = true;
       $currentlyDownloading = downloadUrl;
+      invoke('gallery_dl', { url: downloadUrl }); 
     }
-    
+
     downloadUrl = "";
     url = "";
   }
 
-  async function downloadPending() {
-    if (dlActive || $pendingDownloads.length === 0) return;
-    
-    dlActive = true;
-    let currentDownloadActive = false;
-    
-    const unsubscribe = await listen('download-finished', () => {
-      currentDownloadActive = false;
-    });
-    
-    try {
-      while ($pendingDownloads.length > 0) {
-        const url = $pendingDownloads[0];
-        let tailUrl = url.substring(url.lastIndexOf('/') + 1);
-        $currentlyDownloading = url;
-        currentDownloadActive = true;
-        
-        try {
-          await invoke('gallery_dl', { url });
-          let attempts = 0;
-          
-          while (currentDownloadActive && attempts < 300) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            attempts++;
-          }
-          
-          if (currentDownloadActive) {
-            addNotification(`Download timeout: ${tailUrl}. Removing from list...`, "error");
-          }
-          
-          addNotification(`Download completed: ${tailUrl}`, "success");
-        } catch (error) {
-          addNotification(`Download failed: ${tailUrl}`, "error");
-          currentDownloadActive = false;
-        } finally {
-          $pendingDownloads = $pendingDownloads.filter(item => item !== url);
-          await invoke("overwrite_json", { links: $pendingDownloads });
-          currentDownloadActive = false;
-        }
-      }
-    } catch (error) {
-      addNotification(`Error while processing pending downloads!`, "error");
-    } finally {
-      dlActive = false;
-      unsubscribe();
+  async function downloadNextPending() {
+    if ($pendingDownloads.length > 0) {
+      const nextUrl = $pendingDownloads[0];
+      $pendingDownloads = $pendingDownloads.slice(1);
+      await invoke("overwrite_json", { links: $pendingDownloads });
+
+      $currentlyDownloading = nextUrl;
+      invoke('gallery_dl', { url: nextUrl });
+      $isDownloading = true;
     }
   }
   //#endregion
@@ -124,20 +89,27 @@
   // @ts-ignore
   function handleKeyPress(event) {
     if (event.key !== 'Enter') return;
-    handleDownload();
+    download();
+  }
+
+  function resetDownloadState() {
+    $currentlyDownloading = "";
+    $expandStatus = false;
+    $statusMessages = [];
+    $downloadProgress = 0;
   }
 
   //#region On Mount
   onMount(async () => {
     invoke("check_links");
-    
+
     await tick();
     if (urlInput) urlInput.focus();
-    
+
     if (!closeHandlerSet) {
       getCurrentWindow().onCloseRequested(async (event) => {
         if ($isDownloading) {
-          const confirm = await ask('A download is currently in progress. Do you want to quit?', {
+          const confirm = await ask('A download is in progress. Do you want to quit?', {
             title: 'Tauri',
             kind: 'warning',
           });
@@ -151,13 +123,14 @@
             $pendingDownloads = [$currentlyDownloading, ...$pendingDownloads];
           }
         }
-    
+
         await invoke("overwrite_json", { links: $pendingDownloads });
         await exit($isDownloading ? 1 : 0);
       });
       closeHandlerSet = true;
     }
   });
+  //#endregion
 
   //#region Event Listeners
   listen('download-started', () => {
@@ -174,43 +147,42 @@
   });
 
   listen('download-error', (event) => {
-    addNotification(event.payload, "error");
+    const urlTail = $currentlyDownloading.substring($currentlyDownloading.lastIndexOf('/') + 1);
+    addNotification(`Download failed: ${urlTail}`, "error");
+    resetDownloadState();
+
+    if ($pendingDownloads.length > 0) {
+      downloadNextPending();
+    } else {
+      $isDownloading = false;
+    }
   });
 
   listen('download-finished', () => {
-    if ($pendingDownloads.length == 0) addNotification("All tasks completed", "success");
+    const urlTail = $currentlyDownloading.substring($currentlyDownloading.lastIndexOf('/') + 1);
+    addNotification(`Download completed: ${urlTail}`, "success");
+    resetDownloadState();
 
-    $isDownloading = false;
-    $expandStatus = false;
-    $statusMessages = [];
-    $downloadProgress = 0;
-    $currentlyDownloading = "";
-    
-    if ($pendingDownloads.length > 0 && !dlActive) downloadPending();
+    console.log($pendingDownloads);
+    if ($pendingDownloads.length > 0) {
+      downloadNextPending();
+    } else {
+      $isDownloading = false;
+    }
   });
 
-  listen('link-event', (event) => {      
+  listen('link-event', async (event) => {      
     if (event.payload.message !== 'Nothing') {
       $pendingDownloads = event.payload.links;
       
-      if (isStartup) {
-        isStartup = false;
-        setTimeout(async () => {
-          if ($pendingDownloads.length === 0 || pendingChecked) return;
-          pendingChecked = true;
-          
-          const confirm = await ask(
-            `You have ${$pendingDownloads.length} pending download(s) from last session. Download now?`,
-            { title: 'Pending Downloads', kind: 'info' }
-          );
-          
-          if (confirm) {
-            downloadPending();
-          }
-        }, 100);
+      const confirm = await ask(
+        `You have ${$pendingDownloads.length} pending download(s) from last session. Download now?`,
+        { title: 'Pending Downloads', kind: 'info' }
+      );
+      
+      if (confirm) {
+        downloadNextPending();
       }
-    } else {
-      isStartup = false;
     }
   });
 
@@ -254,7 +226,7 @@
             class="paste-btn" 
             title={$isDownloading ? "Add link to queue (clipboard supported)" : "Paste from clipboard and download"}
             aria-label="Pastes from clipboard and downloads the URL"
-            on:click={handleDownload}
+            on:click={download}
           >
             {#if $isDownloading}
               <i class="fa-solid fa-plus fa-lg"></i>
