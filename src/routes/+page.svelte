@@ -401,6 +401,10 @@
     background: #5a7df9;
   }
 
+  i {
+    pointer-events: none;
+  }
+
   @media (max-width: 600px) {
     .sidebar-container {
       flex-direction: column;
