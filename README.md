@@ -1,12 +1,12 @@
-# gallery-dl GUI
-A user-friendly, cross-platform desktop application for downloading image links.
+# MediaMagnet
+A user-friendly, cross-platform desktop application for downloading any and all forms of media (image, video, torrent)
 Built with Svelte and Tauri
 
 ## Roadmap
-Majority of the backend code is done, I need suggestions on how I can make the UI look better (if at all)
-- TODO: Queue all the downloads and make it persistent ✅
-- TODO: Settings panel where I can set Cookies, User Agent, and a dedicated page for oauth which Pixiv uses
-- TODO: Separate page for managing all the Cookies for different sites
+I need suggestions on how I can make the UI look better (if at all)
+- TODO: Settings panel where I can set User Agent and other options ➖
+- TODO: Separate page for managing all the Cookies for different sites, and oauth ❌
+- TODO: Integrate yt-dlp and aria2 into the code as well ❌
 
 ## Requirements
 - 64 bit system
