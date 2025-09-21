@@ -230,6 +230,7 @@
     align-items: center;
     animation: fadeIn 0.3s forwards;
     opacity: 0;
+    overflow: hidden;
   }
 
   @keyframes fadeIn {
@@ -248,6 +249,7 @@
     align-items: center;
     flex: 1;
     min-width: 0;
+    overflow: hidden;
   }
 
   .download-icon {
@@ -259,9 +261,10 @@
     color: #ddd;
     font-size: 14px;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 230px;
+    overflow: visible;
+    text-overflow: clip;
+    max-width: none;
+    min-width: 0;
   }
 
   .last {
