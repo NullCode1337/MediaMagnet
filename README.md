@@ -1,5 +1,7 @@
 # MediaMagnet
 A user-friendly, cross-platform desktop application for downloading any and all forms of media (image, video, torrent)
+
+
 Built with Svelte and Tauri
 
 ## Roadmap
