@@ -1,7 +1,10 @@
 <script>
-  import { 
-    pendingDownloads, addNotification,
-    activePanel, openPanel, closePanel
+  import {
+    pendingDownloads,
+    addNotification,
+    activePanel,
+    openPanel,
+    closePanel,
   } from "$lib/stores/store";
   import { invoke } from "@tauri-apps/api/core";
   import { ask } from "@tauri-apps/plugin-dialog";
@@ -11,10 +14,10 @@
   let pendingContainer;
 
   function togglePendingPanel() {
-    if ($activePanel === 'pending') {
+    if ($activePanel === "pending") {
       closePanel();
     } else {
-      openPanel('pending');
+      openPanel("pending");
     }
   }
 
@@ -35,6 +38,15 @@
 
     closePanel();
   }
+
+  // @ts-ignore
+  async function removeDownload(index) {
+    const updatedDownloads = [...$pendingDownloads];
+    updatedDownloads.splice(index, 1);
+    $pendingDownloads = updatedDownloads;
+    await invoke("overwrite_json", { links: $pendingDownloads });
+    addNotification("Download removed from queue", "success");
+  }
 </script>
 
 <div class="pending-container" bind:this={pendingContainer}>
@@ -50,7 +62,7 @@
     {/if}
   </button>
 
-  {#if $activePanel === 'pending'}
+  {#if $activePanel === "pending"}
     <div class="pending-panel">
       <div class="panel-header">
         <h3>
@@ -79,7 +91,17 @@
                 </div>
                 <div class="download-url">{download}</div>
               </div>
-              <div class="download-status">Pending</div>
+              <div class="last">
+                <div class="download-status">Pending</div>
+                <button
+                  class="cancel"
+                  on:click={() => removeDownload(index)}
+                  aria-label="Press to cancel the download (this action cannot be reverted)"
+                  title="Cancel download"
+                >
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
             </div>
           {/each}
         {:else}
@@ -238,6 +260,12 @@
     max-width: 230px;
   }
 
+  .last {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
   .download-status {
     font-size: 12px;
     color: #ffa502;
@@ -246,6 +274,21 @@
     border-radius: 4px;
     margin-left: 10px;
     flex-shrink: 0;
+  }
+
+  .cancel {
+    background: transparent;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+  }
+
+  .cancel:hover {
+    color: #ff4757;
+    background: rgba(255, 71, 87, 0.1);
   }
 
   .pending-item:last-child {
