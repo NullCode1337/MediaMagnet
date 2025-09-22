@@ -37,5 +37,6 @@
 
   i {
     pointer-events: none;
+    color: var(--text-color);
   }
 </style>

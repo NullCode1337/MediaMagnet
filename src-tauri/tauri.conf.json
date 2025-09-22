@@ -22,7 +22,7 @@
         "width": 750,
         "height": 550,
         "backgroundColor": "#2e2e32",
-        "resizable": false
+        "alwaysOnTop": true
       }
     ],
     "security": {
