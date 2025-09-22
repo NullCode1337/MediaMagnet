@@ -30,6 +30,9 @@ pub fn reset_settings(app: tauri::AppHandle) {
         always_on_top: true,
         notifications: false,
     };
+
+    app.get_webview_window("main").unwrap().set_always_on_top(default_settings.always_on_top).unwrap();
+
     std::fs::write(&config_path, serde_json::to_string_pretty(&default_settings).unwrap())
         .map_err(|e| format!("Failed to write default settings to file: {}", e))
         .unwrap();
