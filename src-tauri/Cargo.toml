@@ -29,4 +29,5 @@ tauri-plugin-shell = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-process = "2"
 winapi = { version = "0.3.9", features = ["winbase"] }
+fix-path-env = { git = "https://github.com/tauri-apps/fix-path-env-rs" }
 

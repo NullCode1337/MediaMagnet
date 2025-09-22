@@ -35,7 +35,7 @@
     if (!confirm) return;
 
     $settings = {
-      download_path: "None",
+      download_path: "Default",
       dark_mode: true,
       always_on_top: true,
       notifications: true
