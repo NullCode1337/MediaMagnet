@@ -215,11 +215,11 @@
 
 <!-- #region <-- HTML -->
 <div class="sidebar-container">
-  <aside class="sidebar" data-tauri-drag-region>
+  <aside class="sidebar">
     <div class="sidebar-content">
       <Pending />
       <Settings />
-      <div class="spacer"></div>
+      <div class="spacer" data-tauri-drag-region></div>
       <OpenFolder />
     </div>
   </aside>
@@ -307,7 +307,10 @@
     padding: 16px 0;
   }
 
-  .spacer { flex-grow: 1; }
+  .spacer { 
+    flex-grow: 1; 
+    user-select: none;
+  }
   i { pointer-events: none; }
 
   .sidebar-content {
