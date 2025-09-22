@@ -1,3 +1,3 @@
 pub mod download;
 pub mod init;
-pub mod files;
+pub mod settings;

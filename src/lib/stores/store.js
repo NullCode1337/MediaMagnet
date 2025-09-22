@@ -2,11 +2,10 @@
 import { writable } from "svelte/store";
 
 // Settings
-export let darkMode = writable(true);
 export let settings = writable({
-    downloadPath: "",
-    darkMode: true,
-    alwaysOnTop: true,
+    download_path: "",
+    dark_mode: true,
+    always_on_top: true,
     notifications: false
 });
 
