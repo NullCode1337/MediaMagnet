@@ -47,7 +47,6 @@
 
   listen('settings', (event) => {
     $settings = event.payload;
-    console.log($settings);
   });
 </script>
 
@@ -58,7 +57,7 @@
     title="Show settings"
     on:click={toggleSettingsPanel}
   >
-    <i class="fa-solid fa-gear fa-lg" style="color: white;"></i>
+    <i class="fa-solid fa-gear fa-lg"></i>
   </button>
 
   {#if $activePanel === 'settings'}
@@ -147,6 +146,7 @@
 <style>
   .settings-container {
     position: relative;
+    user-select: none;
     display: inline-block;
   }
 
@@ -167,6 +167,7 @@
 
   i {
     pointer-events: none;
+    color: var(--text-color);
   }
   
   .settings-panel {
@@ -175,7 +176,7 @@
     left: 85px;
     bottom: 0;
     right: 0;
-    background: rgb(25, 25, 35);
+    background: var(--main-bg);
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
     overflow: hidden;
     z-index: 10;
@@ -187,7 +188,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 16px;
-    background: rgb(25, 25, 35);
+    background: var(--sidebar-bg);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   }
 
@@ -199,7 +200,7 @@
 
   .reset-settings {
     color: #ffa502;
-    background-color: #191923;
+    background-color: var(--main-bg);
     border: 1px solid #ffa502;
     border-radius: 4px;
     padding: 6px 10px;
@@ -215,7 +216,7 @@
 
   .panel-header h3 {
     margin: 0;
-    color: white;
+    color: var(--text-color);
     font-size: 16px;
     font-family: "noto-sans-semibold", sans-serif;
   }
@@ -232,7 +233,7 @@
   }
 
   .settings-group h4 {
-    color: #FFF;
+    color: var(--text-color);
     font-size: 14px;
     margin: 0 0 12px 0;
     font-family: "noto-sans-semibold", sans-serif;
@@ -253,7 +254,7 @@
   }
 
   .setting-item label {
-    color: #ddd;
+    color: var(--text-color);
     font-size: 14px;
     font-family: "noto-sans-semibold", sans-serif;
     margin-right: 12px;
@@ -271,7 +272,7 @@
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 4px;
     padding: 8px 12px;
-    color: white;
+    color: var(--text-color);
     font-family: "noto-sans-semibold", sans-serif;
   }
 
