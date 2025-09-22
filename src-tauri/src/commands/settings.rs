@@ -15,6 +15,8 @@ pub fn check_settings(app: tauri::AppHandle) {
     let config_path = config_dir.join("settings.json");
     let configs = std::fs::read_to_string(&config_path).unwrap();
     let settings: Settings = serde_json::from_str(&configs).unwrap();
+
+    app.get_webview_window("main").unwrap().set_always_on_top(settings.always_on_top).unwrap();
     app.emit("settings", &settings).unwrap();
 }
 
@@ -23,7 +25,7 @@ pub fn reset_settings(app: tauri::AppHandle) {
     let config_dir = app.path().app_config_dir().unwrap();
     let config_path = config_dir.join("settings.json");
     let default_settings = Settings {
-        download_path: "None".to_string(),
+        download_path: "Default".to_string(),
         dark_mode: true,
         always_on_top: true,
         notifications: false,

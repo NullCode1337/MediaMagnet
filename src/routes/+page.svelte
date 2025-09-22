@@ -17,6 +17,7 @@
     expandStatus,
     pendingDownloads,
     currentlyDownloading,
+    settings
   } from "$lib/stores/store";
 
   import Pending from "$lib/components/Pending.svelte";
@@ -33,6 +34,12 @@
   let closeHandlerSet = false;
   let pasteIcon = true;
   $: pasteIcon = url.trim() === "";
+
+  $: {
+    if (document.body) {
+      document.body.classList.toggle('dark', $settings.dark_mode);
+    }
+  }
 
   //#region Download Functions
   async function download() {
@@ -265,6 +272,24 @@
     margin: 0;
     padding: 0;
     overflow: hidden;
+
+    --main-bg: #F3F3F3;
+    --sidebar-bg: #F3F3F3;
+    --border-color: rgba(62, 54, 54, 0.156);
+    --text-color: #333;
+    --input-bg: #dfdfff;
+    --input-border: rgba(0, 0, 0, 0.1);
+    --input-placeholder: rgba(51, 51, 51, 0.6);
+  }
+
+  :global(body.dark) {
+    --main-bg: rgba(25, 25, 35, 0.98);
+    --sidebar-bg: rgba(30, 30, 40, 0.95);
+    --border-color: rgba(255, 255, 255, 0.1);
+    --text-color: #fff;
+    --input-bg: #2e2e32;
+    --input-border: rgba(255, 255, 255, 0.1);
+    --input-placeholder: rgba(255, 255, 255, 0.6);
   }
 
   .sidebar-container {
@@ -275,16 +300,15 @@
 
   .sidebar {
     width: 85px;
-    background: rgba(30, 30, 40, 0.95);
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--sidebar-bg);
+    border-right: 2px solid var(--border-color);
     display: flex;
     flex-direction: column;
     padding: 16px 0;
   }
 
-  .spacer {
-    flex-grow: 1;
-  }
+  .spacer { flex-grow: 1; }
+  i { pointer-events: none; }
 
   .sidebar-content {
     padding: 0 16px;
@@ -308,7 +332,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    background: rgba(25, 25, 35, 0.98);
+    background: var(--main-bg);
     overflow: hidden;
   }
 
@@ -322,7 +346,7 @@
   }
 
   .header {
-    color: white;
+    color: var(--text-color);
     font-family: "noto-sans-semibold", sans-serif;
     font-weight: 300;
     user-select: none;
@@ -340,22 +364,20 @@
 
   .url-input {
     flex: 1;
-    border: none;
     padding: 16px 20px;
     width: 100%;
     max-width: 100%;
     font-size: 16px;
     font-family: "noto-sans-semibold", sans-serif;
     outline: none;
-    background: rgba(255, 255, 255, 0.08);
-    color: #fff;
+    background: var(--input-bg);
+    color: var(--input-placeholder);
     border-radius: 16px;
     transition: all 0.2s ease;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--input-border);
   }
 
   .url-input:focus {
-    background: rgba(255, 255, 255, 0.087);
     border: 1px solid rgba(110, 142, 251, 0.4);
     outline: none;
     box-shadow:
@@ -365,7 +387,7 @@
   }
 
   .url-input::placeholder {
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--input-placeholder);
   }
 
   .paste-btn {
@@ -382,12 +404,8 @@
     transition: background 0.2s ease;
   }
 
-  .paste-btn:hover {
-    background: #5a7df9;
-  }
-
-  i {
-    pointer-events: none;
+  .paste-btn:hover { 
+    background: #5a7df9; 
   }
 
   @media (max-width: 600px) {
@@ -409,13 +427,8 @@
       padding: 8px 0;
     }
 
-    .box {
-      width: 90vw;
-    }
-
-    .url-input {
-      width: 100%;
-    }
+    .box { width: 90vw; }
+    .url-input { width: 100%;}
   }
   /*#endregion */
 </style>

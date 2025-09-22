@@ -74,7 +74,7 @@ pub fn init_config(app: tauri::AppHandle) {
 
     if !settings_json.exists() {
         let default_settings = Settings {
-            download_path: "None".to_string(),
+            download_path: "Default".to_string(),
             dark_mode: true,
             always_on_top: true,
             notifications: false,
