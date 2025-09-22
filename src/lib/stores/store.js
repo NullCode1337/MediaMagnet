@@ -3,7 +3,7 @@ import { writable } from "svelte/store";
 
 // Settings
 export let settings = writable({
-    download_path: "",
+    download_path: "Default",
     dark_mode: true,
     always_on_top: true,
     notifications: false

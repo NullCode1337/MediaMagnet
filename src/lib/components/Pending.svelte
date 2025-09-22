@@ -6,7 +6,7 @@
     openPanel,
     closePanel,
   } from "$lib/stores/store";
-  
+
   import { invoke } from "@tauri-apps/api/core";
   import { ask } from "@tauri-apps/plugin-dialog";
   import "@fortawesome/fontawesome-free/css/all.min.css";
@@ -57,7 +57,7 @@
     title="Show pending downloads"
     on:click={togglePendingPanel}
   >
-    <i class="fa-solid fa-file-arrow-down fa-lg" style="color: white;"></i>
+    <i class="fa-solid fa-file-arrow-down fa-lg"></i>
     {#if $pendingDownloads.length > 0}
       <span class="pending-badge">{$pendingDownloads.length}</span>
     {/if}
@@ -140,6 +140,7 @@
 
   i {
     pointer-events: none;
+    color: var(--text-color);
   }
   
   .pending-badge {
@@ -162,7 +163,8 @@
   #blankText {
     font-family: "noto-sans-semibold", Courier, monospace;
     font-style: normal;
-    color: white;
+    color: var(--text-color);
+    user-select: none;
   }
 
   .pending-panel {
@@ -171,7 +173,7 @@
     left: 85px;
     bottom: 0;
     right: 0;
-    background: rgb(25, 25, 35);
+    background: var(--main-bg);
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
     overflow: hidden;
     z-index: 10;
@@ -183,7 +185,8 @@
     justify-content: space-between;
     align-items: center;
     padding: 20px;
-    background: rgb(25, 25, 35);
+    background: var(--sidebar-bg);
+    user-select: none;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   }
 
@@ -211,7 +214,7 @@
 
   .panel-header h3 {
     margin: 0;
-    color: white;
+    color: var(--text-color);
     font-size: 16px;
     font-family: "noto-sans-semibold", sans-serif;
   }
