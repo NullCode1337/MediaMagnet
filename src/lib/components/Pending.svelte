@@ -6,6 +6,7 @@
     openPanel,
     closePanel,
   } from "$lib/stores/store";
+  
   import { invoke } from "@tauri-apps/api/core";
   import { ask } from "@tauri-apps/plugin-dialog";
   import "@fortawesome/fontawesome-free/css/all.min.css";

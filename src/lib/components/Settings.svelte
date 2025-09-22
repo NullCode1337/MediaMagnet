@@ -1,8 +1,14 @@
 <script>
   import { 
-    settings, addNotification,
-    activePanel, openPanel, closePanel 
+    addNotification,
+    settings,
+    activePanel, 
+    openPanel, 
+    closePanel 
   } from "$lib/stores/store";
+
+  import { invoke } from '@tauri-apps/api/core';
+  import { listen } from '@tauri-apps/api/event';
   import { ask } from "@tauri-apps/plugin-dialog";
   import "@fortawesome/fontawesome-free/css/all.min.css";
 
@@ -15,10 +21,11 @@
   }
 
   // @ts-ignore
-  function updateSetting(key, value) {
+  async function updateSetting(key, value) {
     $settings = { ...$settings, [key]: value };
+    await invoke("update_settings", { settings: $settings });
   }
-
+  
   async function resetSettings() {
     const confirm = await ask("Are you sure you want to reset all settings to default?", {
       title: "Reset Settings",
@@ -28,14 +35,20 @@
     if (!confirm) return;
 
     $settings = {
-      downloadPath: "",
-      darkMode: true,
-      alwaysOnTop: true,
+      download_path: "None",
+      dark_mode: true,
+      always_on_top: true,
       notifications: true
     };
     
+    await invoke("reset_settings");
     addNotification("Settings reset to factory default", "success");
   }
+
+  listen('settings', (event) => {
+    $settings = event.payload;
+    console.log($settings);
+  });
 </script>
 
 <div class="settings-container">
@@ -75,8 +88,8 @@
           <input 
             id="darkMode" 
             type="checkbox" 
-            bind:checked={$settings.darkMode}
-            on:change={() => updateSetting('darkMode', $settings.darkMode)}
+            bind:checked={$settings.dark_mode}
+            on:change={() => updateSetting('darkMode', $settings.dark_mode)}
           />
           <label for="darkMode">Dark Mode</label>
         </div>
@@ -85,8 +98,8 @@
           <input 
             id="alwaysOnTop" 
             type="checkbox" 
-            bind:checked={$settings.alwaysOnTop}
-            on:change={() => updateSetting('alwaysOnTop', $settings.alwaysOnTop)}
+            bind:checked={$settings.always_on_top}
+            on:change={() => updateSetting('alwaysOnTop', $settings.always_on_top)}
           />
           <label for="alwaysOnTop">Always on Top</label>
         </div>
@@ -116,8 +129,8 @@
             <input 
               id="downloadPath" 
               type="text" 
-              bind:value={$settings.downloadPath}
-              on:change={() => updateSetting('downloadPath', $settings.downloadPath)}
+              bind:value={$settings.download_path}
+              on:change={() => updateSetting('downloadPath', $settings.download_path)}
             />
             <!-- svelte-ignore a11y_consider_explicit_label -->
             <button class="browse-button" title="Browse">
