@@ -23,6 +23,7 @@
   // @ts-ignore
   async function updateSetting(key, value) {
     $settings = { ...$settings, [key]: value };
+    console.log($settings);
     await invoke("update_settings", { settings: $settings });
   }
   
@@ -47,6 +48,7 @@
 
   listen('settings', (event) => {
     $settings = event.payload;
+    console.log($settings);
   });
 </script>
 
@@ -88,9 +90,9 @@
             id="darkMode" 
             type="checkbox" 
             bind:checked={$settings.dark_mode}
-            on:change={() => updateSetting('darkMode', $settings.dark_mode)}
+            on:change={() => updateSetting('dark_mode', $settings.dark_mode)}
           />
-          <label for="darkMode">Dark Mode</label>
+          <label for="dark_mode">Dark Mode</label>
         </div>
 
         <div class="setting-item checkbox">
@@ -98,9 +100,9 @@
             id="alwaysOnTop" 
             type="checkbox" 
             bind:checked={$settings.always_on_top}
-            on:change={() => updateSetting('alwaysOnTop', $settings.always_on_top)}
+            on:change={() => updateSetting('always_on_top', $settings.always_on_top)}
           />
-          <label for="alwaysOnTop">Always on Top</label>
+          <label for="always_on_top">Always on Top</label>
         </div>
       </div>
       
@@ -129,7 +131,7 @@
               id="downloadPath" 
               type="text" 
               bind:value={$settings.download_path}
-              on:change={() => updateSetting('downloadPath', $settings.download_path)}
+              on:change={() => updateSetting('download_path', $settings.download_path)}
             />
             <!-- svelte-ignore a11y_consider_explicit_label -->
             <button class="browse-button" title="Browse">
