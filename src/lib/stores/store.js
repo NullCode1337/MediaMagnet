@@ -57,11 +57,3 @@ export function openPanel(panelName) {
 export function closePanel() {
     activePanel.set(null);
 }
-
-export function goBack() {
-    panelHistory.update(history => {
-        const previousPanel = history.pop();
-        activePanel.set(previousPanel || null);
-        return history;
-    });
-}
