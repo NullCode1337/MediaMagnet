@@ -29,17 +29,19 @@
   import "@fortawesome/fontawesome-free/css/all.min.css";
   //#endregion
 
-  let url = "";
-  /** @type {HTMLInputElement} */ let urlInput;
-  let closeHandlerSet = false;
-  let pasteIcon = true;
-  $: pasteIcon = url.trim() === "";
-
   $: {
     if (document.body) {
       document.body.classList.toggle('dark', $settings.dark_mode);
     }
   }
+
+  let url = "";
+  /** @type {HTMLInputElement} */ let urlInput;
+
+  let closeHandlerSet = false;
+
+  let pasteIcon = true;
+  $: pasteIcon = url.trim() === "";
 
   //#region Download Functions
   async function download() {
