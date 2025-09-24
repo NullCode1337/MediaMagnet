@@ -285,11 +285,11 @@
   }
 
   :global(body.dark) {
-    --main-bg: rgba(25, 25, 35, 0.98);
-    --sidebar-bg: rgba(30, 30, 40, 0.95);
-    --border-color: rgba(255, 255, 255, 0.1);
+    --main-bg: rgb(21, 21, 23);
+    --sidebar-bg: rgba(21, 21, 29, 0.95);
+    --border-color: rgba(255, 255, 255, 0.0);
     --text-color: #fff;
-    --input-bg: #2e2e32;
+    --input-bg: rgba(40, 40, 49, 0.95);
     --input-border: rgba(255, 255, 255, 0.1);
     --input-placeholder: rgba(255, 255, 255, 0.6);
   }
@@ -378,7 +378,7 @@
     background: var(--input-bg);
     color: var(--input-placeholder);
     border-radius: 16px;
-    transition: all 0.2s ease;
+    transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     border: 1px solid var(--input-border);
   }
 
@@ -386,9 +386,9 @@
     border: 1px solid rgba(110, 142, 251, 0.4);
     outline: none;
     box-shadow:
-      0 4px 20px rgba(110, 142, 251, 0.15),
-      0 2px 6px rgba(110, 142, 251, 0.1);
-    transition: all 0.25s ease-in-out;
+      0 8px 32px rgba(110, 142, 251, 0.18),
+      0 4px 12px rgba(110, 142, 251, 0.12),
+      0 2px 4px rgba(110, 142, 251, 0.08);
   }
 
   .url-input::placeholder {
