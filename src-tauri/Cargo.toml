@@ -1,6 +1,6 @@
 [package]
 name = "mediamagnet"
-version = "0.2.2"
+version = "0.3.0"
 description = "Cross-platform GUI for gallery-dl, an imageboard/media downloader"
 authors = ["NullCode1337"]
 edition = "2021"
