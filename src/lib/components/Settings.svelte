@@ -42,7 +42,7 @@
       notifications: true
     };
     
-    await invoke("reset_settings");
+    await invoke("settings", {action: "reset"});
     addNotification("Settings reset to factory default", "success");
   }
 

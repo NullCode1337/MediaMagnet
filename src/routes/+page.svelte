@@ -114,7 +114,7 @@
   //#region On Mount
   onMount(async () => {
     invoke("check_links");
-    invoke("check_settings");
+    invoke("settings", {action: "check"});
 
     await tick();
     if (urlInput) urlInput.focus();
