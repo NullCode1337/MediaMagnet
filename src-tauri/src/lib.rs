@@ -15,8 +15,7 @@ pub fn run() {
             commands::download::downloader,
             commands::download::overwrite_json,
             commands::init::check_links,
-            commands::settings::check_settings,
-            commands::settings::reset_settings,
+            commands::settings::settings,
             commands::settings::update_settings
         ])
         .run(tauri::generate_context!())
