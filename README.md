@@ -6,12 +6,13 @@ Built with Svelte and Tauri
 
 ## Roadmap
 I need suggestions on how I can make the UI look better (if at all)
-- TODO: Settings panel where I can set User Agent and other options ➖
+- TODO: Settings panel where I can set User Agent and other options ✅
 - TODO: Separate page for managing all the Cookies for different sites, and oauth ❌
 - TODO: Integrate yt-dlp and aria2 into the code as well ❌
 
 ## Requirements
+- Windows or Linux (.deb, .rpm, AppImage provided) (AUR soon)
 - 64 bit system
 
 ## Screenshots
-<img width="752" height="582" alt="image" src="https://github.com/user-attachments/assets/58f8d898-ae07-4269-b2f0-0ce8f5211c53" />
+<img width="872" height="709" alt="Screenshot From 2025-09-26 17-21-02" src="https://github.com/user-attachments/assets/044d964d-db82-46cd-9b73-3d453df2d8e3" />
