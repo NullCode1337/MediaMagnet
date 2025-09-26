@@ -138,8 +138,15 @@
     background-color: rgba(255, 255, 255, 0.1);
   }
 
+  .active {
+    background: rgba(255, 255, 255, 0.2)
+  }
+
   i {
     pointer-events: none;
+  }
+
+  .toolbar-button i {
     color: var(--text-color);
   }
   
