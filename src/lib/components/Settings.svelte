@@ -9,7 +9,7 @@
 
   import { invoke } from '@tauri-apps/api/core';
   import { listen } from '@tauri-apps/api/event';
-  import { ask } from "@tauri-apps/plugin-dialog";
+  import { ask, open } from "@tauri-apps/plugin-dialog";
   import "@fortawesome/fontawesome-free/css/all.min.css";
 
   function toggleSettingsPanel() {
@@ -44,6 +44,15 @@
     
     await invoke("settings", {action: "reset"});
     addNotification("Settings reset to factory default", "success");
+  }
+
+  async function selectDir() {
+    const dir = await open({
+      multiple: false,
+      directory: true,
+    });
+    
+    updateSetting('download_path', dir);
   }
 
   listen('settings', (event) => {
@@ -134,7 +143,10 @@
               on:change={() => updateSetting('download_path', $settings.download_path)}
             />
             <!-- svelte-ignore a11y_consider_explicit_label -->
-            <button class="browse-button" title="Browse">
+            <button 
+              class="browse-button"
+              title="Browse"
+              on:click={selectDir}>
               <i class="fas fa-folder-open"></i>
             </button>
           </div>
@@ -221,6 +233,7 @@
     color: var(--text-color);
     font-size: 16px;
     font-family: "noto-sans-semibold", sans-serif;
+    user-select: none;
   }
 
   .panel-content {
