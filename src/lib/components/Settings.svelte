@@ -175,15 +175,22 @@
     transition: background-color 0.2s ease;
   }
 
+  .active {
+    background: rgba(255, 255, 255, 0.2)
+  }
+
   .toolbar-button:hover {
     background-color: rgba(255, 255, 255, 0.1);
   }
 
   i {
     pointer-events: none;
-    color: var(--text-color);
   }
   
+  .toolbar-button i {
+    color: var(--text-color);
+  }
+
   .settings-panel {
     position: fixed;
     top: 0;
@@ -295,8 +302,9 @@
     appearance: none;
     width: 18px;
     height: 18px;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(0, 0, 0, 0.3);
     border-radius: 3px;
+    color: white;
     background: rgba(255, 255, 255, 0.1);
     position: relative;
     cursor: pointer;
@@ -310,11 +318,29 @@
   .setting-item input[type="checkbox"]:checked::after {
     content: "✓";
     position: absolute;
-    color: white;
     font-size: 12px;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
+  }
+
+  :global(body:not(.dark)) .setting-item input[type="checkbox"] {
+    border: 1px solid rgba(0, 0, 0, 0.5);
+    background: rgba(255, 255, 255, 0.95);
+  }
+
+  :global(body:not(.dark)) .setting-item input[type="checkbox"]:checked {
+    background: #6e8efb;
+    border-color: #6e8efb;
+  }
+
+  :global(body:not(.dark)) .setting-item input[type="checkbox"]:checked::after {
+    color: white;
+  }
+
+  :global(body:not(.dark)) .setting-item input[type="checkbox"]:not(:checked) {
+    border: 1px solid rgba(0, 0, 0, 0.6);
+    background: rgba(255, 255, 255, 0.98);
   }
 
   .input-group {
