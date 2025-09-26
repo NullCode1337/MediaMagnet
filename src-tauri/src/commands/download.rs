@@ -1,20 +1,57 @@
 use std::io::Write;
 
+use serde::{Deserialize, Serialize};
 use tauri::{Emitter, Manager};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
-// TODO: backend and frontend for user-agent, cookies and oauth
-async fn async_dl(app: tauri::AppHandle, link: &str) -> Result<(), Box<dyn std::error::Error>> {
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Settings {
+    pub download_path: String,
+    pub dark_mode: bool,
+    pub always_on_top: bool,
+    pub notifications: bool,
+}
+
+async fn set_download_path(app: tauri::AppHandle) {
+    let config_path = app.path().app_config_dir().unwrap().join("settings.json");
+    let configs = std::fs::read_to_string(&config_path).unwrap();
+    let settings: Settings = serde_json::from_str(&configs).unwrap();
+    
+    let default = dirs::download_dir().unwrap().join("MediaMagnet");
+
+    let downloads_path = match settings.download_path.as_str() {
+        "Default" => default,
+        custom_path if custom_path.to_lowercase().contains("mediamagnet") => {
+            std::path::PathBuf::from(custom_path)
+        },
+        path if !path.to_lowercase().contains("mediamagnet") => {
+            std::path::PathBuf::from(path).join("MediaMagnet")
+        },
+        _ => default
+    };
+
+    if !downloads_path.exists() {
+        if let Err(e) = std::fs::create_dir_all(&downloads_path) {
+            eprintln!("Failed to create directory: {}", e);
+            return;
+        }
+    }
+    
+    std::env::set_current_dir(&downloads_path).unwrap();
+}
+
+async fn gallery_dl(app: tauri::AppHandle, link: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut downloaded: Vec<String> = Vec::new();
 
-    let mut url_list_cmd = Command::new("gallery-dl");
-    url_list_cmd.args(["-g", link]);
+    // === Total urls in link ===
+    let mut url_cmd = Command::new("gallery-dl");
+    url_cmd.args(["-g", link]);
 
     #[cfg(target_os = "windows")]
-    url_list_cmd.creation_flags(winapi::um::winbase::CREATE_NO_WINDOW); 
+    url_cmd.creation_flags(winapi::um::winbase::CREATE_NO_WINDOW); 
 
-    let url_list = url_list_cmd
+    let url_list = url_cmd
         .output()
         .await?;
 
@@ -23,28 +60,23 @@ async fn async_dl(app: tauri::AppHandle, link: &str) -> Result<(), Box<dyn std::
         .filter(|line| !line.trim_start().starts_with('|'))
         .count();
 
-    if let Some(downloads_path) = dirs::download_dir() {
-        std::env::set_current_dir(&downloads_path)?;
-    } else {
-        eprintln!("Could not find Downloads directory");
-    }
+    // === Downloader ===
+    let _ = set_download_path(app.clone());
 
-    let mut downloader_cmd = Command::new("gallery-dl");
-    downloader_cmd.arg(link);
-    
+    let mut cmd = Command::new("gallery-dl");
+    cmd.arg(link);
+
     #[cfg(target_os = "windows")]
-    downloader_cmd.creation_flags(winapi::um::winbase::CREATE_NO_WINDOW); 
+    cmd.creation_flags(winapi::um::winbase::CREATE_NO_WINDOW);
 
-    let mut downloader = downloader_cmd
-        .stdout(std::process::Stdio::piped())
+    let mut downloader = cmd.stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
         .spawn()?;
 
-    let stdout = downloader.stdout.take().unwrap();
-    let stderr = downloader.stderr.take().unwrap();
-
-    let mut stdout_reader = BufReader::new(stdout).lines();
-    let mut stderr_reader = BufReader::new(stderr).lines();
+    let (mut stdout_reader, mut stderr_reader) = (
+        BufReader::new(downloader.stdout.take().unwrap()).lines(),
+        BufReader::new(downloader.stderr.take().unwrap()).lines()
+    );
 
     let app_stdout = app.clone();
     let app_stderr = app.clone();
@@ -75,7 +107,7 @@ async fn async_dl(app: tauri::AppHandle, link: &str) -> Result<(), Box<dyn std::
 }
 
 #[tauri::command]
-pub async fn gallery_dl(app: tauri::AppHandle, url: String) {
+pub async fn downloader(app: tauri::AppHandle, url: String) {
     if !url.to_lowercase().contains("http") {
         app.emit("download-error", "Invalid URL").unwrap();
         return;
@@ -83,7 +115,7 @@ pub async fn gallery_dl(app: tauri::AppHandle, url: String) {
 
     // Start download
     app.emit("download-started", ()).unwrap();
-    let _ = async_dl(app.clone(), &url).await;
+    let _ = gallery_dl(app.clone(), &url).await;
     app.emit("download-finished", ()).unwrap();
 }
 
