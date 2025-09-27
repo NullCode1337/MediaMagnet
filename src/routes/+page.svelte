@@ -27,6 +27,7 @@
   import OpenFolder from "$lib/components/OpenFolder.svelte";
 
   import "@fortawesome/fontawesome-free/css/all.min.css";
+  import WindowDecor from "$lib/components/WindowDecor.svelte";
   //#endregion
 
   $: {
@@ -216,6 +217,9 @@
 </svelte:head>
 
 <!-- #region <-- HTML -->
+<WindowDecor />
+<header class="drag-region" data-tauri-drag-region=""></header>
+
 <div class="sidebar-container">
   <aside class="sidebar">
     <div class="sidebar-content">
@@ -285,13 +289,24 @@
   }
 
   :global(body.dark) {
-    --main-bg: rgb(21, 21, 23);
-    --sidebar-bg: rgba(21, 21, 29, 0.95);
+    --main-bg: rgb(36, 15, 50);
+    --sidebar-bg: rgba(40, 17, 56, 0.95);
     --border-color: rgba(255, 255, 255, 0.0);
     --text-color: #fff;
-    --input-bg: rgba(40, 40, 49, 0.95);
+    --input-bg: rgba(47, 19, 67, 0.95);
     --input-border: rgba(255, 255, 255, 0.1);
     --input-placeholder: rgba(255, 255, 255, 0.6);
+  }
+
+  .drag-region {
+    position: fixed;
+    top: 0;
+    left: 85px;
+    width: 100%;
+    height: 65px;
+    z-index: 0;
+    -webkit-app-region: drag;
+    pointer-events: all;
   }
 
   .sidebar-container {
