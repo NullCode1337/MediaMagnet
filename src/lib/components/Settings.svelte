@@ -73,7 +73,7 @@
 
   {#if $activePanel === 'settings'}
   <div class="settings-panel">
-    <div class="panel-header">
+    <div class="panel-header" data-tauri-drag-region> 
       <h3>Settings</h3>
 
       <div class="header-actions">
@@ -208,7 +208,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px;
+    padding: 20px;
     background: var(--sidebar-bg);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   }
@@ -220,6 +220,9 @@
   }
 
   .reset-settings {
+    position: fixed;
+    right: 122px;
+    top: 15px;
     color: #ffa502;
     background-color: var(--main-bg);
     border: 1px solid #ffa502;

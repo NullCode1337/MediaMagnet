@@ -65,7 +65,7 @@
 
   {#if $activePanel === "pending"}
     <div class="pending-panel">
-      <div class="panel-header">
+      <div class="panel-header" data-tauri-drag-region>
         <h3>
           Downloads {#if $pendingDownloads.length > 0}({$pendingDownloads.length}){/if}
         </h3>
@@ -204,6 +204,9 @@
   }
 
   .clear-all {
+    position: fixed;
+    right: 122px;
+    top: 15px;
     color: #ff4757;
     background-color: #191923;
     border: 1px solid #ff4757;
