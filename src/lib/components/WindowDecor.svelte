@@ -50,17 +50,17 @@
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
     border-radius: 40px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
     box-shadow: 
       0 8px 32px rgba(0, 0, 0, 0.1),
       inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    border: none; /* Explicitly remove border */
   }
 
   .window-control {
     width: 15px;
     height: 15px;
     border-radius: 50%;
-    border: none;
+    border: none; /* Remove border from buttons */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -80,11 +80,12 @@
   .window-control:hover {
     opacity: 0.8;
     transform: scale(1.1);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); 
   }
 
   :global(body.dark) .glass-container {
     background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    border: none; 
   }
 </style>
