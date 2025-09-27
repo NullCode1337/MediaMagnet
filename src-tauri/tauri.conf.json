@@ -19,8 +19,8 @@
     "windows": [
       {
         "title": "MediaMagnet",
-        "width": 750,
-        "height": 550,
+        "width": 675,
+        "height": 475,
         "backgroundColor": "#2e2e32",
         "alwaysOnTop": true,
         "dragDropEnabled": true,

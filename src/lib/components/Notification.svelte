@@ -12,7 +12,7 @@
 </script>
 
 <div class="notification-panel">
-  {#each $notifications as notification (notification.id)}
+  {#each $notifications as notification, index (index)}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div 
@@ -69,7 +69,7 @@
     height: 3px;
     width: 100%;
     background: rgba(0, 0, 0, 0.1);
-    animation: progress 5s linear forwards;
+    animation: progress 3s linear forwards;
   }
   @keyframes progress {
     from { width: 100%; }
