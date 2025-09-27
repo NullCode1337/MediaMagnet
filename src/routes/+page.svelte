@@ -115,12 +115,12 @@
 
   //#region On Mount
   onMount(async () => {
-    invoke("check_links");
-    invoke("settings", {action: "check"});
-
     await tick();
     if (urlInput) urlInput.focus();
 
+    invoke("check_links");
+    invoke("settings", {action: "check"});
+    
     if (!closeHandlerSet) {
       getCurrentWindow().onCloseRequested(async (event) => {
         if ($isDownloading) {
