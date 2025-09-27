@@ -28,6 +28,7 @@
 
   import "@fortawesome/fontawesome-free/css/all.min.css";
   import WindowDecor from "$lib/components/WindowDecor.svelte";
+    import Back from "$lib/components/Back.svelte";
   //#endregion
 
   $: {
@@ -223,6 +224,7 @@
 <div class="sidebar-container">
   <aside class="sidebar">
     <div class="sidebar-content">
+      <Back />
       <Pending />
       <Settings />
       <div class="spacer" data-tauri-drag-region></div>
