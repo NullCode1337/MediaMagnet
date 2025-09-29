@@ -330,9 +330,74 @@
   @media (max-width: 600px) {
     .pending-panel {
       left: 0;
+      top: 45px;
+      height: calc(100vh - 45px);
     }
+
+    .panel-header {
+      padding: 20px 20px; 
+    }
+
+    .clear-all {
+      position: static;
+      right: auto;
+      top: auto;
+    }
+
+    .header-actions {
+      gap: 8px; 
+    }
+
+    .pending-item {
+      flex-direction: row;
+      align-items: center;
+      padding: 10px 16px;
+      gap: 8px;
+    }
+
+    .download-info {
+      flex: 1;
+      min-width: 0; 
+      overflow: hidden;
+    }
+
     .download-url {
-      max-width: calc(100vw - 160px);
+      max-width: calc(100vw - 200px); 
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 13px; 
+    }
+
+    .last {
+      flex-shrink: 0; 
+      gap: 6px;
+    }
+
+    .download-status {
+      font-size: 11px; 
+      padding: 3px 6px;
+      margin-left: 0; 
+    }
+
+    .panel-content {
+      max-height: calc(100% - 73px);
+      overflow-y: auto;
+    }
+
+    .empty-state {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -25%);
+      width: 90%;
+      padding: 0 16px;
+    }
+
+    .pending-badge {
+      width: 16px;
+      height: 16px;
+      font-size: 10px;
     }
   }
 
