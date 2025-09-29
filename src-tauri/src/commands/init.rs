@@ -2,13 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::io::{Read, Write};
 use tauri::{Emitter, Manager};
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Settings {
-    pub download_path: String,
-    pub dark_mode: bool,
-    pub always_on_top: bool,
-    pub notifications: bool,
-}
+use super::settings::Settings;
 
 #[derive(Clone, Serialize, Deserialize)]
 struct LinkEvent {
@@ -73,14 +67,8 @@ pub fn init_config(app: tauri::AppHandle) {
     }
 
     if !settings_json.exists() {
-        let default_settings = Settings {
-            download_path: "Default".to_string(),
-            dark_mode: true,
-            always_on_top: true,
-            notifications: false,
-        };
-
-        let settings_json_content = serde_json::to_string_pretty(&default_settings).unwrap();
+        let default_settings = Settings::default();
+        let settings_json_content: String = serde_json::to_string_pretty(&default_settings).unwrap();
         
         std::fs::write(&settings_json, settings_json_content)
             .map_err(|e| format!("Failed to write default settings to file: {}", e))
