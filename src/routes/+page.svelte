@@ -80,7 +80,7 @@
     } else {
       $isDownloading = true;
       $currentlyDownloading = downloadUrl;
-      await invoke("downloader", { url: downloadUrl });
+      invoke("downloader", { url: downloadUrl });
     }
 
     downloadUrl = "";
@@ -94,7 +94,7 @@
       await invoke("overwrite_json", { links: $pendingDownloads });
 
       $currentlyDownloading = nextUrl;
-      await invoke("downloader", { url: nextUrl });
+      invoke("downloader", { url: nextUrl });
       $isDownloading = true;
     }
   }
