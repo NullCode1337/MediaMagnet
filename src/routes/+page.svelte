@@ -25,10 +25,10 @@
   import Progress from "$lib/components/Progress.svelte";
   import Settings from "$lib/components/Settings.svelte";
   import OpenFolder from "$lib/components/OpenFolder.svelte";
+  import WindowDecor from "$lib/components/WindowDecor.svelte";
+  import Back from "$lib/components/Back.svelte";
 
   import "@fortawesome/fontawesome-free/css/all.min.css";
-  import WindowDecor from "$lib/components/WindowDecor.svelte";
-    import Back from "$lib/components/Back.svelte";
   //#endregion
 
   $: {
@@ -80,7 +80,7 @@
     } else {
       $isDownloading = true;
       $currentlyDownloading = downloadUrl;
-      invoke("downloader", { url: downloadUrl });
+      await invoke("downloader", { url: downloadUrl });
     }
 
     downloadUrl = "";
@@ -94,7 +94,7 @@
       await invoke("overwrite_json", { links: $pendingDownloads });
 
       $currentlyDownloading = nextUrl;
-      invoke("downloader", { url: nextUrl });
+      await invoke("downloader", { url: nextUrl });
       $isDownloading = true;
     }
   }
@@ -115,13 +115,13 @@
 
   //#region On Mount
   onMount(async () => {
-    await tick();
-    if (urlInput) urlInput.focus();
-
-    invoke("check_links");
-    invoke("settings", {action: "check"});
-    
     if (!closeHandlerSet) {
+      await tick();
+      if (urlInput) urlInput.focus();
+
+      await invoke("check_links");
+      await invoke("settings", {action: "check"});
+
       getCurrentWindow().onCloseRequested(async (event) => {
         if ($isDownloading) {
           const confirm = await ask(
