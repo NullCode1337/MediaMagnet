@@ -4,6 +4,7 @@ import { writable } from "svelte/store";
 // Settings
 export let settings = writable({
     download_path: "Default",
+    user_agent: "None",
     dark_mode: true,
     always_on_top: true,
     notifications: false

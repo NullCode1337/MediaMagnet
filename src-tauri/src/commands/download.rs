@@ -1,17 +1,8 @@
-use std::io::Write;
-
-use serde::{Deserialize, Serialize};
 use tauri::{Emitter, Manager};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Settings {
-    pub download_path: String,
-    pub dark_mode: bool,
-    pub always_on_top: bool,
-    pub notifications: bool,
-}
+use super::settings::Settings;
 
 async fn set_download_path(app: tauri::AppHandle) {
     let config_path = app.path().app_config_dir().unwrap().join("settings.json");
@@ -43,6 +34,8 @@ async fn set_download_path(app: tauri::AppHandle) {
 
 async fn gallery_dl(app: tauri::AppHandle, link: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut downloaded: Vec<String> = Vec::new();
+    let config_path = app.path().app_config_dir().unwrap().join("settings.json");
+    let settings: Settings = serde_json::from_str(&std::fs::read_to_string(&config_path).unwrap()).unwrap();
 
     // === Total urls in link ===
     let mut url_cmd = Command::new("gallery-dl");
@@ -64,7 +57,13 @@ async fn gallery_dl(app: tauri::AppHandle, link: &str) -> Result<(), Box<dyn std
     set_download_path(app.clone()).await;
 
     let mut cmd = Command::new("gallery-dl");
-    cmd.args(["-d", ".", link]);
+    cmd.args(["-d", "."]);
+
+    if settings.user_agent != "None" {
+        cmd.args(["-a", &settings.user_agent]);
+    }
+
+    cmd.args([link]);
 
     #[cfg(target_os = "windows")]
     cmd.creation_flags(winapi::um::winbase::CREATE_NO_WINDOW);
@@ -117,26 +116,4 @@ pub async fn downloader(app: tauri::AppHandle, url: String) {
     app.emit("download-started", ()).unwrap();
     let _ = gallery_dl(app.clone(), &url).await;
     app.emit("download-finished", ()).unwrap();
-}
-
-#[tauri::command]
-pub fn overwrite_json(app: tauri::AppHandle, links: Vec<String>) {
-    let path = app.path().app_data_dir().unwrap().join("links.json");
-    
-    let mut unique_links = Vec::new();
-    let mut seen_links = std::collections::HashSet::new();
-    
-    for link in links {
-        if !seen_links.contains(&link) {
-            seen_links.insert(link.clone());
-            unique_links.push(link);
-        }
-    }
-    
-    let json_data = serde_json::to_string_pretty(&unique_links).unwrap();
-
-    std::fs::File::create(&path)
-        .unwrap()
-        .write_all(json_data.as_bytes())
-        .unwrap();
 }
