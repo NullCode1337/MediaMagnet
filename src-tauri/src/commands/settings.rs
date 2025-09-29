@@ -1,9 +1,12 @@
+use std::io::Write;
+
 use tauri::{Emitter, Manager};
 use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Settings {
     pub download_path: String,
+    pub user_agent: String,
     pub dark_mode: bool,
     pub always_on_top: bool,
     pub notifications: bool,
@@ -13,6 +16,7 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             download_path: "Default".to_string(),
+            user_agent: "None".to_string(),
             dark_mode: true,
             always_on_top: true,
             notifications: false,
@@ -51,7 +55,7 @@ pub fn settings(app: tauri::AppHandle, action: String) {
         "check" => {
             let settings = Settings::load(&app);
             settings.apply(&app);
-            let _ = app.emit("settings", &settings);
+            let _ = app.emit("settings", settings);
         }
         "reset" => {
             let default = Settings::default();
@@ -67,4 +71,27 @@ pub fn settings(app: tauri::AppHandle, action: String) {
 pub fn update_settings(app: tauri::AppHandle, settings: Settings) {
     settings.apply(&app);
     settings.save(&app);
+}
+
+// JSON clearer
+#[tauri::command]
+pub fn overwrite_json(app: tauri::AppHandle, links: Vec<String>) {
+    let path = app.path().app_data_dir().unwrap().join("links.json");
+    
+    let mut unique_links = Vec::new();
+    let mut seen_links = std::collections::HashSet::new();
+    
+    for link in links {
+        if !seen_links.contains(&link) {
+            seen_links.insert(link.clone());
+            unique_links.push(link);
+        }
+    }
+    
+    let json_data = serde_json::to_string_pretty(&unique_links).unwrap();
+
+    std::fs::File::create(&path)
+        .unwrap()
+        .write_all(json_data.as_bytes())
+        .unwrap();
 }
