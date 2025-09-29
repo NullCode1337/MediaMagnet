@@ -282,17 +282,17 @@
     overflow: hidden;
 
     --main-bg: #F3F3F3;
-    --sidebar-bg: #F3F3F3;
-    --border-color: rgba(62, 54, 54, 0.156);
+    --sidebar-bg: #e3e3e3;
+    --border-color: rgba(0, 0, 0, 0.0);
     --text-color: #333;
-    --input-bg: #dfdfff;
+    --input-bg: #d8d8df;
     --input-border: rgba(0, 0, 0, 0.1);
     --input-placeholder: rgba(51, 51, 51, 0.6);
   }
 
   :global(body.dark) {
     --main-bg: rgb(36, 15, 50);
-    --sidebar-bg: rgba(40, 17, 56, 0.95);
+    --sidebar-bg: rgba(47, 21, 66, 0.95);
     --border-color: rgba(255, 255, 255, 0.0);
     --text-color: #fff;
     --input-bg: rgba(47, 19, 67, 0.95);
