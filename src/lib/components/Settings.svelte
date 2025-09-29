@@ -156,13 +156,22 @@
 
         <div class="setting-item text-input">
           <label for="userAgent">User Agent</label>
-          <input 
-            id="userAgent" 
-            type="text" 
-            bind:value={$settings.user_agent}
-            on:change={() => updateSetting('user_agent', $settings.user_agent)}
-            placeholder="Enter custom user agent string"
-          />
+          <div class="input-group">
+            <input 
+              id="userAgent" 
+              type="text" 
+              bind:value={$settings.user_agent}
+              on:change={() => updateSetting('user_agent', $settings.user_agent)}
+              placeholder="Enter custom user agent string"
+            />
+            <!-- svelte-ignore a11y_consider_explicit_label -->
+            <button 
+              class="browse-button"
+              title="Reset to None"
+              on:click={() => updateSetting('user_agent', 'None')}>
+              <i class="fas fa-undo"></i>
+            </button>
+          </div>
         </div>
       </div> 
     </div>
@@ -324,6 +333,7 @@
 
   .setting-item input[type="text"] {
     width: 100%;
+    margin-right: 5px;
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 6px;
@@ -404,9 +414,7 @@
   .browse-button {
     background: rgba(110, 142, 251, 0.3);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    border-left: none;
-    border-top-right-radius: 6px;
-    border-bottom-right-radius: 6px;
+    border-radius: 6px;
     color: #6e8efb;
     padding: 0 16px;
     cursor: pointer;
