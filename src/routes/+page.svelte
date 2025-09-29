@@ -431,26 +431,150 @@
   }
 
   @media (max-width: 600px) {
-    .sidebar-container {
-      flex-direction: column;
-    }
-
     .sidebar-content {
       flex-direction: row;
-      justify-content: right;
+      justify-content: left;
+      align-items: center; 
       margin-right: 20px;
-      gap: 24px;
+      gap: 4px; 
       padding: 0;
+      padding-left: 10px;
+      height: 60px;
     }
 
     .sidebar {
+      position: fixed;
       width: 100%;
-      height: auto;
+      height: 45px;
       padding: 8px 0;
+      border-right: none;
+      border-bottom: 2px solid var(--border-color);
     }
 
-    .box { width: 90vw; }
-    .url-input { width: 100%;}
+    .spacer {
+      display: none;
+    }
+
+    .drag-region {
+      left: 0;
+      height: 60px;
+    }
+
+    .container {
+      padding-top: 45px;
+      height: calc(100vh - 45px);
+    }
+
+    .header {
+      font-size: 16px;
+    }
+
+    .input-container {
+      padding-top: 20px;
+      width: 95vw;
+      max-width: 95vw;
+    }
+
+    .box {
+      width: 80%; 
+      max-width: 100%;
+    }
+
+    .input {
+      width: 100%; 
+    }
+  }
+
+  @media (max-width: 360px) {
+    .sidebar {
+      display: none;
+    }
+
+    .drag-region {
+      display: block;
+      left: 0;
+      height: 100vh;
+      width: 100vw;
+      z-index: 1;
+    }
+
+    .container {
+      padding-top: 0; 
+      height: 100vh; 
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .input-container {
+      padding-top: 0;
+      width: 100vw;
+      max-width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding-top: 80px;
+    }
+
+    .header {
+      display: none;
+    }
+
+    .box {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 40px;
+      margin-top: -40px; 
+    }
+
+    .input {
+      flex-direction: column;
+      gap: 0;
+      align-items: center;
+      justify-content: center;
+      padding-top: 30px;
+    }
+
+    .url-input {
+      display: none;
+    }
+
+    .paste-btn {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      font-size: 32px;
+      position: static;
+      transform: none;
+      z-index: 900;
+      cursor: pointer;
+      background: var(--sidebar-bg);
+      transition: all 0.3s ease;
+      border: 4px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .paste-btn i {
+      font-size: 36px;
+    }
+    
+    .paste-btn:hover {
+      background: var(--main-bg);
+      transform: scale(1.08);
+    }
+
+    .paste-btn:active {
+      transform: scale(0.95);
+    }
+
+    :global(.progress-container) {
+      width: 80%;
+      max-width: 300px;
+    }
   }
   /*#endregion */
 </style>
