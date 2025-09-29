@@ -374,20 +374,7 @@
   }
 
   .panel-content::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  .panel-content::-webkit-scrollbar-track {
-    background: #1e1e22;
-  }
-
-  .panel-content::-webkit-scrollbar-thumb {
-    background: #6e8efb;
-    border-radius: 3px;
-  }
-
-  .panel-content::-webkit-scrollbar-thumb:hover {
-    background: #5d7ce0;
+    display: none;
   }
 
   .panel-content::-webkit-scrollbar:horizontal {
@@ -398,19 +385,60 @@
   @media (max-width: 600px) {
     .settings-panel {
       left: 0;
+      top: 45px; 
+      height: calc(100vh - 45px);
     }
     
+    .panel-header {
+      padding: 16px 20px 12px;
+    }
+
+    .reset-settings {
+      position: static;
+      right: auto;
+      top: auto;
+    }
+
+    .header-actions {
+      gap: 8px; 
+    }
+
     .setting-item {
-      flex-direction: column;
-      align-items: flex-start;
+      flex-direction: row; 
+      align-items: center;
+      padding: 8px 12px;
     }
-    
+
+    .setting-item.checkbox {
+      flex-direction: row;
+    }
+
     .setting-item label {
-      margin-bottom: 8px;
+      margin-bottom: 0; 
+      margin-right: 12px; 
+      min-width: 140px;
+      flex-shrink: 0;
     }
-    
+
+    .setting-item.checkbox label {
+      margin-left: 8px;
+      min-width: auto;
+    }
+
+    .input-group {
+      flex: 1;
+      min-width: 0; 
+    }
+
     .setting-item input[type="text"] {
-      width: 100%;
+      width: 100%; 
+      min-width: 0;
+    }
+
+    .panel-content {
+      max-height: calc(100% - 73px);
+      overflow-y: auto;
+      padding: 12px 16px;
     }
   }
 </style>
