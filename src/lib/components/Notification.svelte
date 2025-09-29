@@ -3,29 +3,21 @@
   import { notifications } from "$lib/stores/store";
   import { fade, slide } from "svelte/transition";
   import '@fortawesome/fontawesome-free/css/all.min.css';
-  
-  function removeNotification(id) {
-    notifications.update($notifications => 
-      $notifications.filter(n => n.id !== id)
-    );
-  }
 </script>
 
 <div class="notification-panel">
-  {#each $notifications as notification, index (index)}
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
+  {#each $notifications as notification (notification.key)}
     <div 
       class="notification {notification.type}"
       in:fade={{ duration: 300 }}
       out:slide|local={{ duration: 300, offset: 20 }}
-      on:click={() => removeNotification(notification.id)}
     >
       <div class="notification-content">
         <i class="fas {notification.type === 'success' ? 'fa-check-circle' : notification.type === 'error' ? 'fa-triangle-exclamation' : 'fa-info-circle'}"></i>
         <span>{notification.message}</span>
       </div>
-      <div class="notification-progress"></div>
+
+        <div class="notification-progress"></div>
     </div>
   {/each}
 </div>
@@ -35,7 +27,7 @@
     position: fixed;
     bottom: 20px;
     right: 20px; 
-    pointer-events: none;
+    pointer-events: none; 
     z-index: 1000;
     display: flex;
     flex-direction: column-reverse;
