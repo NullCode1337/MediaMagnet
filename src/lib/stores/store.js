@@ -21,23 +21,21 @@ export let notifications = writable([]);
 export let statusMessages = writable([]);
 
 export function addNotification(message, type = "info") {
-    const id = Date.now();
     const newNotification = {
-        id,
         message,
         type,
-        timestamp: new Date(),
+        key: Date.now(), 
     };
 
     notifications.update(($notifications) =>
-        [newNotification, ...$notifications].slice(0, 4)
+        [newNotification, ...$notifications].slice(0, 4) 
     );
 
     setTimeout(() => {
         notifications.update(($notifications) =>
-            $notifications.filter((n) => n.id !== id)
+            $notifications.slice(0, -1) 
         );
-    }, 3000);
+    }, 3000); 
 }
 
 // Panel
