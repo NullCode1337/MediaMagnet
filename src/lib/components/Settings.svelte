@@ -12,12 +12,19 @@
   import { ask, open } from "@tauri-apps/plugin-dialog";
   import "@fortawesome/fontawesome-free/css/all.min.css";
 
+  let activeSection = 'general'; 
+
   function toggleSettingsPanel() {
     if ($activePanel === 'settings') {
       closePanel();
     } else {
       openPanel('settings');
     }
+  }
+
+  // @ts-ignore
+  function setActiveSection(section) {
+    activeSection = section;
   }
 
   // @ts-ignore
@@ -88,92 +95,171 @@
           Reset Defaults
         </button>
       </div>
-
     </div>
 
-    <div class="panel-content">
-      <div class="settings-group">
-        <h4>Appearance</h4>
-        
-        <div class="setting-item checkbox">
-          <input 
-            id="darkMode" 
-            type="checkbox" 
-            bind:checked={$settings.dark_mode}
-            on:change={() => updateSetting('dark_mode', $settings.dark_mode)}
-          />
-          <label for="dark_mode">Dark Mode</label>
-        </div>
-
-        <div class="setting-item checkbox">
-          <input 
-            id="alwaysOnTop" 
-            type="checkbox" 
-            bind:checked={$settings.always_on_top}
-            on:change={() => updateSetting('always_on_top', $settings.always_on_top)}
-          />
-          <label for="always_on_top">Always on Top</label>
-        </div>
-      </div>
-      
-      <div class="settings-group">
-        <h4>Notifications</h4>
-        
-        <div class="setting-item checkbox">
-          <input 
-            id="notifications" 
-            type="checkbox" 
-            bind:checked={$settings.notifications}
-            on:change={() => updateSetting('notifications', $settings.notifications)}
-          />
-          <label for="notifications">Enable system notifications</label>
-        </div>
+    <div class="settings-layout">
+      <div class="settings-sidebar">
+        <nav class="sidebar-nav">
+          <button 
+            class="nav-item {activeSection === 'general' ? 'active' : ''}"
+            on:click={() => setActiveSection('general')}
+          >
+            <i class="fas fa-cog"></i>
+            <span>General</span>
+          </button>
+          
+          <button 
+            class="nav-item {activeSection === 'cookies' ? 'active' : ''}"
+            on:click={() => setActiveSection('cookies')}
+          >
+            <i class="fas fa-cookie"></i>
+            <span>Cookies</span>
+          </button>
+        </nav>
       </div>
 
-      
-      <div class="settings-group">
-        <h4>Download Settings</h4>
-        
-        <div class="setting-item text-input">
-          <label for="downloadPath">Download Location</label>
-          <div class="input-group">
-            <input 
-              id="downloadPath" 
-              type="text" 
-              bind:value={$settings.download_path}
-              on:change={() => updateSetting('download_path', $settings.download_path)}
-              placeholder="Select download directory"
-            />
-            <!-- svelte-ignore a11y_consider_explicit_label -->
-            <button 
-              class="browse-button"
-              title="Browse"
-              on:click={selectDir}>
-              <i class="fas fa-folder-open"></i>
-            </button>
+      <div class="settings-content">
+        {#if activeSection === 'general'}
+        <div class="settings-section">
+          <h2 class="section-title">General Settings</h2>
+          
+          <div class="settings-group">
+            <h4>Appearance</h4>
+            
+            <div class="setting-item checkbox">
+              <input 
+                id="darkMode" 
+                type="checkbox" 
+                bind:checked={$settings.dark_mode}
+                on:change={() => updateSetting('dark_mode', $settings.dark_mode)}
+              />
+              <label for="dark_mode">Dark Mode</label>
+            </div>
+
+            <div class="setting-item checkbox">
+              <input 
+                id="alwaysOnTop" 
+                type="checkbox" 
+                bind:checked={$settings.always_on_top}
+                on:change={() => updateSetting('always_on_top', $settings.always_on_top)}
+              />
+              <label for="always_on_top">Always on Top</label>
+            </div>
+          </div>
+          
+          <div class="settings-group">
+            <h4>Notifications</h4>
+            
+            <div class="setting-item checkbox">
+              <input 
+                id="notifications" 
+                type="checkbox" 
+                bind:checked={$settings.notifications}
+                on:change={() => updateSetting('notifications', $settings.notifications)}
+              />
+              <label for="notifications">Enable system notifications</label>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <h4>Download Settings</h4>
+            
+            <div class="setting-item text-input">
+              <label for="downloadPath">Download Location</label>
+              <div class="input-group">
+                <input 
+                  id="downloadPath" 
+                  type="text" 
+                  bind:value={$settings.download_path}
+                  on:change={() => updateSetting('download_path', $settings.download_path)}
+                  placeholder="Select download directory"
+                />
+                <!-- svelte-ignore a11y_consider_explicit_label -->
+                <button 
+                  class="browse-button"
+                  title="Browse"
+                  on:click={selectDir}>
+                  <i class="fas fa-folder-open"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="setting-item text-input">
+              <label for="userAgent">User Agent</label>
+              <div class="input-group">
+                <input 
+                  id="userAgent" 
+                  type="text" 
+                  bind:value={$settings.user_agent}
+                  on:change={() => updateSetting('user_agent', $settings.user_agent)}
+                  placeholder="Enter custom user agent string"
+                />
+                <!-- svelte-ignore a11y_consider_explicit_label -->
+                <button 
+                  class="browse-button"
+                  title="Reset to None"
+                  on:click={() => updateSetting('user_agent', 'None')}>
+                  <i class="fas fa-undo"></i>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="setting-item text-input">
-          <label for="userAgent">User Agent</label>
-          <div class="input-group">
-            <input 
-              id="userAgent" 
-              type="text" 
-              bind:value={$settings.user_agent}
-              on:change={() => updateSetting('user_agent', $settings.user_agent)}
-              placeholder="Enter custom user agent string"
-            />
-            <!-- svelte-ignore a11y_consider_explicit_label -->
-            <button 
-              class="browse-button"
-              title="Reset to None"
-              on:click={() => updateSetting('user_agent', 'None')}>
-              <i class="fas fa-undo"></i>
-            </button>
+        {:else if activeSection === 'cookies'}
+        <div class="settings-section">
+          <h2 class="section-title">Cookie Management</h2>
+          
+          <div class="settings-group">
+            <h4>Cookie Settings</h4>
+
+            <div class="setting-item checkbox">
+              <input 
+                id="clearOnExit" 
+                type="checkbox" 
+                checked
+              />
+              <label for="clearOnExit">Delete cookies on app exit</label>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <h4>Stored Cookies</h4>
+            
+            <div class="cookies-list">
+              <div class="cookie-item">
+                <div class="cookie-info">
+                  <span class="cookie-name">example.com</span>
+                  <span class="cookie-details">Session cookie • 2 items</span>
+                </div>
+                <!-- svelte-ignore a11y_consider_explicit_label -->
+                <button class="cookie-delete" title="Delete cookie">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+              
+              <div class="cookie-item">
+                <div class="cookie-info">
+                  <span class="cookie-name">api.service.com</span>
+                  <span class="cookie-details">Authentication • 1 item</span>
+                </div>
+                <!-- svelte-ignore a11y_consider_explicit_label -->
+                <button class="cookie-delete" title="Delete cookie">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="cookie-actions">
+              <button class="action-button warning">
+                <i class="fas fa-trash-alt"></i>
+                Clear All Cookies
+              </button>
+            </div>
           </div>
         </div>
-      </div> 
+        {/if}
+      </div>
     </div>
   </div>
   {/if}
@@ -271,12 +357,71 @@
     user-select: none;
   }
 
-  .panel-content {
-    flex-grow: 1; 
+  .settings-layout {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .settings-sidebar {
+    width: 200px;
+    background: var(--sidebar-bg);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 20px 0;
+    flex-shrink: 0;
+  }
+
+  .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 0 12px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: var(--text-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: "noto-sans-semibold", sans-serif;
+    font-size: 14px;
+  }
+
+  .nav-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .nav-item.active {
+    background: rgba(110, 142, 251, 0.2);
+    color: #6e8efb;
+  }
+
+  .nav-item i {
+    width: 16px;
+    text-align: center;
+  }
+
+  .settings-content {
+    flex: 1;
     overflow-y: auto;
-    overflow-x: hidden;
-    padding: 16px;
-    min-width: 0;
+    padding: 24px;
+  }
+
+  .settings-section {
+    max-width: 600px;
+  }
+
+  .section-title {
+    color: var(--text-color);
+    font-size: 20px;
+    margin: 0 0 24px 0;
+    font-family: "noto-sans-semibold", sans-serif;
   }
 
   .settings-group {
@@ -427,22 +572,137 @@
     background: rgba(110, 142, 251, 0.5);
   }
 
-  .panel-content::-webkit-scrollbar {
+  .cookies-list {
+    margin-bottom: 16px;
+  }
+
+  .cookie-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    margin-bottom: 8px;
+  }
+
+  .cookie-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .cookie-name {
+    font-family: "noto-sans-semibold", sans-serif;
+    color: var(--text-color);
+    font-size: 14px;
+  }
+
+  .cookie-details {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .cookie-delete {
+    background: transparent;
+    border: none;
+    color: #ff6b6b;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+  }
+
+  .cookie-delete:hover {
+    background: rgba(255, 107, 107, 0.1);
+  }
+
+  .cookie-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .action-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: "noto-sans-semibold", sans-serif;
+    font-size: 13px;
+    transition: all 0.2s ease;
+  }
+
+  .action-button.secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-color);
+  }
+
+  .action-button.warning {
+    background: rgba(255, 107, 107, 0.2);
+    color: #ff6b6b;
+  }
+
+  .action-button:hover {
+    transform: translateY(-1px);
+  }
+
+  .action-button.secondary:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  .action-button.warning:hover {
+    background: rgba(255, 107, 107, 0.3);
+  }
+
+  .settings-content::-webkit-scrollbar {
     width: 5px;
   }
 
-  .panel-content::-webkit-scrollbar-thumb {
+  .settings-content::-webkit-scrollbar-thumb {
     background: #672f7b;
     border-radius: 10px;
   }
 
-  .panel-content::-webkit-scrollbar-thumb:hover {
+  .settings-content::-webkit-scrollbar-thumb:hover {
     background: #b25de0;
   }
 
-  .panel-content::-webkit-scrollbar:horizontal {
+  .settings-content::-webkit-scrollbar:horizontal {
     display: none;
     height: 0;
+  }
+
+  @media (max-width: 768px) {
+    .settings-layout {
+      flex-direction: column;
+    }
+
+    .settings-sidebar {
+      width: 100%;
+      border-right: none;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 12px 0;
+    }
+
+    .sidebar-nav {
+      flex-direction: row;
+      overflow-x: auto;
+      padding: 0 16px;
+    }
+
+    .nav-item {
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .settings-content {
+      padding: 16px;
+    }
   }
 
   @media (max-width: 600px) {
@@ -520,9 +780,12 @@
       min-width: 44px;
     }
 
-    .panel-content {
-      max-height: auto;
-      padding: 12px 16px;
+    .cookie-actions {
+      flex-direction: column;
+    }
+
+    .action-button {
+      justify-content: center;
     }
   }
 </style>
