@@ -1,15 +1,19 @@
 <script>
   import { 
-    addNotification,
-    settings,
     activePanel, 
+    addNotification,
+    closePanel,
+    cookies,
     openPanel, 
-    closePanel 
+    settings,
+    showCookieDialog,
   } from "$lib/stores/store";
 
   import { invoke } from '@tauri-apps/api/core';
   import { listen } from '@tauri-apps/api/event';
   import { ask, open } from "@tauri-apps/plugin-dialog";
+  
+  import CookieDialog from "./CookieDialog.svelte";
   import "@fortawesome/fontawesome-free/css/all.min.css";
 
   let activeSection = 'general'; 
@@ -227,30 +231,38 @@
             <h4>Stored Cookies</h4>
             
             <div class="cookies-list">
-              <div class="cookie-item">
-                <div class="cookie-info">
-                  <span class="cookie-name">example.com</span>
-                  <span class="cookie-details">Session cookie • 2 items</span>
-                </div>
-                <!-- svelte-ignore a11y_consider_explicit_label -->
-                <button class="cookie-delete" title="Delete cookie">
-                  <i class="fas fa-trash"></i>
-                </button>
+            {#if Object.keys($cookies || {}).length === 0}
+              <div class="empty-state">
+                No cookies stored!
               </div>
-              
-              <div class="cookie-item">
-                <div class="cookie-info">
-                  <span class="cookie-name">api.service.com</span>
-                  <span class="cookie-details">Authentication • 1 item</span>
+            {:else}
+              {#each Object.entries($cookies) as [name, path]}
+                <div class="cookie-item">
+                  <div class="cookie-info">
+                    <span class="cookie-name">{name}</span>
+                    <span class="cookie-details">Path: {path}</span>
+                  </div>
+                  <button class="cookie-delete" title="Delete cookie" aria-label="Click this button to delete the cookie">
+                    <i class="fas fa-trash"></i>
+                  </button>
                 </div>
-                <!-- svelte-ignore a11y_consider_explicit_label -->
-                <button class="cookie-delete" title="Delete cookie">
-                  <i class="fas fa-trash"></i>
-                </button>
-              </div>
+              {/each}
+            {/if}
             </div>
 
             <div class="cookie-actions">
+              <button 
+                class="action-button secondary" 
+                on:click={() => $showCookieDialog = true}
+                title="Add Cookie"
+                aria-label="Click to add cookie to the app"
+              >
+                <i class="fas fa-plus"></i>
+                Add Cookie
+              </button>
+
+              <CookieDialog />
+              
               <button class="action-button warning">
                 <i class="fas fa-trash-alt"></i>
                 Clear All Cookies
@@ -281,6 +293,13 @@
     position: relative;
     z-index: 102;
     transition: background-color 0.2s ease;
+  }
+  
+  .empty-state {
+    font-size: 20px;
+    color: white;
+    font-family: "ubuntu-regular", "noto-sans-semibold", sans-serif;
+    justify-content: center;
   }
 
   .active {
