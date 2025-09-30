@@ -1,10 +1,12 @@
 <script>
-  import { downloadDir } from '@tauri-apps/api/path';
   import { openPath } from '@tauri-apps/plugin-opener';
+  import { join } from '@tauri-apps/api/path';
+  import { settings } from '$lib/stores/store';
 
   async function openFolder() {
-    const path = await downloadDir();
-    console.log(path);
+    let path = $settings.download_path;
+    if (!path.toLowerCase().includes("mediamagnet"))
+      path = await join(path, "MediaMagnet");
     await openPath(path);
   }
 </script>
