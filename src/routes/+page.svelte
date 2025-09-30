@@ -165,7 +165,7 @@
       if (urlInput) urlInput.focus();
 
       await invoke("check_links");
-      await invoke("settings", {action: "check"});
+      $settings = await invoke("settings", {action: "check"});
 
       getCurrentWindow().onCloseRequested(async (event) => {
         if ($isDownloading) {
