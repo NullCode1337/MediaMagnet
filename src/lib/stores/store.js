@@ -26,22 +26,19 @@ export let expandStatus = writable(false);
 // Notifications
 export let notifications = writable([]);
 export let statusMessages = writable([]);
-let counter = 0;
 
 export function addNotification(message, type = "info") {
-  counter += 1;
-
   const newNotification = {
     message,
     type,
-    key: counter,
+    key: Date.now() + Math.random(),
   };
 
   notifications.update(($notifications) =>
     [newNotification, ...$notifications].slice(0, 4)
   );
 
-  const nkey = counter;
+  const nkey = newNotification.key;
   
   setTimeout(() => {
     notifications.update(($notifications) =>
