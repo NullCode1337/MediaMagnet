@@ -103,6 +103,21 @@ async fn gallery_dl(app: tauri::AppHandle, link: &str) -> Result<(), Box<dyn std
     });
 
     let _status = downloader.wait().await?;
+
+    let directlink = std::path::Path::new("directlink");
+    if directlink.exists() && directlink.is_dir() {
+        for entry in std::fs::read_dir(directlink)? {
+            let entry = entry?;
+            let file_path = entry.path();
+            if file_path.is_file() {
+                let file_name = file_path.file_name().unwrap();
+                let new_path = std::path::Path::new(".").join(file_name);
+                std::fs::rename(&file_path, new_path)?;
+            }
+        }
+        std::fs::remove_dir(directlink)?;
+    }
+    
     Ok(())
 }
 
