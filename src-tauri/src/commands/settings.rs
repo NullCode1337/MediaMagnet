@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use tauri::{Emitter, Manager};
+use tauri::Manager;
 use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -50,20 +50,20 @@ impl Settings {
 }
 
 #[tauri::command]
-pub fn settings(app: tauri::AppHandle, action: String) {
+pub fn settings(app: tauri::AppHandle, action: String) -> Settings {
     match action.as_str() {
         "check" => {
             let settings = Settings::load(&app);
             settings.apply(&app);
-            let _ = app.emit("settings", settings);
+            settings
         }
         "reset" => {
             let default = Settings::default();
             default.apply(&app);
             default.save(&app);
-            let _ = app.emit("settings", default);
+            default
         }
-        _ => { }
+        _ => { Settings::default() }
     }
 }
 

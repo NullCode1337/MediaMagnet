@@ -46,15 +46,7 @@
 
     if (!confirm) return;
 
-    $settings = {
-      download_path: "Default",
-      dark_mode: true,
-      always_on_top: true,
-      notifications: true,
-      user_agent: ""
-    };
-    
-    await invoke("settings", {action: "reset"});
+    $settings = await invoke("settings", {action: "reset"});
     addNotification("Settings reset to factory default", "success");
   }
 
@@ -66,11 +58,6 @@
     
     updateSetting('download_path', dir);
   }
-
-  listen('settings', (event) => {
-    $settings = event.payload;
-    console.log($settings);
-  });
 </script>
 
 <div class="settings-container">
