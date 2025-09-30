@@ -10,6 +10,12 @@ export let settings = writable({
     notifications: false
 });
 
+// Cookies
+export let cookies = writable({});
+export const showCookieDialog = writable(false);
+export const cookieDomain = writable('');
+export const cookieFile = writable('');
+
 // Variables
 export let pendingDownloads = writable([]);
 export let isDownloading = writable(false);
