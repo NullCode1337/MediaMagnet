@@ -214,6 +214,7 @@
       $currentlyDownloading.lastIndexOf("/") + 1,
     );
     addNotification(`Download failed: ${urlTail}`, "error");
+    addNotification(event.payload);
     resetDownloadState();
 
     if ($pendingDownloads.length > 0) {
