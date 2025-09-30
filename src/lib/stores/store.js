@@ -26,24 +26,28 @@ export let expandStatus = writable(false);
 // Notifications
 export let notifications = writable([]);
 export let statusMessages = writable([]);
+let counter = 0;
 
 export function addNotification(message, type = "info") {
-    const newNotification = {
-        message,
-        type,
-        key: Date.now(), 
-    };
+  counter += 1;
 
+  const newNotification = {
+    message,
+    type,
+    key: counter,
+  };
+
+  notifications.update(($notifications) =>
+    [newNotification, ...$notifications].slice(0, 4)
+  );
+
+  setTimeout(() => {
     notifications.update(($notifications) =>
-        [newNotification, ...$notifications].slice(0, 4) 
+      $notifications.filter((n) => n.key !== newNotification.key)
     );
-
-    setTimeout(() => {
-        notifications.update(($notifications) =>
-            $notifications.slice(0, -1) 
-        );
-    }, 3000); 
+  }, 3000);
 }
+
 
 // Panel
 export const activePanel = writable(null);
