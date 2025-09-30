@@ -41,13 +41,14 @@ export function addNotification(message, type = "info") {
     [newNotification, ...$notifications].slice(0, 4)
   );
 
+  const nkey = counter;
+  
   setTimeout(() => {
     notifications.update(($notifications) =>
-      $notifications.filter((n) => n.key !== newNotification.key)
+      $notifications.filter((n) => n.key !== nkey)
     );
   }, 3000);
 }
-
 
 // Panel
 export const activePanel = writable(null);
