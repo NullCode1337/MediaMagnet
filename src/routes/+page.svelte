@@ -124,9 +124,7 @@
       invoke("downloader", { url: firstUrl });
       
       if (remainingUrls.length > 0) {
-        addNotification(`Started download and queued ${remainingUrls.length} URL(s)`, "success");
-      } else {
-        addNotification("Download started", "success");
+        addNotification(`Queued ${remainingUrls.length} URL(s)`, "success");
       }
     }
 
@@ -199,7 +197,7 @@
 
   //#region Event Listeners
   listen("download-started", () => {
-    addNotification("Task started");
+    addNotification("Download started");
     $isDownloading = true;
   });
 
