@@ -45,42 +45,89 @@
   let pasteIcon = true;
   $: pasteIcon = url.trim() === "";
 
+  // @ts-ignore
+  function extractUrls(text) {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const allUrls = text.match(urlRegex) || [];
+    
+    // @ts-ignore | Just a hardcoded check for one site
+    return allUrls.filter(url => {
+        if (
+          url.includes('forum') 
+          && url.includes('.io') 
+          && url.includes('didg')
+        ) 
+          return url.includes('original');
+
+        return true;
+    });
+  }
+
   //#region Download Functions
   async function download() {
     let downloadUrl = url.trim();
 
     if (downloadUrl === "") {
       try {
-        const clip = await readText();
-        downloadUrl = clip.trim();
+        downloadUrl = await readText();
       } catch (error) {
         addNotification("Failed to read clipboard", "error");
         return;
       }
     }
+    
+    downloadUrl = downloadUrl
+      .replace(/["']/g, '')
+      .replace(/%22/g, '')
+      .trim();
 
-    try {
-      new URL(downloadUrl);
-    } catch (_) {
-      addNotification("Invalid URL", "error");
+    const extractedUrls = extractUrls(downloadUrl);
+
+    if (extractedUrls.length === 0) {
+      addNotification("No URLs found", "error");
+      return;
+    }
+
+    const validUrls = [];
+    const seenUrls = new Set([...$pendingDownloads, $currentlyDownloading].filter(Boolean));
+
+    for (const extractedUrl of extractedUrls) {
+      try {
+        const url = new URL(extractedUrl);
+        const good = url.href;
+        
+        if (!seenUrls.has(good)) {
+          validUrls.push(good);
+          seenUrls.add(good);
+        }
+      } catch (_) {
+        continue;
+      }
+    }
+
+    if (validUrls.length === 0) {
+      addNotification("No valid URLs found", "error");
       return;
     }
 
     if ($isDownloading) {
-      if (
-        $pendingDownloads.includes(downloadUrl) ||
-        $currentlyDownloading === downloadUrl
-      ) {
-        addNotification("URL already in the queue", "error");
-        return;
-      }
-      $pendingDownloads = [...$pendingDownloads, downloadUrl];
-      addNotification("Link added to queue", "success");
+      $pendingDownloads = [...$pendingDownloads, ...validUrls];
       await invoke("overwrite_json", { links: $pendingDownloads });
+      addNotification(`Added ${validUrls.length} URL(s) to queue`, "success");
     } else {
+      const [firstUrl, ...remainingUrls] = validUrls;
+      $pendingDownloads = [...$pendingDownloads, ...remainingUrls];
+      $currentlyDownloading = firstUrl;
       $isDownloading = true;
-      $currentlyDownloading = downloadUrl;
-      invoke("downloader", { url: downloadUrl });
+      
+      await invoke("overwrite_json", { links: $pendingDownloads });
+      invoke("downloader", { url: firstUrl });
+      
+      if (remainingUrls.length > 0) {
+        addNotification(`Started download and queued ${remainingUrls.length} URL(s)`, "success");
+      } else {
+        addNotification("Download started", "success");
+      }
     }
 
     downloadUrl = "";
@@ -245,7 +292,7 @@
             bind:this={urlInput}
             on:keypress={handleKeyPress}
             autocomplete="off"
-            placeholder="Enter URL"
+            placeholder="Enter URL (or multiple URLs)"
           />
           <button
             class="paste-btn"
