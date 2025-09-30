@@ -107,9 +107,21 @@
     color: white;
     cursor: pointer;
     padding: 5px;
+    border-radius: 4px;
     transition: transform 0.3s ease;
   }
   .expand-btn.expanded {
     transform: rotate(180deg);
+  }
+  .status-container::-webkit-scrollbar {
+    width: 12px;
+  }
+  .status-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+  }
+  .status-container::-webkit-scrollbar-thumb {
+    background: #670f6a;
+    border-radius: 6px;
   }
 </style>
