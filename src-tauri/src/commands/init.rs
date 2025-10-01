@@ -68,8 +68,9 @@ pub fn init_config(app: tauri::AppHandle) {
 
     if !settings_json.exists() {
         let default_settings = Settings::default();
-        let settings_json_content: String = serde_json::to_string_pretty(&default_settings).unwrap();
-        
+        let settings_json_content: String =
+            serde_json::to_string_pretty(&default_settings).unwrap();
+
         std::fs::write(&settings_json, settings_json_content)
             .map_err(|e| format!("Failed to write default settings to file: {}", e))
             .unwrap();
