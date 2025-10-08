@@ -17,11 +17,12 @@
     "process:default",
 
     "opener:default",
+    "opener:allow-open-url",
     {
       "identifier": "opener:allow-open-path",
       "allow": [{ "path": "/**" }]
     },
-    
+
     "clipboard-manager:default",
     "clipboard-manager:allow-read-text",
     "clipboard-manager:allow-read-image",
