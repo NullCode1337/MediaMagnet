@@ -9,6 +9,7 @@
 
   import { invoke } from "@tauri-apps/api/core";
   import { ask } from "@tauri-apps/plugin-dialog";
+  import { writeText } from '@tauri-apps/plugin-clipboard-manager';
   import "@fortawesome/fontawesome-free/css/all.min.css";
 
   // @ts-ignore
@@ -38,6 +39,17 @@
     );
 
     closePanel();
+  }
+
+  /** @param {string} url */
+  async function copyUrl(url) {
+    try {
+      await writeText(url);
+      addNotification('URL copied to clipboard', 'success');
+    } catch (error) {
+      console.log('Failed to copy URL:', error);
+      addNotification('Failed to copy URL', 'error');
+    }
   }
 
   // @ts-ignore
@@ -90,7 +102,16 @@
                 <div class="download-icon">
                   <i class="fas fa-file-download"></i>
                 </div>
-                <div class="download-url">{download}</div>
+                <!-- svelte-ignore a11y_click_events_have_key_events -->
+                <!-- svelte-ignore a11y_no_static_element_interactions -->
+                <div 
+                  class="download-url"
+                  on:click={() => copyUrl(download)}
+                  title="Click to copy URL"
+                  aria-label="Click to copy me"
+                >
+                  {download}
+                </div>
               </div>
               <div class="last">
                 <div class="download-status">Pending</div>
@@ -279,6 +300,13 @@
     text-overflow: clip;
     max-width: none;
     min-width: 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .download-url:hover {
+    text-decoration: underline;
+    color: #6e8efb;
   }
 
   .last {
@@ -367,6 +395,13 @@
       overflow: hidden;
       text-overflow: ellipsis;
       font-size: 13px; 
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .download-url:hover {
+      text-decoration: underline;
+      color: #6e8efb;
     }
 
     .last {
