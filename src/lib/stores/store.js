@@ -7,6 +7,7 @@ export let settings = writable({
     user_agent: "None",
     dark_mode: true,
     always_on_top: true,
+    show_decor: true,
     notifications: false
 });
 
