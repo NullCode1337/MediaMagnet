@@ -11,18 +11,20 @@
     "core:window:allow-minimize",
     "core:window:allow-toggle-maximize",
     "core:window:allow-close",
+    
+    "shell:default",
+    "dialog:default",
+    "process:default",
+
     "opener:default",
     {
       "identifier": "opener:allow-open-path",
-      "allow": [ 
-        { "path": "/**" }
-      ]
+      "allow": [{ "path": "/**" }]
     },
+    
     "clipboard-manager:default",
     "clipboard-manager:allow-read-text",
     "clipboard-manager:allow-read-image",
-    "shell:default",
-    "dialog:default",
-    "process:default"
+    "clipboard-manager:allow-write-text"
   ]
 }
