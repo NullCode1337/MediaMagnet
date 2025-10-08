@@ -37,6 +37,10 @@
     }
   }
 
+  let decor = true;
+  $: decor = $settings.show_decor; 
+
+
   let url = "";
   /** @type {HTMLInputElement} */ let urlInput;
 
@@ -44,7 +48,7 @@
 
   let pasteIcon = true;
   $: pasteIcon = url.trim() === "";
-
+  
   // @ts-ignore
   function extractUrls(text) {
     const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -264,8 +268,10 @@
 </svelte:head>
 
 <!-- #region <-- HTML -->
-<WindowDecor />
-<header class="drag-region" data-tauri-drag-region=""></header>
+{#if decor}
+  <WindowDecor />
+  <header class="drag-region" data-tauri-drag-region=""></header>
+{/if}
 
 <div class="sidebar-container">
   <aside class="sidebar">
@@ -456,6 +462,7 @@
 
   .url-input::placeholder {
     color: var(--input-placeholder);
+    font-size: 15px;
   }
 
   .paste-btn {
