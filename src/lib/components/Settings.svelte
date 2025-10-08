@@ -136,6 +136,16 @@
               />
               <label for="always_on_top">Always on Top</label>
             </div>
+
+            <div class="setting-item checkbox">
+              <input 
+                id="showDecor" 
+                type="checkbox" 
+                bind:checked={$settings.show_decor}
+                on:change={() => updateSetting('show_decor', $settings.show_decor)}
+              />
+              <label for="show_decor">Use custom titlebar</label>
+            </div>
           </div>
           
           <div class="settings-group">
