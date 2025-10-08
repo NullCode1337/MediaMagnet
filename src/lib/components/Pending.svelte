@@ -10,6 +10,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import { ask } from "@tauri-apps/plugin-dialog";
   import { writeText } from '@tauri-apps/plugin-clipboard-manager';
+  import { openUrl } from '@tauri-apps/plugin-opener';
   import "@fortawesome/fontawesome-free/css/all.min.css";
 
   // @ts-ignore
@@ -49,6 +50,17 @@
     } catch (error) {
       console.log('Failed to copy URL:', error);
       addNotification('Failed to copy URL', 'error');
+    }
+  }
+
+  /** @param {string} url */
+  async function browserUrl(url) {
+    try {
+      await openUrl(url);
+      addNotification('URL opened in browser', 'success');
+    } catch (error) {
+      console.log('Failed to open URL:', error);
+      addNotification('Failed to open URL', 'error');
     }
   }
 
@@ -115,14 +127,32 @@
               </div>
               <div class="last">
                 <div class="download-status">Pending</div>
-                <button
-                  class="cancel"
-                  on:click={() => removeDownload(index)}
-                  aria-label="Press to cancel the download (this action cannot be reverted)"
-                  title="Cancel download"
-                >
-                  <i class="fas fa-times"></i>
-                </button>
+                <div class="action-buttons">
+                  <button
+                    class="action-btn copy"
+                    on:click={() => copyUrl(download)}
+                    aria-label="Copy URL to clipboard"
+                    title="Copy URL"
+                  >
+                    <i class="fas fa-copy"></i>
+                  </button>
+                  <button
+                    class="action-btn open"
+                    on:click={() => browserUrl(download)}
+                    aria-label="Open URL in browser"
+                    title="Open in browser"
+                  >
+                    <i class="fas fa-external-link-alt"></i>
+                  </button>
+                  <button
+                    class="action-btn cancel"
+                    on:click={() => removeDownload(index)}
+                    aria-label="Press to cancel the download (this action cannot be reverted)"
+                    title="Cancel download"
+                  >
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
               </div>
             </div>
           {/each}
@@ -315,6 +345,38 @@
     gap: 8px;
   }
 
+  .action-buttons {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .action-btn {
+    background: transparent;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    font-size: 12px;
+  }
+
+  .action-btn.copy:hover {
+    color: #6e8efb;
+    background: rgba(110, 142, 251, 0.1);
+  }
+
+  .action-btn.open:hover {
+    color: #2ed573;
+    background: rgba(46, 213, 115, 0.1);
+  }
+
+  .action-btn.cancel:hover {
+    color: #ff4757;
+    background: rgba(255, 71, 87, 0.1);
+  }
+
   .download-status {
     font-size: 12px;
     color: #ffa502;
@@ -324,17 +386,7 @@
     margin-left: 10px;
     flex-shrink: 0;
   }
-
-  .cancel {
-    background: transparent;
-    border: none;
-    color: #888;
-    cursor: pointer;
-    padding: 4px 6px;
-    border-radius: 4px;
-    transition: all 0.2s ease;
-  }
-
+  
   .cancel:hover {
     color: #ff4757;
     background: rgba(255, 71, 87, 0.1);
@@ -407,6 +459,15 @@
     .last {
       flex-shrink: 0; 
       gap: 6px;
+    }
+
+    .action-buttons {
+      gap: 2px;
+    }
+    
+    .action-btn {
+      padding: 5px;
+      font-size: 11px;
     }
 
     .download-status {
