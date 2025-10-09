@@ -10,13 +10,12 @@
   } from "$lib/stores/store";
 
   import { invoke } from '@tauri-apps/api/core';
-  import { listen } from '@tauri-apps/api/event';
   import { ask, open } from "@tauri-apps/plugin-dialog";
   
   import CookieDialog from "./CookieDialog.svelte";
   import "@fortawesome/fontawesome-free/css/all.min.css";
 
-  let activeSection = 'general'; 
+  let activeSection = 'appearance'; 
 
   function toggleSettingsPanel() {
     if ($activePanel === 'settings') {
@@ -92,11 +91,19 @@
       <div class="settings-sidebar">
         <nav class="sidebar-nav">
           <button 
-            class="nav-item {activeSection === 'general' ? 'active' : ''}"
-            on:click={() => setActiveSection('general')}
+            class="nav-item {activeSection === 'appearance' ? 'active' : ''}"
+            on:click={() => setActiveSection('appearance')}
           >
-            <i class="fas fa-cog"></i>
-            <span>General</span>
+            <i class="fas fa-palette"></i>
+            <span>Appearance</span>
+          </button>
+          
+          <button 
+            class="nav-item {activeSection === 'download' ? 'active' : ''}"
+            on:click={() => setActiveSection('download')}
+          >
+            <i class="fas fa-download"></i>
+            <span>Download</span>
           </button>
           
           <button 
@@ -110,12 +117,12 @@
       </div>
 
       <div class="settings-content">
-        {#if activeSection === 'general'}
+        {#if activeSection === 'appearance'}
         <div class="settings-section">
-          <h2 class="section-title">General Settings</h2>
+          <h2 class="section-title">Appearance Settings</h2>
           
           <div class="settings-group">
-            <h4>Appearance</h4>
+            <h4>Theme</h4>
             
             <div class="setting-item checkbox">
               <input 
@@ -126,7 +133,11 @@
               />
               <label for="dark_mode">Dark Mode</label>
             </div>
+          </div>
 
+          <div class="settings-group">
+            <h4>Window Behavior</h4>
+            
             <div class="setting-item checkbox">
               <input 
                 id="alwaysOnTop" 
@@ -147,23 +158,14 @@
               <label for="show_decor">Use custom titlebar</label>
             </div>
           </div>
+        </div>
+
+        {:else if activeSection === 'download'}
+        <div class="settings-section">
+          <h2 class="section-title">Download Settings</h2>
           
           <div class="settings-group">
-            <h4>Notifications</h4>
-            
-            <div class="setting-item checkbox">
-              <input 
-                id="notifications" 
-                type="checkbox" 
-                bind:checked={$settings.notifications}
-                on:change={() => updateSetting('notifications', $settings.notifications)}
-              />
-              <label for="notifications">Enable system notifications</label>
-            </div>
-          </div>
-
-          <div class="settings-group">
-            <h4>Download Settings</h4>
+            <h4>Storage</h4>
             
             <div class="setting-item text-input">
               <label for="downloadPath">Download Location</label>
@@ -184,7 +186,11 @@
                 </button>
               </div>
             </div>
+          </div>
 
+          <div class="settings-group">
+            <h4>Network</h4>
+            
             <div class="setting-item text-input">
               <label for="userAgent">User Agent</label>
               <div class="input-group">
@@ -203,6 +209,20 @@
                   <i class="fas fa-undo"></i>
                 </button>
               </div>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <h4>Notifications (WIP)</h4>
+            
+            <div class="setting-item checkbox">
+              <input 
+                id="notifications" 
+                type="checkbox" 
+                bind:checked={$settings.notifications}
+                on:change={() => updateSetting('notifications', $settings.notifications)}
+              />
+              <label for="notifications">Enable system notifications</label>
             </div>
           </div>
         </div>
