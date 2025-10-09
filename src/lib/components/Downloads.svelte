@@ -235,9 +235,13 @@
           {/each}
         {:else}
           <div class="empty-state">
-            <p id="blankText">
-              <i class="fas fa-check"></i> No downloads
-            </p>
+            <h3>✅ No Downloads</h3>
+            <div class="empty-actions">
+              <button class="paste-btn" on:click={() => closePanel()}>
+                <i class="fas fa-plus"></i>
+                Add Download
+              </button>
+            </div>
           </div>
         {/if}
       </div>
@@ -293,13 +297,6 @@
     justify-content: center;
     font-weight: bold;
     z-index: 103;
-  }
-
-  #blankText {
-    font-family: "noto-sans-semibold", Courier, monospace;
-    font-style: normal;
-    color: var(--text-color);
-    user-select: none;
   }
 
   .downloads-panel {
@@ -513,14 +510,39 @@
   }
 
   .empty-state {
-    position: absolute;
-    top: 50%;
-    left: 50%;
+    position: absolute; 
+    top: 50%; 
+    left: 50%; 
     transform: translate(-50%, -50%);
     text-align: center;
-    color: #888;
-    font-style: italic;
-    width: 100%;
+    color: var(--text-color);
+  }
+
+  .empty-state h3 {
+    margin: 0 0 16px 0;
+    font-size: 20px;
+    font-weight: 600;
+    font-family: "noto-sans-semibold", sans-serif;
+  }
+
+  .empty-actions .paste-btn {
+    background: #6e8efb;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-family: "noto-sans-semibold", sans-serif;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .empty-actions .paste-btn:hover {
+    background: #5a7df9;
+    transform: translateY(-1px);
   }
 
   @media (max-width: 600px) {
