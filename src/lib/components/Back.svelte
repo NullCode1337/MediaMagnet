@@ -38,7 +38,7 @@
   i {
     pointer-events: none;
   }
-  
+
   .toolbar-button i {
     color: var(--text-color);
   }
