@@ -72,7 +72,7 @@
   {#if $activePanel === 'settings'}
   <div class="settings-panel">
     <div class="panel-header" data-tauri-drag-region> 
-      <h3>Settings</h3>
+      <h3 data-tauri-drag-region>Settings</h3>
 
       <div class="header-actions">
         <button
@@ -89,7 +89,7 @@
 
     <div class="settings-layout">
       <div class="settings-sidebar">
-        <nav class="sidebar-nav">
+        <nav class="sidebar-nav" data-tauri-drag-region>
           <button 
             class="nav-item {activeSection === 'appearance' ? 'active' : ''}"
             on:click={() => setActiveSection('appearance')}
@@ -386,7 +386,7 @@
   }
 
   .panel-header h3 {
-    margin: 0;
+    margin: 2px 8px 2px 0;
     color: var(--text-color);
     font-size: 16px;
     font-family: "noto-sans-semibold", sans-serif;

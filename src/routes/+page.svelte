@@ -283,12 +283,12 @@
 <!-- #region <-- HTML -->
 {#if decor}
   <WindowDecor />
-  <header class="drag-region" data-tauri-drag-region=""></header>
+  <header class="drag-region" data-tauri-drag-region></header>
 {/if}
 
 <div class="sidebar-container">
   <aside class="sidebar">
-    <div class="sidebar-content">
+    <div class="sidebar-content" data-tauri-drag-region>
       <Back />
       <Downloads />
       <Settings />
@@ -436,7 +436,6 @@
     color: var(--text-color);
     font-family: "noto-sans-semibold", sans-serif;
     font-weight: 300;
-    user-select: none;
     font-size: 20px;
     margin-bottom: 14px;
     text-align: center;

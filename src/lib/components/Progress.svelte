@@ -114,7 +114,7 @@
     transform: rotate(180deg);
   }
   .status-container::-webkit-scrollbar {
-    width: 12px;
+    width: 4px;
   }
   .status-container::-webkit-scrollbar-track {
     background: rgba(0, 0, 0, 0.2);
