@@ -234,7 +234,7 @@
             </div>
           {/each}
         {:else}
-          <div class="empty-state">
+          <div class="empty-state" data-tauri-drag-region>
             <h3>No pending downloads</h3>
             <div class="empty-actions">
               <button class="paste-btn" on:click={() => closePanel()}>
@@ -348,7 +348,7 @@
   }
 
   .panel-header h3 {
-    margin: 0;
+    margin: 2px 8px 2px 0;
     color: var(--text-color);
     font-size: 16px;
     font-family: "noto-sans-semibold", sans-serif;
