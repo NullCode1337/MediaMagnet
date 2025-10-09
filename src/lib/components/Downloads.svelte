@@ -370,6 +370,7 @@
     animation: fadeIn 0.3s forwards;
     opacity: 0;
     overflow: hidden;
+    min-height: 40px;
   }
 
   .download-item.failed {
@@ -390,7 +391,7 @@
 
   .download-info {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     flex: 1;
     min-width: 0;
     overflow: hidden;
@@ -398,8 +399,9 @@
 
   .download-icon {
     margin-right: 10px;
-    margin-top: 2px;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
   }
 
   .download-item:not(.failed) .download-icon {
@@ -425,6 +427,9 @@
     min-width: 0;
     cursor: pointer;
     transition: all 0.2s ease;
+    display: flex;
+    align-items: center; 
+    height: 100%; 
   }
 
   .download-url:hover {
@@ -579,25 +584,29 @@
 
     .download-item {
       flex-direction: row;
-      align-items: flex-start;
+      align-items: center;
       padding: 10px 16px;
       gap: 8px;
+      min-height: 55px;
     }
 
     .download-info {
       flex: 1;
-      min-width: 0; 
+      min-width: 0;
       overflow: hidden;
+      align-items: center;
     }
 
     .download-url {
-      max-width: calc(100vw - 200px); 
+      max-width: calc(100vw - 200px);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      font-size: 13px; 
+      font-size: 13px;
       cursor: pointer;
       transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
     }
 
     .download-url:hover {
@@ -611,7 +620,7 @@
     }
 
     .last {
-      flex-shrink: 0; 
+      flex-shrink: 0;
       gap: 6px;
       flex-direction: column;
       align-items: flex-end;
@@ -627,9 +636,9 @@
     }
 
     .download-status {
-      font-size: 11px; 
+      font-size: 11px;
       padding: 3px 6px;
-      margin-left: 0; 
+      margin-left: 0;
     }
 
     .panel-content {
