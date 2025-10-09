@@ -297,7 +297,7 @@
     </div>
   </aside>
 
-  <main class="container">
+  <main class="container" data-tauri-drag-region>
     <div class="input-container">
       <h1 class="header">What to download today?</h1>
       <div class="box">
