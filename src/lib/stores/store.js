@@ -19,6 +19,7 @@ export const cookieFile = writable('');
 
 // Variables
 export let pendingDownloads = writable([]);
+export let failedDownloads = writable([]);
 export let isDownloading = writable(false);
 export let currentlyDownloading = writable();
 export let downloadProgress = writable(0);
