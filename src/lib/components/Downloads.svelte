@@ -235,7 +235,7 @@
           {/each}
         {:else}
           <div class="empty-state">
-            <h3>✅ No Downloads</h3>
+            <h3>No pending downloads</h3>
             <div class="empty-actions">
               <button class="paste-btn" on:click={() => closePanel()}>
                 <i class="fas fa-plus"></i>
@@ -510,39 +510,50 @@
   }
 
   .empty-state {
-    position: absolute; 
-    top: 50%; 
-    left: 50%; 
-    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     text-align: center;
     color: var(--text-color);
+    padding: 20px;
   }
 
   .empty-state h3 {
-    margin: 0 0 16px 0;
+    margin: 0 0 20px 0;
     font-size: 20px;
     font-weight: 600;
     font-family: "noto-sans-semibold", sans-serif;
   }
 
-  .empty-actions .paste-btn {
-    background: #6e8efb;
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 12px;
-    cursor: pointer;
-    font-family: "noto-sans-semibold", sans-serif;
-    font-size: 14px;
-    transition: all 0.2s ease;
+  .empty-actions {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    justify-content: center;
+  }
+
+  .empty-actions .paste-btn {
+      background: #6e8efb;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-family: "noto-sans-semibold", sans-serif;
+      font-size: 14px;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
   }
 
   .empty-actions .paste-btn:hover {
-    background: #5a7df9;
-    transform: translateY(-1px);
+      background: #5a7df9;
+      transform: translateY(-1px);
   }
 
   @media (max-width: 600px) {
@@ -627,12 +638,16 @@
     }
 
     .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -25%);
-      width: 90%;
-      padding: 0 16px;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 20px;
     }
 
     .downloads-badge {
