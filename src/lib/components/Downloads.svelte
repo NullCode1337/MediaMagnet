@@ -1,6 +1,7 @@
 <script>
   import {
     pendingDownloads,
+    failedDownloads,
     addNotification,
     activePanel,
     openPanel,
@@ -14,18 +15,19 @@
   import "@fortawesome/fontawesome-free/css/all.min.css";
 
   // @ts-ignore
-  let pendingContainer;
+  let downloadsContainer;
 
-  function togglePendingPanel() {
-    if ($activePanel === "pending") {
+  function toggleDownloadsPanel() {
+    if ($activePanel === "downloads") {
       closePanel();
     } else {
-      openPanel("pending");
+      openPanel("downloads");
     }
   }
 
   async function clearAllDownloads() {
-    const confirm = await ask("Are you sure? This action is irreversible!", {
+    const totalDownloads = $pendingDownloads.length + $failedDownloads.length;
+    const confirm = await ask(`Are you sure you want to clear all ${totalDownloads} downloads? This action is irreversible!`, {
       title: "Clear all downloads",
       kind: "warning",
     });
@@ -33,12 +35,9 @@
     if (!confirm) return;
 
     $pendingDownloads = [];
+    $failedDownloads = [];
     await invoke("overwrite_json", { links: $pendingDownloads });
-    addNotification(
-      "Cleared all pending downloads and removed from data file",
-      "success",
-    );
-
+    addNotification("Cleared all downloads", "success");
     closePanel();
   }
 
@@ -64,34 +63,53 @@
     }
   }
 
-  // @ts-ignore
-  async function removeDownload(index) {
+  /** @param {any} index */
+  async function removePendingDownload(index) {
     const updatedDownloads = [...$pendingDownloads];
     updatedDownloads.splice(index, 1);
     $pendingDownloads = updatedDownloads;
     await invoke("overwrite_json", { links: $pendingDownloads });
     addNotification("Download removed from queue", "success");
   }
+
+  /** @param {any} index */
+  async function removeFailedDownload(index) {
+    $failedDownloads = $failedDownloads.filter(fd => fd.url !== index.url);
+    addNotification("Failed download removed", "success");
+  }
+
+  /** @param {any} url */
+  function isFailedDownload(url) {
+    return $failedDownloads.some(fd => fd.url === url);
+  }
+
+  /** @param {any} url */
+  function getFailedDownloadError(url) {
+    const failed = $failedDownloads.find(fd => fd.url === url);
+    return failed ? failed.error : null;
+  }
 </script>
 
-<div class="pending-container" bind:this={pendingContainer}>
+<div class="downloads-container" bind:this={downloadsContainer}>
   <button
-    class="toolbar-button pending {$activePanel === 'pending' ? 'active' : ''}"
-    aria-label="Click to view all pending downloads"
-    title="Show pending downloads"
-    on:click={togglePendingPanel}
+    class="toolbar-button downloads {$activePanel === 'downloads' ? 'active' : ''}"
+    aria-label="Click to view all downloads"
+    title="Show downloads"
+    on:click={toggleDownloadsPanel}
   >
     <i class="fa-solid fa-file-arrow-down fa-lg"></i>
-    {#if $pendingDownloads.length > 0}
-      <span class="pending-badge">{$pendingDownloads.length}</span>
+    {#if $pendingDownloads.length > 0 || $failedDownloads.length > 0}
+      <span class="downloads-badge">
+        {$pendingDownloads.length + $failedDownloads.length}
+      </span>
     {/if}
   </button>
 
-  {#if $activePanel === "pending"}
-    <div class="pending-panel">
+  {#if $activePanel === "downloads"}
+    <div class="downloads-panel">
       <div class="panel-header" data-tauri-drag-region>
         <h3>
-          Downloads {#if $pendingDownloads.length > 0}({$pendingDownloads.length}){/if}
+          Downloads {#if $pendingDownloads.length > 0 || $failedDownloads.length > 0}({$pendingDownloads.length + $failedDownloads.length}){/if}
         </h3>
         <div class="header-actions">
           {#if $pendingDownloads.length > 0}
@@ -107,12 +125,12 @@
         </div>
       </div>
       <div class="panel-content">
-        {#if $pendingDownloads.length > 0}
+        {#if $pendingDownloads.length > 0 || $failedDownloads.length > 0}
           {#each $pendingDownloads as download, index}
-            <div class="pending-item" style="animation-delay: {index * 0.05}s">
+            <div class="download-item" style="animation-delay: {index * 0.05}s">
               <div class="download-info">
                 <div class="download-icon">
-                  <i class="fas fa-file-download"></i>
+                  <i class="fas fa-clock"></i>
                 </div>
                 <!-- svelte-ignore a11y_click_events_have_key_events -->
                 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -126,7 +144,7 @@
                 </div>
               </div>
               <div class="last">
-                <div class="download-status">Pending</div>
+                <div class="download-status pending">Pending</div>
                 <div class="action-buttons">
                   <button
                     class="action-btn copy"
@@ -146,9 +164,68 @@
                   </button>
                   <button
                     class="action-btn cancel"
-                    on:click={() => removeDownload(index)}
+                    on:click={() => removePendingDownload(index)}
                     aria-label="Press to cancel the download (this action cannot be reverted)"
                     title="Cancel download"
+                  >
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          {/each}
+
+          {#each $failedDownloads as failedDownload, index}
+            <div class="download-item failed" style="animation-delay: {($pendingDownloads.length + index) * 0.05}s">
+              <div class="download-info">
+                <div class="download-icon">
+                  <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <!-- svelte-ignore a11y_no_static_element_interactions -->
+                <div class="download-details">
+                  <!-- svelte-ignore a11y_click_events_have_key_events -->
+                  <div 
+                    class="download-url"
+                    on:click={() => copyUrl(failedDownload.url)}
+                    title="Click to copy URL"
+                    aria-label="Click to copy URL"
+                  >
+                    {failedDownload.url}
+                  </div>
+                  <!-- svelte-ignore a11y_click_events_have_key_events -->
+                  <div 
+                    class="error-message" 
+                    title={failedDownload.error}
+                    on:click={() => addNotification(`Download Error: ${failedDownload.error}`, 'error')}
+                  >
+                    {failedDownload.error}
+                  </div>
+                </div>
+              </div>
+              <div class="last">
+                <div class="download-status failed">Failed</div>
+                <div class="action-buttons">
+                  <button
+                    class="action-btn copy"
+                    on:click={() => copyUrl(failedDownload.url)}
+                    aria-label="Copy URL to clipboard"
+                    title="Copy URL"
+                  >
+                    <i class="fas fa-copy"></i>
+                  </button>
+                  <button
+                    class="action-btn open"
+                    on:click={() => browserUrl(failedDownload.url)}
+                    aria-label="Open URL in browser"
+                    title="Open in browser"
+                  >
+                    <i class="fas fa-external-link-alt"></i>
+                  </button>
+                  <button
+                    class="action-btn cancel"
+                    on:click={() => removeFailedDownload(failedDownload)}
+                    aria-label="Remove this failed download"
+                    title="Remove failed download"
                   >
                     <i class="fas fa-times"></i>
                   </button>
@@ -159,7 +236,7 @@
         {:else}
           <div class="empty-state">
             <p id="blankText">
-              <i class="fas fa-check"></i> No pending downloads
+              <i class="fas fa-check"></i> No downloads
             </p>
           </div>
         {/if}
@@ -169,7 +246,7 @@
 </div>
 
 <style>
-  .pending-container {
+  .downloads-container {
     position: relative;
     display: inline-block;
   }
@@ -201,7 +278,7 @@
     color: var(--text-color);
   }
   
-  .pending-badge {
+  .downloads-badge {
     position: absolute;
     top: -5px;
     right: -5px;
@@ -225,7 +302,7 @@
     user-select: none;
   }
 
-  .pending-panel {
+  .downloads-panel {
     position: fixed;
     top: 0;
     left: 85px;
@@ -286,7 +363,7 @@
     overflow-x: hidden;
   }
 
-  .pending-item {
+  .download-item {
     padding: 12px 16px;
     font-family: "noto-sans-semibold", Courier, monospace;
     border-bottom: 1px solid #404045;
@@ -296,6 +373,11 @@
     animation: fadeIn 0.3s forwards;
     opacity: 0;
     overflow: hidden;
+  }
+
+  .download-item.failed {
+    background: rgba(255, 71, 87, 0.05);
+    border-left: 3px solid #ff4757;
   }
 
   @keyframes fadeIn {
@@ -311,7 +393,7 @@
 
   .download-info {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     flex: 1;
     min-width: 0;
     overflow: hidden;
@@ -319,7 +401,21 @@
 
   .download-icon {
     margin-right: 10px;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+
+  .download-item:not(.failed) .download-icon {
     color: #6e8efb;
+  }
+
+  .download-item.failed .download-icon {
+    color: #ff4757;
+  }
+
+  .download-details {
+    flex: 1;
+    min-width: 0;
   }
 
   .download-url {
@@ -337,6 +433,23 @@
   .download-url:hover {
     text-decoration: underline;
     color: #6e8efb;
+  }
+
+  .error-message {
+    color: #ff6b6b;
+    font-size: 12px;
+    margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 400px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .error-message:hover {
+    color: #ff4757;
+    text-decoration: underline;
   }
 
   .last {
@@ -379,20 +492,23 @@
 
   .download-status {
     font-size: 12px;
-    color: #ffa502;
     padding: 4px 8px;
-    background: rgba(255, 165, 2, 0.1);
     border-radius: 4px;
     margin-left: 10px;
     flex-shrink: 0;
   }
-  
-  .cancel:hover {
+
+  .download-status.pending {
+    color: #ffa502;
+    background: rgba(255, 165, 2, 0.1);
+  }
+
+  .download-status.failed {
     color: #ff4757;
     background: rgba(255, 71, 87, 0.1);
   }
-
-  .pending-item:last-child {
+  
+  .download-item:last-child {
     border-bottom: none;
   }
 
@@ -408,7 +524,7 @@
   }
 
   @media (max-width: 600px) {
-    .pending-panel {
+    .downloads-panel {
       left: 0;
       top: 45px;
       height: calc(100vh - 45px);
@@ -428,9 +544,9 @@
       gap: 8px; 
     }
 
-    .pending-item {
+    .download-item {
       flex-direction: row;
-      align-items: center;
+      align-items: flex-start;
       padding: 10px 16px;
       gap: 8px;
     }
@@ -456,9 +572,16 @@
       color: #6e8efb;
     }
 
+    .error-message {
+      max-width: calc(100vw - 220px);
+      font-size: 11px;
+    }
+
     .last {
       flex-shrink: 0; 
       gap: 6px;
+      flex-direction: column;
+      align-items: flex-end;
     }
 
     .action-buttons {
@@ -490,7 +613,7 @@
       padding: 0 16px;
     }
 
-    .pending-badge {
+    .downloads-badge {
       width: 16px;
       height: 16px;
       font-size: 10px;
