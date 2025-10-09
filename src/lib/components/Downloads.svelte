@@ -10,12 +10,14 @@
 
   import { invoke } from "@tauri-apps/api/core";
   import { ask } from "@tauri-apps/plugin-dialog";
-  import { writeText } from '@tauri-apps/plugin-clipboard-manager';
-  import { openUrl } from '@tauri-apps/plugin-opener';
+  import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+  import { openUrl } from "@tauri-apps/plugin-opener";
   import "@fortawesome/fontawesome-free/css/all.min.css";
 
   // @ts-ignore
   let downloadsContainer;
+
+  $: totalDownloads = $pendingDownloads.length + $failedDownloads.length;
 
   function toggleDownloadsPanel() {
     if ($activePanel === "downloads") {
@@ -26,11 +28,13 @@
   }
 
   async function clearAllDownloads() {
-    const totalDownloads = $pendingDownloads.length + $failedDownloads.length;
-    const confirm = await ask(`Are you sure you want to clear all ${totalDownloads} downloads? This action is irreversible!`, {
-      title: "Clear all downloads",
-      kind: "warning",
-    });
+    const confirm = await ask(
+      `Are you sure you want to clear all ${totalDownloads} downloads? This action is irreversible!`,
+      {
+        title: "Clear all downloads",
+        kind: "warning",
+      },
+    );
 
     if (!confirm) return;
 
@@ -45,10 +49,10 @@
   async function copyUrl(url) {
     try {
       await writeText(url);
-      addNotification('URL copied to clipboard', 'success');
+      addNotification("URL copied to clipboard", "success");
     } catch (error) {
-      console.log('Failed to copy URL:', error);
-      addNotification('Failed to copy URL', 'error');
+      console.log("Failed to copy URL:", error);
+      addNotification("Failed to copy URL", "error");
     }
   }
 
@@ -56,10 +60,10 @@
   async function browserUrl(url) {
     try {
       await openUrl(url);
-      addNotification('URL opened in browser', 'success');
+      addNotification("URL opened in browser", "success");
     } catch (error) {
-      console.log('Failed to open URL:', error);
-      addNotification('Failed to open URL', 'error');
+      console.log("Failed to open URL:", error);
+      addNotification("Failed to open URL", "error");
     }
   }
 
@@ -74,18 +78,18 @@
 
   /** @param {any} index */
   async function removeFailedDownload(index) {
-    $failedDownloads = $failedDownloads.filter(fd => fd.url !== index.url);
+    $failedDownloads = $failedDownloads.filter((fd) => fd.url !== index.url);
     addNotification("Failed download removed", "success");
   }
 
   /** @param {any} url */
   function isFailedDownload(url) {
-    return $failedDownloads.some(fd => fd.url === url);
+    return $failedDownloads.some((fd) => fd.url === url);
   }
 
   /** @param {any} url */
   function getFailedDownloadError(url) {
-    const failed = $failedDownloads.find(fd => fd.url === url);
+    const failed = $failedDownloads.find((fd) => fd.url === url);
     return failed ? failed.error : null;
   }
 </script>
@@ -100,7 +104,7 @@
     <i class="fa-solid fa-file-arrow-down fa-lg"></i>
     {#if $pendingDownloads.length > 0 || $failedDownloads.length > 0}
       <span class="downloads-badge">
-        {$pendingDownloads.length + $failedDownloads.length}
+        {totalDownloads}
       </span>
     {/if}
   </button>
@@ -109,7 +113,7 @@
     <div class="downloads-panel">
       <div class="panel-header" data-tauri-drag-region>
         <h3>
-          Downloads {#if $pendingDownloads.length > 0 || $failedDownloads.length > 0}({$pendingDownloads.length + $failedDownloads.length}){/if}
+          Downloads {#if $pendingDownloads.length > 0 || $failedDownloads.length > 0}({totalDownloads}){/if}
         </h3>
         <div class="header-actions">
           {#if $pendingDownloads.length > 0}
@@ -134,7 +138,7 @@
                 </div>
                 <!-- svelte-ignore a11y_click_events_have_key_events -->
                 <!-- svelte-ignore a11y_no_static_element_interactions -->
-                <div 
+                <div
                   class="download-url"
                   on:click={() => copyUrl(download)}
                   title="Click to copy URL"
@@ -176,7 +180,10 @@
           {/each}
 
           {#each $failedDownloads as failedDownload, index}
-            <div class="download-item failed" style="animation-delay: {($pendingDownloads.length + index) * 0.05}s">
+            <div
+              class="download-item failed"
+              style="animation-delay: {($pendingDownloads.length + index) * 0.05}s"
+            >
               <div class="download-info">
                 <div class="download-icon">
                   <i class="fas fa-exclamation-triangle"></i>
@@ -184,7 +191,7 @@
                 <!-- svelte-ignore a11y_no_static_element_interactions -->
                 <div class="download-details">
                   <!-- svelte-ignore a11y_click_events_have_key_events -->
-                  <div 
+                  <div
                     class="download-url"
                     on:click={() => copyUrl(failedDownload.url)}
                     title="Click to copy URL"
@@ -193,10 +200,14 @@
                     {failedDownload.url}
                   </div>
                   <!-- svelte-ignore a11y_click_events_have_key_events -->
-                  <div 
-                    class="error-message" 
+                  <div
+                    class="error-message"
                     title={failedDownload.error}
-                    on:click={() => addNotification(`Download Error: ${failedDownload.error}`, 'error')}
+                    on:click={() =>
+                      addNotification(
+                        `Download Error: ${failedDownload.error}`,
+                        "error",
+                      )}
                   >
                     {failedDownload.error}
                   </div>
@@ -271,7 +282,7 @@
   }
 
   .active {
-    background: rgba(255, 255, 255, 0.2)
+    background: rgba(255, 255, 255, 0.2);
   }
 
   i {
@@ -281,7 +292,7 @@
   .toolbar-button i {
     color: var(--text-color);
   }
-  
+
   .downloads-badge {
     position: absolute;
     top: -5px;
@@ -428,8 +439,8 @@
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
-    align-items: center; 
-    height: 100%; 
+    align-items: center;
+    height: 100%;
   }
 
   .download-url:hover {
@@ -509,7 +520,7 @@
     color: #ff4757;
     background: rgba(255, 71, 87, 0.1);
   }
-  
+
   .download-item:last-child {
     border-bottom: none;
   }
@@ -542,23 +553,23 @@
   }
 
   .empty-actions .paste-btn {
-      background: #6e8efb;
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 12px;
-      cursor: pointer;
-      font-family: "noto-sans-semibold", sans-serif;
-      font-size: 14px;
-      transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+    background: #6e8efb;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-family: "noto-sans-semibold", sans-serif;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   .empty-actions .paste-btn:hover {
-      background: #5a7df9;
-      transform: translateY(-1px);
+    background: #5a7df9;
+    transform: translateY(-1px);
   }
 
   @media (max-width: 600px) {
@@ -569,7 +580,7 @@
     }
 
     .panel-header {
-      padding: 20px 20px; 
+      padding: 20px 20px;
     }
 
     .clear-all {
@@ -579,7 +590,7 @@
     }
 
     .header-actions {
-      gap: 8px; 
+      gap: 8px;
     }
 
     .download-item {
@@ -629,7 +640,7 @@
     .action-buttons {
       gap: 2px;
     }
-    
+
     .action-btn {
       padding: 5px;
       font-size: 11px;

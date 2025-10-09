@@ -1,7 +1,7 @@
 <script>
-  import { openPath } from '@tauri-apps/plugin-opener';
-  import { join } from '@tauri-apps/api/path';
-  import { settings } from '$lib/stores/store';
+  import { openPath } from "@tauri-apps/plugin-opener";
+  import { join } from "@tauri-apps/api/path";
+  import { settings } from "$lib/stores/store";
 
   async function openFolder() {
     let path = $settings.download_path;
