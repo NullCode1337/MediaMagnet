@@ -1,27 +1,27 @@
 <script>
-  import { 
-    activePanel, 
+  import {
+    activePanel,
     addNotification,
     closePanel,
     cookies,
-    openPanel, 
+    openPanel,
     settings,
     showCookieDialog,
   } from "$lib/stores/store";
 
-  import { invoke } from '@tauri-apps/api/core';
+  import { invoke } from "@tauri-apps/api/core";
   import { ask, open } from "@tauri-apps/plugin-dialog";
-  
+
   import CookieDialog from "./CookieDialog.svelte";
   import "@fortawesome/fontawesome-free/css/all.min.css";
 
-  let activeSection = 'appearance'; 
+  let activeSection = "appearance";
 
   function toggleSettingsPanel() {
-    if ($activePanel === 'settings') {
+    if ($activePanel === "settings") {
       closePanel();
     } else {
-      openPanel('settings');
+      openPanel("settings");
     }
   }
 
@@ -36,16 +36,19 @@
     console.log($settings);
     await invoke("update_settings", { settings: $settings });
   }
-  
+
   async function resetSettings() {
-    const confirm = await ask("Are you sure you want to reset all settings to default?", {
-      title: "Reset Settings",
-      kind: "warning",
-    });
+    const confirm = await ask(
+      "Are you sure you want to reset all settings to default?",
+      {
+        title: "Reset Settings",
+        kind: "warning",
+      },
+    );
 
     if (!confirm) return;
 
-    $settings = await invoke("settings", {action: "reset"});
+    $settings = await invoke("settings", { action: "reset" });
     addNotification("Settings reset to factory default", "success");
   }
 
@@ -54,14 +57,16 @@
       multiple: false,
       directory: true,
     });
-    
-    updateSetting('download_path', dir);
+
+    updateSetting("download_path", dir);
   }
 </script>
 
 <div class="settings-container">
   <button
-    class="toolbar-button settings {$activePanel === 'settings' ? 'active' : ''}"
+    class="toolbar-button settings {$activePanel === 'settings'
+      ? 'active'
+      : ''}"
     aria-label="Click to view settings"
     title="Show settings"
     on:click={toggleSettingsPanel}
@@ -69,228 +74,232 @@
     <i class="fa-solid fa-gear fa-lg"></i>
   </button>
 
-  {#if $activePanel === 'settings'}
-  <div class="settings-panel">
-    <div class="panel-header" data-tauri-drag-region> 
-      <h3 data-tauri-drag-region>Settings</h3>
+  {#if $activePanel === "settings"}
+    <div class="settings-panel">
+      <div class="panel-header" data-tauri-drag-region>
+        <h3 data-tauri-drag-region>Settings</h3>
 
-      <div class="header-actions">
-        <button
-          class="reset-settings"
-          on:click={resetSettings}
-          aria-label="Reset all settings to default"
-          title="Reset settings"
-        >
-          <i class="fas fa-undo"></i>
-          Reset Defaults
-        </button>
-      </div>
-    </div>
-
-    <div class="settings-layout">
-      <div class="settings-sidebar">
-        <nav class="sidebar-nav" data-tauri-drag-region>
-          <button 
-            class="nav-item {activeSection === 'appearance' ? 'active' : ''}"
-            on:click={() => setActiveSection('appearance')}
+        <div class="header-actions">
+          <button
+            class="reset-settings"
+            on:click={resetSettings}
+            aria-label="Reset all settings to default"
+            title="Reset settings"
           >
-            <i class="fas fa-palette"></i>
-            <span>Appearance</span>
+            <i class="fas fa-undo"></i>
+            Reset Defaults
           </button>
-          
-          <button 
-            class="nav-item {activeSection === 'download' ? 'active' : ''}"
-            on:click={() => setActiveSection('download')}
-          >
-            <i class="fas fa-download"></i>
-            <span>Download</span>
-          </button>
-          
-          <button 
-            class="nav-item {activeSection === 'cookies' ? 'active' : ''}"
-            on:click={() => setActiveSection('cookies')}
-          >
-            <i class="fas fa-cookie"></i>
-            <span>Cookies</span>
-          </button>
-        </nav>
+        </div>
       </div>
 
-      <div class="settings-content">
-        {#if activeSection === 'appearance'}
-        <div class="settings-section">
-          <h2 class="section-title">Appearance Settings</h2>
-          
-          <div class="settings-group">
-            <h4>Theme</h4>
-            
-            <div class="setting-item checkbox">
-              <input 
-                id="darkMode" 
-                type="checkbox" 
-                bind:checked={$settings.dark_mode}
-                on:change={() => updateSetting('dark_mode', $settings.dark_mode)}
-              />
-              <label for="dark_mode">Dark Mode</label>
-            </div>
-          </div>
+      <div class="settings-layout">
+        <div class="settings-sidebar">
+          <nav class="sidebar-nav" data-tauri-drag-region>
+            <button
+              class="nav-item {activeSection === 'appearance' ? 'active' : ''}"
+              on:click={() => setActiveSection("appearance")}
+            >
+              <i class="fas fa-palette"></i>
+              <span>Appearance</span>
+            </button>
 
-          <div class="settings-group">
-            <h4>Window Behavior</h4>
-            
-            <div class="setting-item checkbox">
-              <input 
-                id="alwaysOnTop" 
-                type="checkbox" 
-                bind:checked={$settings.always_on_top}
-                on:change={() => updateSetting('always_on_top', $settings.always_on_top)}
-              />
-              <label for="always_on_top">Always on Top</label>
-            </div>
+            <button
+              class="nav-item {activeSection === 'download' ? 'active' : ''}"
+              on:click={() => setActiveSection("download")}
+            >
+              <i class="fas fa-download"></i>
+              <span>Download</span>
+            </button>
 
-            <div class="setting-item checkbox">
-              <input 
-                id="showDecor" 
-                type="checkbox" 
-                bind:checked={$settings.show_decor}
-                on:change={() => updateSetting('show_decor', $settings.show_decor)}
-              />
-              <label for="show_decor">Use custom titlebar</label>
-            </div>
-          </div>
+            <button
+              class="nav-item {activeSection === 'cookies' ? 'active' : ''}"
+              on:click={() => setActiveSection("cookies")}
+            >
+              <i class="fas fa-cookie"></i>
+              <span>Cookies</span>
+            </button>
+          </nav>
         </div>
 
-        {:else if activeSection === 'download'}
-        <div class="settings-section">
-          <h2 class="section-title">Download Settings</h2>
-          
-          <div class="settings-group">
-            <h4>Storage</h4>
-            
-            <div class="setting-item text-input">
-              <label for="downloadPath">Download Location</label>
-              <div class="input-group">
-                <input 
-                  id="downloadPath" 
-                  type="text" 
-                  bind:value={$settings.download_path}
-                  on:change={() => updateSetting('download_path', $settings.download_path)}
-                  placeholder="Select download directory"
-                />
-                <!-- svelte-ignore a11y_consider_explicit_label -->
-                <button 
-                  class="browse-button"
-                  title="Browse"
-                  on:click={selectDir}>
-                  <i class="fas fa-folder-open"></i>
-                </button>
+        <div class="settings-content">
+          {#if activeSection === "appearance"}
+            <div class="settings-section">
+              <h2 class="section-title">Appearance Settings</h2>
+
+              <div class="settings-group">
+                <h4>Theme</h4>
+
+                <div class="setting-item checkbox">
+                  <input
+                    id="darkMode"
+                    type="checkbox"
+                    bind:checked={$settings.dark_mode}
+                    on:change={() =>
+                      updateSetting("dark_mode", $settings.dark_mode)}
+                  />
+                  <label for="dark_mode">Dark Mode</label>
+                </div>
+              </div>
+
+              <div class="settings-group">
+                <h4>Window Behavior</h4>
+
+                <div class="setting-item checkbox">
+                  <input
+                    id="alwaysOnTop"
+                    type="checkbox"
+                    bind:checked={$settings.always_on_top}
+                    on:change={() =>
+                      updateSetting("always_on_top", $settings.always_on_top)}
+                  />
+                  <label for="always_on_top">Always on Top</label>
+                </div>
+
+                <div class="setting-item checkbox">
+                  <input
+                    id="showDecor"
+                    type="checkbox"
+                    bind:checked={$settings.show_decor}
+                    on:change={() =>
+                      updateSetting("show_decor", $settings.show_decor)}
+                  />
+                  <label for="show_decor">Use custom titlebar</label>
+                </div>
               </div>
             </div>
-          </div>
+          {:else if activeSection === "download"}
+            <div class="settings-section">
+              <h2 class="section-title">Download Settings</h2>
 
-          <div class="settings-group">
-            <h4>Network</h4>
-            
-            <div class="setting-item text-input">
-              <label for="userAgent">User Agent</label>
-              <div class="input-group">
-                <input 
-                  id="userAgent" 
-                  type="text" 
-                  bind:value={$settings.user_agent}
-                  on:change={() => updateSetting('user_agent', $settings.user_agent)}
-                  placeholder="Enter custom user agent string"
-                />
-                <!-- svelte-ignore a11y_consider_explicit_label -->
-                <button 
-                  class="browse-button"
-                  title="Reset to None"
-                  on:click={() => updateSetting('user_agent', 'None')}>
-                  <i class="fas fa-undo"></i>
-                </button>
-              </div>
-            </div>
-          </div>
+              <div class="settings-group">
+                <h4>Storage</h4>
 
-          <div class="settings-group">
-            <h4>Notifications (WIP)</h4>
-            
-            <div class="setting-item checkbox">
-              <input 
-                id="notifications" 
-                type="checkbox" 
-                bind:checked={$settings.notifications}
-                on:change={() => updateSetting('notifications', $settings.notifications)}
-              />
-              <label for="notifications">Enable system notifications</label>
-            </div>
-          </div>
-        </div>
-
-        {:else if activeSection === 'cookies'}
-        <div class="settings-section">
-          <h2 class="section-title">Cookie Management</h2>
-          
-          <div class="settings-group">
-            <h4>Cookie Settings</h4>
-
-            <div class="setting-item checkbox">
-              <input 
-                id="clearOnExit" 
-                type="checkbox" 
-                checked
-              />
-              <label for="clearOnExit">Delete cookies on app exit</label>
-            </div>
-          </div>
-
-          <div class="settings-group">
-            <h4>Stored Cookies</h4>
-            
-            <div class="cookies-list">
-            {#if Object.keys($cookies || {}).length === 0}
-              <div class="empty-state">
-                No cookies stored!
-              </div>
-            {:else}
-              {#each Object.entries($cookies) as [name, path]}
-                <div class="cookie-item">
-                  <div class="cookie-info">
-                    <span class="cookie-name">{name}</span>
-                    <span class="cookie-details">Path: {path}</span>
+                <div class="setting-item text-input">
+                  <label for="downloadPath">Download Location</label>
+                  <div class="input-group">
+                    <input
+                      id="downloadPath"
+                      type="text"
+                      bind:value={$settings.download_path}
+                      on:change={() =>
+                        updateSetting("download_path", $settings.download_path)}
+                      placeholder="Select download directory"
+                    />
+                    <!-- svelte-ignore a11y_consider_explicit_label -->
+                    <button
+                      class="browse-button"
+                      title="Browse"
+                      on:click={selectDir}
+                    >
+                      <i class="fas fa-folder-open"></i>
+                    </button>
                   </div>
-                  <button class="cookie-delete" title="Delete cookie" aria-label="Click this button to delete the cookie">
-                    <i class="fas fa-trash"></i>
+                </div>
+              </div>
+
+              <div class="settings-group">
+                <h4>Network</h4>
+
+                <div class="setting-item text-input">
+                  <label for="userAgent">User Agent</label>
+                  <div class="input-group">
+                    <input
+                      id="userAgent"
+                      type="text"
+                      bind:value={$settings.user_agent}
+                      on:change={() =>
+                        updateSetting("user_agent", $settings.user_agent)}
+                      placeholder="Enter custom user agent string"
+                    />
+                    <!-- svelte-ignore a11y_consider_explicit_label -->
+                    <button
+                      class="browse-button"
+                      title="Reset to None"
+                      on:click={() => updateSetting("user_agent", "None")}
+                    >
+                      <i class="fas fa-undo"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="settings-group">
+                <h4>Notifications (WIP)</h4>
+
+                <div class="setting-item checkbox">
+                  <input
+                    id="notifications"
+                    type="checkbox"
+                    bind:checked={$settings.notifications}
+                    on:change={() =>
+                      updateSetting("notifications", $settings.notifications)}
+                  />
+                  <label for="notifications">Enable system notifications</label>
+                </div>
+              </div>
+            </div>
+          {:else if activeSection === "cookies"}
+            <div class="settings-section">
+              <h2 class="section-title">Cookie Management</h2>
+
+              <div class="settings-group">
+                <h4>Cookie Settings</h4>
+
+                <div class="setting-item checkbox">
+                  <input id="clearOnExit" type="checkbox" checked />
+                  <label for="clearOnExit">Delete cookies on app exit</label>
+                </div>
+              </div>
+
+              <div class="settings-group">
+                <h4>Stored Cookies</h4>
+
+                <div class="cookies-list">
+                  {#if Object.keys($cookies || {}).length === 0}
+                    <div class="empty-state">No cookies stored!</div>
+                  {:else}
+                    {#each Object.entries($cookies) as [name, path]}
+                      <div class="cookie-item">
+                        <div class="cookie-info">
+                          <span class="cookie-name">{name}</span>
+                          <span class="cookie-details">Path: {path}</span>
+                        </div>
+                        <button
+                          class="cookie-delete"
+                          title="Delete cookie"
+                          aria-label="Click this button to delete the cookie"
+                        >
+                          <i class="fas fa-trash"></i>
+                        </button>
+                      </div>
+                    {/each}
+                  {/if}
+                </div>
+
+                <div class="cookie-actions">
+                  <button
+                    class="action-button secondary"
+                    on:click={() => ($showCookieDialog = true)}
+                    title="Add Cookie"
+                    aria-label="Click to add cookie to the app"
+                  >
+                    <i class="fas fa-plus"></i>
+                    Add Cookie
+                  </button>
+
+                  <CookieDialog />
+
+                  <button class="action-button warning">
+                    <i class="fas fa-trash-alt"></i>
+                    Clear All Cookies
                   </button>
                 </div>
-              {/each}
-            {/if}
+              </div>
             </div>
-
-            <div class="cookie-actions">
-              <button 
-                class="action-button secondary" 
-                on:click={() => $showCookieDialog = true}
-                title="Add Cookie"
-                aria-label="Click to add cookie to the app"
-              >
-                <i class="fas fa-plus"></i>
-                Add Cookie
-              </button>
-
-              <CookieDialog />
-              
-              <button class="action-button warning">
-                <i class="fas fa-trash-alt"></i>
-                Clear All Cookies
-              </button>
-            </div>
-          </div>
+          {/if}
         </div>
-        {/if}
       </div>
     </div>
-  </div>
   {/if}
 </div>
 
@@ -311,7 +320,7 @@
     z-index: 102;
     transition: background-color 0.2s ease;
   }
-  
+
   .empty-state {
     font-size: 20px;
     color: white;
@@ -346,7 +355,7 @@
     overflow-y: hidden;
     z-index: 10;
     border-left: 1px solid rgba(255, 255, 255, 0.1);
-    display: flex; 
+    display: flex;
     flex-direction: column;
   }
 
@@ -746,7 +755,7 @@
       left: 0;
       top: 45px;
       height: calc(100vh - 45px);
-      border-left: none; 
+      border-left: none;
     }
 
     .panel-header {
@@ -791,7 +800,7 @@
       flex-shrink: 0;
       font-size: 13px;
     }
-    
+
     .setting-item.checkbox label {
       margin-left: 8px;
       min-width: auto;

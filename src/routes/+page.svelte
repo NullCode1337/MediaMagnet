@@ -18,7 +18,7 @@
     pendingDownloads,
     currentlyDownloading,
     failedDownloads,
-    settings
+    settings,
   } from "$lib/stores/store";
 
   import Downloads from "$lib/components/Downloads.svelte";
@@ -34,37 +34,29 @@
 
   $: {
     if (document.body) {
-      document.body.classList.toggle('dark', $settings.dark_mode);
+      document.body.classList.toggle("dark", $settings.dark_mode);
     }
   }
 
-  let decor = true;
-  $: decor = $settings.show_decor; 
-
+  $: decor = $settings.show_decor;
+  $: pasteIcon = url.trim() === "";
 
   let url = "";
   /** @type {HTMLInputElement} */ let urlInput;
 
   let closeHandlerSet = false;
 
-  let pasteIcon = true;
-  $: pasteIcon = url.trim() === "";
-  
   // @ts-ignore
   function extractUrls(text) {
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     const allUrls = text.match(urlRegex) || [];
-    
-    // @ts-ignore | Just a hardcoded check for one site
-    return allUrls.filter(url => {
-        if (
-          url.includes('forum') 
-          && url.includes('.io') 
-          && url.includes('didg')
-        ) 
-          return url.includes('original');
 
-        return true;
+    // @ts-ignore | Just a hardcoded check for one site
+    return allUrls.filter((url) => {
+      if (url.includes("forum") && url.includes(".io") && url.includes("didg"))
+        return url.includes("original");
+
+      return true;
     });
   }
 
@@ -80,11 +72,8 @@
         return;
       }
     }
-    
-    downloadUrl = downloadUrl
-      .replace(/["']/g, '')
-      .replace(/%22/g, '')
-      .trim();
+
+    downloadUrl = downloadUrl.replace(/["']/g, "").replace(/%22/g, "").trim();
 
     const extractedUrls = extractUrls(downloadUrl);
 
@@ -94,13 +83,15 @@
     }
 
     const validUrls = [];
-    const seenUrls = new Set([...$pendingDownloads, $currentlyDownloading].filter(Boolean));
+    const seenUrls = new Set(
+      [...$pendingDownloads, $currentlyDownloading].filter(Boolean),
+    );
 
     for (const extractedUrl of extractedUrls) {
       try {
         const url = new URL(extractedUrl);
         const good = url.href;
-        
+
         if (!seenUrls.has(good)) {
           validUrls.push(good);
           seenUrls.add(good);
@@ -124,10 +115,10 @@
       $pendingDownloads = [...$pendingDownloads, ...remainingUrls];
       $currentlyDownloading = firstUrl;
       $isDownloading = true;
-      
+
       await invoke("overwrite_json", { links: $pendingDownloads });
       invoke("downloader", { url: firstUrl });
-      
+
       if (remainingUrls.length > 0) {
         addNotification(`Queued ${remainingUrls.length} URL(s)`, "success");
       }
@@ -170,7 +161,7 @@
       if (urlInput) urlInput.focus();
 
       await invoke("check_links");
-      $settings = await invoke("settings", {action: "check"});
+      $settings = await invoke("settings", { action: "check" });
 
       getCurrentWindow().onCloseRequested(async (event) => {
         if ($isDownloading) {
@@ -221,11 +212,14 @@
     addNotification(`Download failed: ${urlTail}`, "error");
     addNotification(event.payload);
 
-    $failedDownloads = [...$failedDownloads, {
-      url: $currentlyDownloading,
-      error: event.payload,
-      timestamp: new Date().toISOString()
-    }];
+    $failedDownloads = [
+      ...$failedDownloads,
+      {
+        url: $currentlyDownloading,
+        error: event.payload,
+        timestamp: new Date().toISOString(),
+      },
+    ];
 
     resetDownloadState();
 
@@ -241,11 +235,11 @@
       $currentlyDownloading.lastIndexOf("/") + 1,
     );
     addNotification(`Download completed: ${urlTail}`, "success");
-    
+
     $failedDownloads = $failedDownloads.filter(
-      item => item.url !== $currentlyDownloading
+      (item) => item.url !== $currentlyDownloading,
     );
-    
+
     resetDownloadState();
 
     if ($pendingDownloads.length > 0) {
@@ -346,9 +340,9 @@
     padding: 0;
     overflow: hidden;
 
-    --main-bg: #F3F3F3;
+    --main-bg: #f3f3f3;
     --sidebar-bg: #e3e3e3;
-    --border-color: rgba(0, 0, 0, 0.0);
+    --border-color: rgba(0, 0, 0, 0);
     --text-color: #333;
     --input-bg: #d8d8df;
     --input-border: rgba(0, 0, 0, 0.1);
@@ -358,7 +352,7 @@
   :global(body.dark) {
     --main-bg: rgb(36, 15, 50);
     --sidebar-bg: rgba(47, 21, 66, 0.95);
-    --border-color: rgba(255, 255, 255, 0.0);
+    --border-color: rgba(255, 255, 255, 0);
     --text-color: #fff;
     --input-bg: rgba(47, 19, 67, 0.95);
     --input-border: rgba(255, 255, 255, 0.1);
@@ -391,11 +385,14 @@
     padding: 16px 0;
   }
 
-  .spacer { 
-    flex-grow: 1; 
+  .spacer {
+    flex-grow: 1;
     user-select: none;
   }
-  i { pointer-events: none; }
+  
+  i {
+    pointer-events: none;
+  }
 
   .sidebar-content {
     padding: 0 16px;
@@ -491,17 +488,17 @@
     transition: background 0.2s ease;
   }
 
-  .paste-btn:hover { 
-    background: #5a7df9; 
+  .paste-btn:hover {
+    background: #5a7df9;
   }
 
   @media (max-width: 600px) {
     .sidebar-content {
       flex-direction: row;
       justify-content: left;
-      align-items: center; 
+      align-items: center;
       margin-right: 20px;
-      gap: 4px; 
+      gap: 4px;
       padding: 0;
       padding-left: 10px;
       height: 60px;
@@ -541,12 +538,12 @@
     }
 
     .box {
-      width: 80%; 
+      width: 80%;
       max-width: 100%;
     }
 
     .input {
-      width: 100%; 
+      width: 100%;
     }
   }
 
@@ -564,8 +561,8 @@
     }
 
     .container {
-      padding-top: 0; 
-      height: 100vh; 
+      padding-top: 0;
+      height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -594,7 +591,7 @@
       align-items: center;
       justify-content: center;
       gap: 40px;
-      margin-top: -40px; 
+      margin-top: -40px;
     }
 
     .input {
@@ -626,7 +623,7 @@
     .paste-btn i {
       font-size: 36px;
     }
-    
+
     .paste-btn:hover {
       background: var(--main-bg);
       transform: scale(1.08);
