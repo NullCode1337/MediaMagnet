@@ -17,10 +17,11 @@
     expandStatus,
     pendingDownloads,
     currentlyDownloading,
+    failedDownloads,
     settings
   } from "$lib/stores/store";
 
-  import Pending from "$lib/components/Pending.svelte";
+  import Downloads from "$lib/components/Downloads.svelte";
   import Notification from "$lib/components/Notification.svelte";
   import Progress from "$lib/components/Progress.svelte";
   import Settings from "$lib/components/Settings.svelte";
@@ -219,6 +220,13 @@
     );
     addNotification(`Download failed: ${urlTail}`, "error");
     addNotification(event.payload);
+
+    $failedDownloads = [...$failedDownloads, {
+      url: $currentlyDownloading,
+      error: event.payload,
+      timestamp: new Date().toISOString()
+    }];
+
     resetDownloadState();
 
     if ($pendingDownloads.length > 0) {
@@ -233,6 +241,11 @@
       $currentlyDownloading.lastIndexOf("/") + 1,
     );
     addNotification(`Download completed: ${urlTail}`, "success");
+    
+    $failedDownloads = $failedDownloads.filter(
+      item => item.url !== $currentlyDownloading
+    );
+    
     resetDownloadState();
 
     if ($pendingDownloads.length > 0) {
@@ -277,7 +290,7 @@
   <aside class="sidebar">
     <div class="sidebar-content">
       <Back />
-      <Pending />
+      <Downloads />
       <Settings />
       <div class="spacer" data-tauri-drag-region></div>
       <OpenFolder />
