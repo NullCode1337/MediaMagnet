@@ -611,7 +611,8 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      z-index: 901;
+      z-index: 899;
+      user-select: none;
     }
 
     .url-input {
@@ -625,7 +626,7 @@
       font-size: 32px;
       position: static;
       transform: none;
-      z-index: 900;
+      z-index: 899;
       cursor: pointer;
       background: var(--sidebar-bg);
       transition: all 0.3s ease;
@@ -650,12 +651,14 @@
       top: 50%; 
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 128px;
-      height: 128px; 
+      width: 130px;
+      height: 130px; 
       display: flex;
       justify-content: center;
-      z-index: 899;
+      z-index: 900;
+      pointer-events: none;
     }
+    
   }
   /*#endregion */
 </style>
