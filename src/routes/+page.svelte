@@ -323,7 +323,9 @@
             {/if}
           </button>
         </div>
-        <Progress />
+        <div class="progWrap">
+          <Progress />
+        </div>
       </div>
     </div>
   </main>
@@ -586,12 +588,14 @@
 
     .box {
       width: 100%;
+      height: 200px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       gap: 40px;
       margin-top: -40px;
+      position: relative;
     }
 
     .input {
@@ -600,6 +604,14 @@
       align-items: center;
       justify-content: center;
       padding-top: 30px;
+      position: absolute;
+      width: 120px;
+      height: 120px; 
+      padding: 0; 
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 901;
     }
 
     .url-input {
@@ -633,9 +645,16 @@
       transform: scale(0.95);
     }
 
-    :global(.progress-container) {
-      width: 80%;
-      max-width: 300px;
+   .progWrap {
+      position: absolute;
+      top: 50%; 
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 128px;
+      height: 128px; 
+      display: flex;
+      justify-content: center;
+      z-index: 899;
     }
   }
   /*#endregion */
