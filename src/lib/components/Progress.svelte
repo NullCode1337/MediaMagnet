@@ -8,6 +8,14 @@
 
   import { fade, slide } from "svelte/transition";
   import "@fortawesome/fontawesome-free/css/all.min.css";
+
+  // @ts-ignore
+  function getStrokeDasharray(progress) {
+    const radius = 60; 
+    const circumference = 2 * Math.PI * radius;
+    const offset = circumference - (progress / 100) * circumference;
+    return `${circumference - offset} ${offset}`;
+  }
 </script>
 
 <div class="progress">
@@ -24,6 +32,13 @@
       >
         <i class="fas fa-chevron-down"></i>
       </button>
+    </div>
+
+    <div class="circular-progress">
+      <svg viewBox="0 0 128 128" class="progress-ring">
+        <circle class="progress-ring-bg" cx="64" cy="64" r="60"></circle>
+        <circle class="progress-ring-arc" cx="64" cy="64" r="60" stroke-dasharray={getStrokeDasharray($downloadProgress)} stroke-dashoffset="0"></circle>
+      </svg>
     </div>
   {/if}
 
@@ -123,5 +138,43 @@
   .status-container::-webkit-scrollbar-thumb {
     background: #670f6a;
     border-radius: 6px;
+  }
+  .circular-progress {
+    display: none;
+    width: 128px;
+    height: 128px;
+    z-index: 899;
+  }
+  .progress-ring {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+  .progress-ring-bg {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.1);
+    stroke-width: 8px;
+  }
+  .progress-ring-arc {
+    fill: none;
+    stroke: #6e8efb; 
+    stroke-width: 8px;
+    transition: stroke-dasharray 0.3s ease;
+  }
+  @media (max-width: 360px) {
+    .progress-container {
+      display: none; 
+    }
+    .circular-progress {
+      display: block;
+      position: static;
+      top: auto;
+      left: auto;
+      transform: none;
+    }
+    .status-container {
+      width: 100%;
+      margin-top: 90px;
+    }
   }
 </style>
