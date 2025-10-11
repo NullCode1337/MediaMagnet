@@ -658,7 +658,6 @@
       z-index: 900;
       pointer-events: none;
     }
-    
   }
   /*#endregion */
 </style>

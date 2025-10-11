@@ -7,11 +7,37 @@
   } from "$lib/stores/store";
 
   import { fade, slide } from "svelte/transition";
+  import { quintOut } from "svelte/easing";
   import "@fortawesome/fontawesome-free/css/all.min.css";
 
   const radius = 60;
   const centerX = 64;
   const centerY = 64;
+
+  const createTimeStore = () => {
+    let value = 0;
+    let subscribers = new Set();
+    let startTime = Date.now();
+    
+    function updateTime() {
+        value = (Date.now() - startTime) / 1000; 
+        subscribers.forEach(sub => sub(value));
+        requestAnimationFrame(updateTime);
+    }
+
+    requestAnimationFrame(updateTime); 
+
+    return {
+        // @ts-ignore
+        subscribe(run) {
+            subscribers.add(run);
+            run(value);
+            return () => subscribers.delete(run);
+        }
+    };
+  };
+
+  const time = createTimeStore();
 
   // @ts-ignore
   const createSmoothProgressStore = (initialValue) => {
@@ -20,7 +46,7 @@
     let subscribers = new Set();
     // @ts-ignore
     let animationFrameId = null;
-    const smoothingFactor = 0.1; 
+    const smoothingFactor = 0.2; 
 
     // @ts-ignore
     function set(newValue) {
@@ -34,7 +60,7 @@
     function update() {
       const diff = targetValue - value;
       
-      if (Math.abs(diff) > 0.1) { 
+      if (Math.abs(diff) > 0.05) { 
         value += diff * smoothingFactor;
         subscribers.forEach((sub) => sub(value));
         animationFrameId = requestAnimationFrame(update);
@@ -63,14 +89,14 @@
   $: smoothProgress.set($downloadProgress);
   
   // @ts-ignore
-  function getSquiggleArc(startAngle, endAngle, amplitude, frequency, currentRadius) {  
+  function getSquiggleArc(startAngle, endAngle, amplitude, frequency, currentRadius, offset = 0) {  
     let path = "";
     const segments = 100;
     const deltaAngle = (endAngle - startAngle) / segments;
 
     for (let i = 0; i <= segments; i++) {
       const angle = startAngle + deltaAngle * i;
-      const radialOffset = Math.sin(angle * frequency) * amplitude;
+      const radialOffset = Math.sin((angle * frequency) + offset) * amplitude;
       const r = currentRadius + radialOffset;
       const x = centerX + r * Math.cos(angle);
       const y = centerY + r * Math.sin(angle);
@@ -84,10 +110,14 @@
     return path;
   }
 
+  $: pulseAmplitude = 3 + Math.sin($time * 5) * 1.5; 
+  $: pulseFrequency = 10 + Math.cos($time * 2) * 2;
+  
   $: arcD = getSquiggleArc(
     -Math.PI / 2,
     -Math.PI / 2 + (2 * Math.PI * $smoothProgress) / 100,
-    3, 10, 
+    pulseAmplitude, 
+    pulseFrequency, 
     radius
   );
 </script>
@@ -121,7 +151,7 @@
   {/if}
 
   {#if $expandStatus}
-    <div class="status-container" transition:slide|local={{ duration: 500 }}>
+    <div class="status-container" transition:slide|local={{ duration: 500, easing: quintOut }}>
       {#each $statusMessages as message, index (index)}
         <p
           class="status-message {index === $statusMessages.length - 1 ? 'latest' : ''}"
@@ -135,7 +165,6 @@
 </div>
 
 <style>
-  /* Rotation Animation Definition */
   @keyframes rotate {
     from {
       transform: rotate(0deg);
@@ -146,7 +175,7 @@
   }
 
   .progress {
-    width: 1:0%;
+    width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -161,7 +190,7 @@
   .progress-bar {
     flex: 1;
     height: 8px;
-    width: 50vw;
+    width: 55vw;
     border-radius: 4px;
     overflow: hidden;
     background: rgba(255, 255, 255, 0.2);
@@ -173,7 +202,6 @@
   .progress-bar::-webkit-progress-value {
     background: #6e8efb;
     border-radius: 4px;
-    transition: width 0.3s ease;
   }
   .progress-text {
     color: white;
@@ -223,7 +251,7 @@
   .status-container::-webkit-scrollbar-thumb {
     background: #670f6a;
     border-radius: 6px;
-  }
+  } 
   .circular-progress {
     display: none;
     width: 128px;
@@ -232,15 +260,15 @@
     position: absolute;
     top: 0;
     left: 0;
+    filter: drop-shadow(0 0 5px rgba(110, 142, 251, 0.5));
   }
   .progress-ring {
     width: 100%;
     height: 100%;
-    animation: rotate 1s linear infinite; 
   }
   .progress-ring-bg {
     fill: none;
-    stroke: rgba(255, 255, 255, 0.0);
+    stroke: rgba(255, 255, 255, 0.0); 
     stroke-width: 4px;
   }
   .progress-ring-arc {
@@ -249,6 +277,7 @@
     stroke-width: 4px;
     stroke-linecap: round;
     transition: d 0.1s ease;
+    filter: drop-shadow(0 0 8px #6e8efb); 
   }
   @media (max-width: 360px) {
     .progress-container {
