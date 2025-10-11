@@ -1,5 +1,10 @@
 <script>
-  import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
+  import { 
+    getCurrentWindow, 
+    LogicalSize, 
+    LogicalPosition, 
+    currentMonitor 
+  } from "@tauri-apps/api/window";
 </script>
 
 <div class="window-controls-overlay">
@@ -13,6 +18,16 @@
         
         if (size.width > 360) {
           await window.setSize(new LogicalSize(175, 190));
+          
+          const monitor = await currentMonitor();
+          if (monitor) {
+            const msize = monitor.size;
+            const mpos = monitor.position;
+            await window.setPosition(new LogicalPosition(
+              mpos.x + msize.width - 180, 
+              mpos.y + msize.height - 195
+            ));
+          }
         } else {
           window.minimize();
         }
@@ -28,6 +43,7 @@
         
         if (size.width < 360) {
           await window.setSize(new LogicalSize(700, 495));
+          await window.center();
         } else {
           window.toggleMaximize();
         }
