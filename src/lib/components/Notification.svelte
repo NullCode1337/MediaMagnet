@@ -69,6 +69,36 @@
     background: rgba(0, 0, 0, 0.1);
     animation: progress 3s linear forwards;
   }
+  @media (max-width: 360px) {
+    .notification-panel {
+      bottom: 75% !important;
+      right: 51% !important;
+      transform: translateX(50%) !important;
+      left: auto !important;
+      max-width: 160px !important;
+    }
+
+    .notification {
+      min-width: 140px !important;
+      max-width: 160px !important;
+      padding: 10px 12px !important;
+      background: rgba(37, 37, 37, 0.2) !important;
+      backdrop-filter: blur(10px) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .notification-content {
+      font-size: 14px !important;
+      gap: 8px !important;
+      line-height: 1.3 !important;
+    }
+
+    .notification-content span {
+      word-break: break-word !important;
+      text-align: center !important;
+      flex: 1 !important;
+    }
+  }
   @keyframes progress {
     from {
       width: 100%;
