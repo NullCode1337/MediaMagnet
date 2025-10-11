@@ -1,5 +1,5 @@
 <script>
-  import { getCurrentWindow } from "@tauri-apps/api/window";
+  import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 </script>
 
 <div class="window-controls-overlay">
@@ -9,7 +9,13 @@
       aria-label="Minimize window"
       on:click={async () => {
         let window = await getCurrentWindow();
-        window.minimize();
+        const size = await window.innerSize();
+        
+        if (size.width > 360) {
+          await window.setSize(new LogicalSize(175, 190));
+        } else {
+          window.minimize();
+        }
       }}
     >
     </button>
@@ -53,14 +59,14 @@
     box-shadow:
       0 8px 32px rgba(0, 0, 0, 0.1),
       inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    border: none; /* Explicitly remove border */
+    border: none;
   }
 
   .window-control {
     width: 15px;
     height: 15px;
     border-radius: 50%;
-    border: none; /* Remove border from buttons */
+    border: none;
     display: flex;
     align-items: center;
     justify-content: center;
