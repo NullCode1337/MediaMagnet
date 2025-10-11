@@ -46,8 +46,7 @@
     "resources": [
       "../static/poppins-bold.ttf",
       "../static/notosans-semibold.ttf",
-      "../static/ubuntu-regular.ttf",
-      "../static/app.css"
+      "../static/ubuntu-regular.ttf"
     ]
   }
 }
