@@ -24,7 +24,13 @@
       aria-label="Maximize window"
       on:click={async () => {
         let window = await getCurrentWindow();
-        window.toggleMaximize();
+        const size = await window.innerSize();
+        
+        if (size.width < 360) {
+          await window.setSize(new LogicalSize(700, 495));
+        } else {
+          window.toggleMaximize();
+        }
       }}
     >
     </button>
