@@ -453,7 +453,7 @@
     width: 100%;
     max-width: 100%;
     font-size: 16px;
-    font-family: "noto-sans-semibold", sans-serif;
+    font-family: "ubuntu-regular", sans-serif;
     outline: none;
     background: var(--input-bg);
     color: var(--input-placeholder);
