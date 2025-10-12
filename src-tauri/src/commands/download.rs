@@ -181,12 +181,24 @@ pub async fn downloader(app: tauri::AppHandle, url: String) {
 }
 
 #[tauri::command]
-pub fn cancel_download()  {
+pub async fn cancel_download() -> Result<(), String> {
     let current_download = get_current_download();
-    let mut download_guard = current_download.lock().unwrap();
     
-    if let Some(ref mut child) = *download_guard {
-        let _ = child.kill();
-        *download_guard = None;
+    let child = {
+        let mut download_guard = current_download.lock().unwrap();
+        download_guard.take()
+    };
+    
+    if let Some(mut child) = child {
+        if let Err(e) = child.start_kill() {
+            return Err(format!("Failed to kill process: {}", e));
+        }
+        
+        match child.wait().await {
+            Ok(_) => Ok(()),
+            Err(e) => Err(format!("Error waiting for process: {}", e)),
+        }
+    } else {
+        Err("No download in progress".to_string())
     }
 }
