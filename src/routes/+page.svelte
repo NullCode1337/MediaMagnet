@@ -141,7 +141,6 @@
   }
 
   async function cancelDownload() {
-    // TODO: Logic for deleting downloaded files in backend
     if (!$isDownloading) return;
 
     invoke("cancel_download");
