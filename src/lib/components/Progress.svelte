@@ -227,7 +227,7 @@
     padding: 15px;
     background-color: rgba(255, 255, 255, 0.1);
     border-radius: 8px;
-    max-height: 200px;
+    max-height: 28vh;
     overflow-y: auto;
   }
   .status-message {
