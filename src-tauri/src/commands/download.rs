@@ -1,8 +1,14 @@
+use std::sync::{Arc, Mutex, OnceLock};
 use tauri::{Emitter, Manager};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
 use super::settings::Settings;
+
+fn get_current_download() -> &'static Arc<Mutex<Option<tokio::process::Child>>> {
+    static CURRENT_DOWNLOAD: OnceLock<Arc<Mutex<Option<tokio::process::Child>>>> = OnceLock::new();
+    CURRENT_DOWNLOAD.get_or_init(|| Arc::new(Mutex::new(None)))
+}
 
 async fn set_download_path(app: tauri::AppHandle) {
     let config_path = app.path().app_config_dir().unwrap().join("settings.json");
@@ -78,16 +84,25 @@ async fn gallery_dl(app: tauri::AppHandle, link: &str) -> Result<(), Box<dyn std
         .stderr(std::process::Stdio::piped())
         .spawn()?;
 
+    let stdout = downloader.stdout.take().unwrap();
+    let stderr = downloader.stderr.take().unwrap();
+
+    {
+        let current_download = get_current_download();
+        let mut download_guard = current_download.lock().unwrap();
+        *download_guard = Some(downloader);
+    }
+
     let (mut stdout_reader, mut stderr_reader) = (
-        BufReader::new(downloader.stdout.take().unwrap()).lines(),
-        BufReader::new(downloader.stderr.take().unwrap()).lines(),
+        BufReader::new(stdout).lines(),
+        BufReader::new(stderr).lines(),
     );
 
     let app_stdout = app.clone();
     let app_stderr = app.clone();
 
     //stdout
-    tokio::spawn(async move {
+    let stdout_handle = tokio::spawn(async move {
         while let Ok(Some(line)) = stdout_reader.next_line().await {
             app_stdout.emit("download-status", &line).unwrap();
             downloaded.push(line);
@@ -97,7 +112,7 @@ async fn gallery_dl(app: tauri::AppHandle, link: &str) -> Result<(), Box<dyn std
     });
 
     //stderr
-    tokio::spawn(async move {
+    let stderr_handle = tokio::spawn(async move {
         while let Ok(Some(line)) = stderr_reader.next_line().await {
             println!("{:#}", &line);
             if line.contains("error") {
@@ -108,7 +123,32 @@ async fn gallery_dl(app: tauri::AppHandle, link: &str) -> Result<(), Box<dyn std
         }
     });
 
-    let _status = downloader.wait().await?;
+    let mut completed = false;
+    while !completed {
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+        
+        let current_download = get_current_download();
+        let mut download_guard = current_download.lock().unwrap();
+        
+        if download_guard.is_none() {
+            completed = true;
+        } else if let Some(child) = download_guard.as_mut() {
+            match child.try_wait() {
+                Ok(Some(_status)) => {
+                    *download_guard = None;
+                    completed = true;
+                }
+                Ok(None) => {}
+                Err(_) => {
+                    *download_guard = None;
+                    completed = true;
+                }
+            }
+        }
+    }
+
+    let _ = stdout_handle.await;
+    let _ = stderr_handle.await;
 
     let directlink = std::path::Path::new("directlink");
     if directlink.exists() && directlink.is_dir() {
@@ -138,4 +178,15 @@ pub async fn downloader(app: tauri::AppHandle, url: String) {
     app.emit("download-started", ()).unwrap();
     let _ = gallery_dl(app.clone(), &url).await;
     app.emit("download-finished", ()).unwrap();
+}
+
+#[tauri::command]
+pub fn cancel_download()  {
+    let current_download = get_current_download();
+    let mut download_guard = current_download.lock().unwrap();
+    
+    if let Some(ref mut child) = *download_guard {
+        let _ = child.kill();
+        *download_guard = None;
+    }
 }

@@ -12,6 +12,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
+            commands::download::cancel_download,
             commands::download::downloader,
             commands::init::check_links,
             commands::settings::overwrite_json,
