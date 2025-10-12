@@ -139,6 +139,21 @@
       $isDownloading = true;
     }
   }
+
+  async function cancelDownload() {
+    // TODO: Logic for deleting downloaded files in backend
+    if (!$isDownloading) return;
+
+    invoke("cancel_download");
+
+    resetDownloadState();
+    $isDownloading = false;
+    addNotification("Download cancelled", "warning");    
+
+    if ($pendingDownloads.length > 0) {
+      downloadNextPending();
+    }
+  }
   //#endregion
 
   // @ts-ignore
@@ -306,6 +321,16 @@
             autocomplete="off"
             placeholder="Enter URL (or multiple URLs)"
           />
+          {#if $isDownloading}
+            <button
+              class="cancel-btn"
+              title="Cancel current download"
+              aria-label="Cancel current download"
+              on:click={cancelDownload}
+            >
+              <i class="fa-solid fa-xmark fa-lg"></i>
+            </button>
+          {/if}
           <button
             class="paste-btn"
             title={$isDownloading
@@ -494,6 +519,24 @@
     background: #5a7df9;
   }
 
+  .cancel-btn {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: #941c1c;
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background 0.2s ease;
+  }
+
+  .cancel-btn:hover {
+    background: #ff5252;
+  }
+
   @media (max-width: 600px) {
     .sidebar-content {
       flex-direction: row;
@@ -644,6 +687,10 @@
 
     .paste-btn:active {
       transform: scale(0.95);
+    }
+
+    .cancel-btn {
+      display: none;
     }
 
    .progWrap {
