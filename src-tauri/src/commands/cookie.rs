@@ -1,0 +1,48 @@
+use std::path::PathBuf;
+
+use tauri::{Emitter, Manager};
+
+use super::utils::is_netscape;
+use super::utils::convert_json;
+
+#[tauri::command]
+pub fn add_cookie(app: tauri::AppHandle, domain: String, file_path: String) -> Result<String, String> {
+    let cookies_dir = app.path().app_data_dir().unwrap().join("cookies");
+    let file_path = PathBuf::from(file_path);
+    
+    if !file_path.exists() {
+        return Err(format!("Source file does not exist: {}", file_path.display()));
+    }
+    
+    let file_extension = file_path.extension()
+        .and_then(|ext| ext.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+    
+    let dest_path = cookies_dir.join(format!("{}.txt", domain));
+    
+    match file_extension.as_str() {
+        "txt" => {
+            if !is_netscape(&file_path)? {
+                return Err("File is not a valid Netscape format cookie file".to_string());
+            }
+            if let Err(e) = std::fs::copy(&file_path, &dest_path) {
+                return Err(format!("Failed to copy cookie file: {}", e));
+            }
+        }
+        "json" => {
+            convert_json(&file_path, &dest_path)?;
+        }
+        _ => {
+            let _ = app.emit("notification", "Unsupported file format: {}. Only .txt (Netscape format) and .json files are supported");
+            return Err("Unsupported file format".to_string());
+        }
+    }
+    
+    Ok(format!("Cookie file processed successfully to: {}", dest_path.display()))
+}
+
+#[tauri::command]
+pub fn clear_cookies(app: tauri::AppHandle) {
+
+}
