@@ -12,13 +12,13 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
+            commands::cookie::add_cookie,
+            commands::cookie::clear_cookies,
             commands::download::cancel_download,
             commands::download::downloader,
             commands::init::check_links,
             commands::settings::settings,
             commands::settings::update_settings,
-            commands::utils::add_cookie,
-            commands::utils::clear_cookies,
             commands::utils::overwrite_json
         ])
         .run(tauri::generate_context!())
