@@ -3,9 +3,10 @@ use std::{
     path::PathBuf
 };
 
-use tauri::{Emitter, Manager};
+use tauri::Manager;
 
-fn is_netscape(file_path: &PathBuf) -> Result<bool, String> {
+// Check if a cookies file is Netscape
+pub fn is_netscape(file_path: &PathBuf) -> Result<bool, String> {
     let content = std::fs::read_to_string(file_path)
         .map_err(|e| format!("Failed to read file: {}", e))?;
 
@@ -32,7 +33,8 @@ fn is_netscape(file_path: &PathBuf) -> Result<bool, String> {
     Ok(has_valid_cookie || has_header)
 }
 
-fn convert_json(source_path: &PathBuf, dest_path: &PathBuf) -> Result<(), String> {
+// Convert a JSON cookie file into Netscape
+pub fn convert_json(source_path: &PathBuf, dest_path: &PathBuf) -> Result<(), String> {
     let content = std::fs::read_to_string(source_path)
         .map_err(|e| format!("Failed to read JSON file: {}", e))?;
     
@@ -110,49 +112,6 @@ fn convert_json(source_path: &PathBuf, dest_path: &PathBuf) -> Result<(), String
         }
     }
     Ok(())
-}
-
-// Cookies
-#[tauri::command]
-pub fn add_cookie(app: tauri::AppHandle, domain: String, file_path: String) -> Result<String, String> {
-    let cookies_dir = app.path().app_data_dir().unwrap().join("cookies");
-    let file_path = PathBuf::from(file_path);
-    
-    if !file_path.exists() {
-        return Err(format!("Source file does not exist: {}", file_path.display()));
-    }
-    
-    let file_extension = file_path.extension()
-        .and_then(|ext| ext.to_str())
-        .unwrap_or("")
-        .to_lowercase();
-    
-    let dest_path = cookies_dir.join(format!("{}.txt", domain));
-    
-    match file_extension.as_str() {
-        "txt" => {
-            if !is_netscape(&file_path)? {
-                return Err("File is not a valid Netscape format cookie file".to_string());
-            }
-            if let Err(e) = std::fs::copy(&file_path, &dest_path) {
-                return Err(format!("Failed to copy cookie file: {}", e));
-            }
-        }
-        "json" => {
-            convert_json(&file_path, &dest_path)?;
-        }
-        _ => {
-            let _ = app.emit("notification", "Unsupported file format: {}. Only .txt (Netscape format) and .json files are supported");
-            return Err("Unsupported file format".to_string());
-        }
-    }
-    
-    Ok(format!("Cookie file processed successfully to: {}", dest_path.display()))
-}
-
-#[tauri::command]
-pub fn clear_cookies(app: tauri::AppHandle) {
-
 }
 
 // JSON clearer
