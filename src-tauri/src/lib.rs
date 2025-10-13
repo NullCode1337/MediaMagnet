@@ -17,6 +17,7 @@ pub fn run() {
             commands::init::check_links,
             commands::settings::settings,
             commands::settings::update_settings,
+            commands::utils::add_cookie,
             commands::utils::clear_cookies,
             commands::utils::overwrite_json
         ])
