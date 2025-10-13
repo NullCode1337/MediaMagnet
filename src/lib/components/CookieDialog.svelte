@@ -26,6 +26,12 @@
     $cookieFile = "";
   }
 
+  // @ts-ignore
+  function noSymbols(event) {
+    const value = event.target.value.replace(/[^a-zA-Z0-9]/g, '');
+    $cookieDomain = value;
+  }
+
   async function browseFile() {
     try {
       const selected = await open({
@@ -100,9 +106,10 @@
           <input
             id="domain-input"
             bind:this={domainInput}
-            bind:value={$cookieDomain}
+            value={$cookieDomain}
+            on:input={noSymbols}
             type="text"
-            placeholder="e.g., example.com"
+            placeholder="e.g. tiktok, facebook"
             autocomplete="off"
           />
         </div>
