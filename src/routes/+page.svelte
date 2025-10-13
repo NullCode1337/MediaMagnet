@@ -198,6 +198,9 @@
         }
 
         await invoke("overwrite_json", { links: $pendingDownloads });
+        if ($settings.clear_on_exit) { // Cookies
+          invoke("clear_cookies");
+        }
         await exit($isDownloading ? 1 : 0);
       });
       closeHandlerSet = true;
