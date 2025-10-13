@@ -8,7 +8,8 @@ export let settings = writable({
     dark_mode: true,
     always_on_top: true,
     show_decor: true,
-    notifications: false
+    notifications: false, 
+    clear_on_exit: false
 });
 
 // Cookies

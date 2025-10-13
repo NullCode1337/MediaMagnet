@@ -41,12 +41,19 @@ pub fn init_config(app: tauri::AppHandle) {
     let app_data_dir = app.path().app_data_dir().unwrap();
     let app_config_dir = app.path().app_config_dir().unwrap();
 
+    let cookies_dir = app_data_dir.join("cookies");
     let links_json = app_data_dir.join("links.json");
     let settings_json = app_config_dir.join("settings.json");
 
     if !app_data_dir.exists() {
         std::fs::create_dir_all(&app_data_dir)
             .map_err(|e| format!("Failed to create app data directory: {}", e))
+            .unwrap();
+    }
+
+    if !cookies_dir.exists() {
+        std::fs::create_dir_all(&cookies_dir)
+            .map_err(|e| format!("Failed to create cookies directory: {}", e))
             .unwrap();
     }
 

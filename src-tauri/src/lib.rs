@@ -15,9 +15,10 @@ pub fn run() {
             commands::download::cancel_download,
             commands::download::downloader,
             commands::init::check_links,
-            commands::settings::overwrite_json,
             commands::settings::settings,
-            commands::settings::update_settings
+            commands::settings::update_settings,
+            commands::utils::clear_cookies,
+            commands::utils::overwrite_json
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
