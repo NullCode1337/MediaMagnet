@@ -246,8 +246,14 @@
                 <h4>Cookie Settings</h4>
 
                 <div class="setting-item checkbox">
-                  <input id="clearOnExit" type="checkbox" checked />
-                  <label for="clearOnExit">Delete cookies on app exit</label>
+                  <input
+                    id="clear_on_exit"
+                    type="checkbox"
+                    bind:checked={$settings.clear_on_exit}
+                    on:change={() =>
+                      updateSetting("clear_on_exit", $settings.clear_on_exit)}
+                  />
+                  <label for="clear_on_exit">Delete cookies on app exit</label>
                 </div>
               </div>
 
