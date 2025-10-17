@@ -53,6 +53,34 @@
     }
   }
 
+  // @ts-ignore
+  async function fileInputCng(event) {
+    const value = event.target.value.trim();  
+    const isFilePath = value.includes('.txt') || value.includes('.json') || value.includes('.cookies');
+    
+    if (!$cookieDomain.trim()) {
+      addNotification("Enter Website domain first!", "error");
+      return;
+    }
+
+    if (!isFilePath && value !== '') {
+      try {
+        const tempFilePath = await invoke("create_cookie", {
+          content: value,
+          domain: $cookieDomain.trim()
+        });
+        
+        $cookieFile = tempFilePath;
+        addNotification("Cookie text saved to temporary file", "info");
+      } catch (e) {
+        addNotification(e, "error");
+        $cookieFile = "";
+      }
+    } else {
+      $cookieFile = value;
+    }
+  }
+
   async function saveCookie() {
     if (!isFormValid) return;
 
@@ -117,17 +145,17 @@
         </div>
 
         <div class="input-group">
-          <label for="file-input">Cookie File Location</label>
+          <label for="file-input">Cookie File Location / Cookie Text</label>
           <div class="file-input-group">
-            <input
-              id="file-input"
-              bind:this={fileInput}
-              bind:value={$cookieFile}
-              type="text"
-              placeholder="Select cookie file..."
-              readonly
-              autocomplete="off"
-            />
+          <input
+            id="file-input"
+            bind:this={fileInput}
+            bind:value={$cookieFile}
+            on:input={fileInputCng}
+            type="text"
+            placeholder="Select cookie file or paste cookie text..."
+            autocomplete="off"
+          />
             <button
               class="browse-btn"
               on:click={browseFile}
