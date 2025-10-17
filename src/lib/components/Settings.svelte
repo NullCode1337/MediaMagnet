@@ -268,7 +268,7 @@
                       <div class="cookie-item">
                         <div class="cookie-info">
                           <span class="cookie-name">{name}</span>
-                          <span class="cookie-details">Path: {path}</span>
+                          <span class="cookie-details">{path}</span>
                         </div>
                         <button
                           class="cookie-delete"
@@ -299,6 +299,7 @@
                     class="action-button warning"
                     on:click={async () => {
                       await invoke("clear_cookies");
+                      $cookies = await invoke("get_cookies");
                     }}
                   >
                     <i class="fas fa-trash-alt"></i>
@@ -657,7 +658,11 @@
 
   .cookie-details {
     font-size: 12px;
-    color: rgba(255, 255, 255, 0.6);
+    font-family: 'ubuntu-regular', Arial, Helvetica, sans-serif;
+    color: var(--text-color);
+    user-select: all;
+    pointer-events: all;
+    cursor: text;
   }
 
   .cookie-delete {

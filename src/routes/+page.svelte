@@ -19,6 +19,7 @@
     currentlyDownloading,
     failedDownloads,
     settings,
+    cookies
   } from "$lib/stores/store";
 
   import Downloads from "$lib/components/Downloads.svelte";
@@ -176,6 +177,7 @@
 
       await invoke("check_links");
       $settings = await invoke("settings", { action: "check" });
+      $cookies = await invoke("get_cookies");
 
       getCurrentWindow().onCloseRequested(async (event) => {
         if ($isDownloading) {
