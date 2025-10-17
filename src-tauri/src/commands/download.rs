@@ -13,9 +13,10 @@ fn get_current_download() -> &'static Arc<Mutex<Option<tokio::process::Child>>> 
 
 async fn gallery_dl(app: tauri::AppHandle, link: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut downloaded: Vec<String> = Vec::new();
-    let config_path = app.path().app_config_dir().unwrap().join("settings.json");
+    let settings_path = app.path().app_config_dir().unwrap().join("settings.json");
     let settings: Settings =
-        serde_json::from_str(&std::fs::read_to_string(&config_path).unwrap()).unwrap();
+        serde_json::from_str(&std::fs::read_to_string(&settings_path).unwrap()).unwrap();
+    let cookies_dir = app.path().app_data_dir().unwrap().join("cookies");
 
     // === Total urls in link ===
     let mut url_cmd = Command::new("gallery-dl");
@@ -39,6 +40,23 @@ async fn gallery_dl(app: tauri::AppHandle, link: &str) -> Result<(), Box<dyn std
 
     if settings.user_agent != "None" {
         cmd.args(["-a", &settings.user_agent]);
+    }
+    
+    if let Ok(entries) = std::fs::read_dir(&cookies_dir) {
+        for entry in entries.flatten() {
+            let file_path = entry.path();
+            if file_path.is_file() {
+                if let Some(file_name) = file_path.file_name().and_then(|n| n.to_str()) {
+                    let file_name_lower = file_name.to_lowercase();
+                    let link_lower = link.to_lowercase();
+                    
+                    if link_lower.contains(&file_name_lower) {
+                        cmd.args(["-C", file_path.to_str().unwrap()]);
+                        break; // Only use one cookie file
+                    }
+                }
+            }
+        }
     }
 
     cmd.args([link]);
