@@ -321,6 +321,14 @@
     overflow: hidden;
     z-index: 10;
     border-left: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .panel-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
   .panel-header {
@@ -363,12 +371,6 @@
     color: var(--text-color);
     font-size: 16px;
     font-family: "noto-sans-semibold", sans-serif;
-  }
-
-  .panel-content {
-    max-height: 100%;
-    overflow-y: auto;
-    overflow-x: hidden;
   }
 
   .download-item {
