@@ -71,7 +71,7 @@ pub async fn create_cookie(app: tauri::AppHandle, content: String, domain: Strin
     
     let _ = std::fs::remove_file(temp);
     
-    Ok(final_name)
+    Ok(final_path.to_string_lossy().into_owned())
 }
 
 #[tauri::command]

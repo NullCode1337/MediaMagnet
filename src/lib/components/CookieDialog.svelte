@@ -65,19 +65,16 @@
 
     if (!isFilePath && value !== '') {
       try {
-        const tempFilePath = await invoke("create_cookie", {
+        const filePath = await invoke("create_cookie", {
           content: value,
           domain: $cookieDomain.trim()
         });
-        
-        $cookieFile = tempFilePath;
-        addNotification("Cookie text saved to temporary file", "info");
+
+        $cookieFile = filePath;
       } catch (e) {
         addNotification(e, "error");
         $cookieFile = "";
       }
-    } else {
-      $cookieFile = value;
     }
   }
 
