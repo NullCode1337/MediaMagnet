@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::collections::HashMap;
 
 use tauri::{Emitter, Manager};
 
@@ -40,6 +41,34 @@ pub fn add_cookie(app: tauri::AppHandle, domain: String, file_path: String) -> R
     }
     
     Ok(format!("Cookie file processed successfully to: {}", dest_path.display()))
+}
+
+#[tauri::command]
+pub fn get_cookies(app: tauri::AppHandle) -> Result<HashMap<String, String>, String> {
+    let cookies_dir = app.path().app_data_dir().unwrap().join("cookies");
+    let mut cookie_files = HashMap::new();
+    
+    match std::fs::read_dir(&cookies_dir) {
+        Ok(entries) => {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                
+                if path.is_file() {
+                    if let Some(file_stem) = path.file_stem().and_then(|s| s.to_str()) {
+                        cookie_files.insert(
+                            file_stem.to_string(),
+                            path.to_string_lossy().to_string(),
+                        );
+                    }
+                }
+            }            
+        }
+        Err(e) => {
+            let _ = app.emit("notifications", format!("Failed to read cookies directory: {}", e));
+        }
+    }
+    Ok(cookie_files)
+
 }
 
 #[tauri::command]
