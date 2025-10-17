@@ -44,6 +44,37 @@ pub fn add_cookie(app: tauri::AppHandle, domain: String, file_path: String) -> R
 }
 
 #[tauri::command]
+pub async fn create_cookie(app: tauri::AppHandle, content: String, domain: String) -> Result<String, String> {    
+    let cookies_dir = app.path().app_data_dir().unwrap().join("cookies");
+    
+    let temp = cookies_dir.join("temp_text.txt");
+    let _ = std::fs::write(&temp, &content);
+    
+    let is_netscape = is_netscape(&temp)?;
+    let is_json = content.trim().starts_with('{') || content.trim().starts_with('[');
+    
+    let final_name = format!("{}.txt", domain);
+    let final_path = cookies_dir.join(&final_name);
+
+    if is_json {
+        let _ = std::fs::remove_file(&temp);
+        let temp_json = cookies_dir.join("temp_json.json");
+        let _ = std::fs::write(&temp_json, &content);
+
+        convert_json(&temp_json, &final_path)?;
+    } else if is_netscape {
+        std::fs::write(&final_path, content).map_err(|e| e.to_string())?;
+    } else {
+        let _ = std::fs::remove_file(temp);
+        return Err("Invalid format. Please provide Netscape/JSON cookies or cookie file path".to_string());
+    }
+    
+    let _ = std::fs::remove_file(temp);
+    
+    Ok(final_name)
+}
+
+#[tauri::command]
 pub fn get_cookies(app: tauri::AppHandle) -> Result<HashMap<String, String>, String> {
     let cookies_dir = app.path().app_data_dir().unwrap().join("cookies");
     let mut cookie_files = HashMap::new();
