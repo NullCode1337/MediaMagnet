@@ -670,6 +670,7 @@
     font-family: "noto-sans-semibold", sans-serif;
     color: var(--text-color);
     font-size: 14px;
+    padding: 2px 5px 5px 0;
   }
 
   .cookie-details {
