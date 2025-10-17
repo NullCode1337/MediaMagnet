@@ -4,44 +4,11 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
 use super::settings::Settings;
+use super::utils::set_download_path;
 
 fn get_current_download() -> &'static Arc<Mutex<Option<tokio::process::Child>>> {
     static CURRENT_DOWNLOAD: OnceLock<Arc<Mutex<Option<tokio::process::Child>>>> = OnceLock::new();
     CURRENT_DOWNLOAD.get_or_init(|| Arc::new(Mutex::new(None)))
-}
-
-async fn set_download_path(app: tauri::AppHandle) {
-    let config_path = app.path().app_config_dir().unwrap().join("settings.json");
-    let settings: Settings =
-        serde_json::from_str(&std::fs::read_to_string(&config_path).unwrap()).unwrap();
-
-    let default = dirs::download_dir().unwrap().join("MediaMagnet");
-
-    let downloads_path = match settings.download_path.as_str() {
-        "Default" => default.clone(),
-        custom_path if custom_path.to_lowercase().contains("mediamagnet") => {
-            std::path::PathBuf::from(custom_path)
-        }
-        path => std::path::PathBuf::from(path).join("MediaMagnet"),
-    };
-
-    let final_dir = if downloads_path.exists() {
-        downloads_path
-    } else {
-        std::fs::create_dir_all(&downloads_path)
-            .map(|_| downloads_path)
-            .unwrap_or_else(|_e| {
-                app.emit(
-                    "notification",
-                    "[MME] Failed to create directory, using default...",
-                )
-                .unwrap();
-                std::fs::create_dir_all(&default).unwrap();
-                default
-            })
-    };
-
-    std::env::set_current_dir(&final_dir).unwrap();
 }
 
 async fn gallery_dl(app: tauri::AppHandle, link: &str) -> Result<(), Box<dyn std::error::Error>> {
