@@ -44,5 +44,17 @@ pub fn add_cookie(app: tauri::AppHandle, domain: String, file_path: String) -> R
 
 #[tauri::command]
 pub fn clear_cookies(app: tauri::AppHandle) {
-
+    let cookies_dir = app.path().app_data_dir().unwrap().join("cookies");
+    let mut deleted_count = 0;
+    
+    if let Ok(entries) = std::fs::read_dir(&cookies_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_file() && std::fs::remove_file(&path).is_ok() {
+                deleted_count += 1;
+            }
+        }
+    }
+    
+    let _ = app.emit("notification", format!("Successfully cleared {} cookie files", deleted_count));
 }
