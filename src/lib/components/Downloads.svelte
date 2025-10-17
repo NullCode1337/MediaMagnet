@@ -116,7 +116,7 @@
           Downloads {#if $pendingDownloads.length > 0 || $failedDownloads.length > 0}({totalDownloads}){/if}
         </h3>
         <div class="header-actions">
-          {#if $pendingDownloads.length > 0}
+          {#if $pendingDownloads.length > 0 || $failedDownloads.length > 0}
             <button
               class="clear-all"
               on:click={clearAllDownloads}
