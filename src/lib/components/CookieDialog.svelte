@@ -6,6 +6,7 @@
     cookieDomain,
     cookieFile,
     addNotification,
+    cookies
   } from "$lib/stores/store";
 
   let domainInput;
@@ -60,7 +61,8 @@
         domain: $cookieDomain.trim(),
         filePath: $cookieFile,
       });
-
+      
+      $cookies = await invoke("get_cookies");
       addNotification("Cookie added successfully", "success");
       handleClose();
     } catch (error) {
