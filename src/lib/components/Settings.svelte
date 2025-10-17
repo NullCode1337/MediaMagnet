@@ -295,7 +295,12 @@
 
                   <CookieDialog />
 
-                  <button class="action-button warning">
+                  <button 
+                    class="action-button warning"
+                    on:click={async () => {
+                      await invoke("clear_cookies");
+                    }}
+                  >
                     <i class="fas fa-trash-alt"></i>
                     Clear All Cookies
                   </button>
