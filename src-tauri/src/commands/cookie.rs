@@ -87,3 +87,14 @@ pub fn clear_cookies(app: tauri::AppHandle) {
     
     let _ = app.emit("notification", format!("Successfully cleared {} cookie files", deleted_count));
 }
+
+#[tauri::command]
+pub fn delete_cookie(app: tauri::AppHandle, path: String) { // delete only one cookie
+    let cookie_path = PathBuf::from(&path);
+    
+    if let Err(e) = std::fs::remove_file(&cookie_path) {
+        let _ = app.emit("notification", format!("Unable to delete cookie file, {}", e));
+    } else {
+        let _ = app.emit("notification", "Cookie deleted!");
+    }
+}
