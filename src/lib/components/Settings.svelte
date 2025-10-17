@@ -263,7 +263,7 @@
 
                 <div class="cookies-list">
                   {#if Object.keys($cookies || {}).length === 0}
-                    <div class="empty-state">No cookies stored!</div>
+                    <div class="cookies-empty"> No cookies stored!</div>
                   {:else}
                     {#each Object.entries($cookies) as [name, path]}
                       <div class="cookie-item">
@@ -282,6 +282,10 @@
                           class="cookie-delete"
                           title="Delete cookie"
                           aria-label="Click this button to delete the cookie"
+                          on:click={async () => {
+                            await invoke("delete_cookie", { path });
+                            $cookies = await invoke("get_cookies");
+                          }}
                         >
                           <i class="fas fa-trash"></i>
                         </button>
@@ -341,11 +345,15 @@
     transition: background-color 0.2s ease;
   }
 
-  .empty-state {
-    font-size: 20px;
+  .cookies-empty {
+    font-size: 18px;
     color: white;
     font-family: "ubuntu-regular", "noto-sans-semibold", sans-serif;
+    display: flex;
     justify-content: center;
+    align-items: center;
+    height: 10vh; 
+    text-align: center;
   }
 
   .active {
