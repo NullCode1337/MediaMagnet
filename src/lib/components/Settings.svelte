@@ -11,6 +11,7 @@
 
   import { invoke } from "@tauri-apps/api/core";
   import { ask, open } from "@tauri-apps/plugin-dialog";
+  import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 
   import CookieDialog from "./CookieDialog.svelte";
   import "@fortawesome/fontawesome-free/css/all.min.css";
@@ -266,9 +267,16 @@
                   {:else}
                     {#each Object.entries($cookies) as [name, path]}
                       <div class="cookie-item">
+                        <!-- svelte-ignore a11y_no_static_element_interactions -->
                         <div class="cookie-info">
                           <span class="cookie-name">{name}</span>
-                          <span class="cookie-details">{path}</span>
+                          <!-- svelte-ignore a11y_click_events_have_key_events -->
+                          <span 
+                            class="cookie-details"
+                            on:click={async () => {
+                              await writeText(path);
+                              addNotification(`Copied cookie path to clipboard`, "success");
+                            }}>{path}</span>
                         </div>
                         <button
                           class="cookie-delete"
@@ -662,7 +670,11 @@
     color: var(--text-color);
     user-select: all;
     pointer-events: all;
-    cursor: text;
+    cursor: pointer;
+  }
+
+  .cookie-details:hover {
+    text-decoration: underline;
   }
 
   .cookie-delete {
