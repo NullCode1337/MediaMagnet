@@ -3,7 +3,9 @@ use std::{
     path::PathBuf
 };
 
-use tauri::Manager;
+use tauri::{Emitter, Manager};
+
+use super::settings::Settings;
 
 // Check if a cookies file is Netscape
 pub fn is_netscape(file_path: &PathBuf) -> Result<bool, String> {
@@ -135,4 +137,39 @@ pub fn overwrite_json(app: tauri::AppHandle, links: Vec<String>) {
         .unwrap()
         .write_all(json_data.as_bytes())
         .unwrap();
+}
+
+// Set download path
+pub async fn set_download_path(app: tauri::AppHandle) {
+    let config_path = app.path().app_config_dir().unwrap().join("settings.json");
+    let settings: Settings =
+        serde_json::from_str(&std::fs::read_to_string(&config_path).unwrap()).unwrap();
+
+    let default = dirs::download_dir().unwrap().join("MediaMagnet");
+
+    let downloads_path = match settings.download_path.as_str() {
+        "Default" => default.clone(),
+        custom_path if custom_path.to_lowercase().contains("mediamagnet") => {
+            std::path::PathBuf::from(custom_path)
+        }
+        path => std::path::PathBuf::from(path).join("MediaMagnet"),
+    };
+
+    let final_dir = if downloads_path.exists() {
+        downloads_path
+    } else {
+        std::fs::create_dir_all(&downloads_path)
+            .map(|_| downloads_path)
+            .unwrap_or_else(|_e| {
+                app.emit(
+                    "notification",
+                    "[MME] Failed to create directory, using default...",
+                )
+                .unwrap();
+                std::fs::create_dir_all(&default).unwrap();
+                default
+            })
+    };
+
+    std::env::set_current_dir(&final_dir).unwrap();
 }
