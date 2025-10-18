@@ -56,8 +56,8 @@ async fn gallery_dl(app: tauri::AppHandle, link: &str) -> Result<()> {
     let settings = load_settings(&app).await?;
     set_download_path(app.clone()).await;
 
-    let version = base_command("gallery-dl").arg("--version").output().await?;
-    println!("[MediaMagnet] gallery-dl version: {}", String::from_utf8_lossy(&version.stdout));
+    //let version = base_command("gallery-dl").arg("--version").output().await?;
+    //println!("[MediaMagnet] gallery-dl version: {}", String::from_utf8_lossy(&version.stdout));
 
     // === Total urls in link ===
     let url_list = base_command("gallery-dl").args(["-g", link]).output().await?;
