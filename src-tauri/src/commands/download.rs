@@ -6,50 +6,39 @@ use tokio::process::Command;
 use super::settings::Settings;
 use super::utils::set_download_path;
 
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
+
 fn get_current_download() -> &'static Arc<Mutex<Option<tokio::process::Child>>> {
     static CURRENT_DOWNLOAD: OnceLock<Arc<Mutex<Option<tokio::process::Child>>>> = OnceLock::new();
     CURRENT_DOWNLOAD.get_or_init(|| Arc::new(Mutex::new(None)))
 }
 
-async fn gallery_dl(app: tauri::AppHandle, link: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let mut downloaded: Vec<String> = Vec::new();
+// Helper download functions
+async fn load_settings(app: &tauri::AppHandle) -> Result<Settings> {
     let settings_path = app.path().app_config_dir().unwrap().join("settings.json");
     let settings: Settings =
         serde_json::from_str(&std::fs::read_to_string(&settings_path).unwrap()).unwrap();
-    let cookies_dir = app.path().app_data_dir().unwrap().join("cookies");
+    Ok(settings)
+}
 
-    // === Total urls in link ===
-    let mut url_cmd = Command::new("gallery-dl");
-    url_cmd.args(["-g", link]);
-
+fn base_command(command: &str) -> Command {
+    let mut cmd = Command::new(command);
     #[cfg(target_os = "windows")]
-    url_cmd.creation_flags(winapi::um::winbase::CREATE_NO_WINDOW);
+    cmd.creation_flags(winapi::um::winbase::CREATE_NO_WINDOW);
+    cmd
+}
 
-    let url_list = url_cmd.output().await?;
+fn apply_cookies(cmd: &mut Command, app: &tauri::AppHandle, link: &str) -> Result<()> {
+    let cookies_dir = app.path().app_data_dir().unwrap().join("cookies");
+    let link_lower = link.to_lowercase();
 
-    let total_urls: usize = String::from_utf8_lossy(&url_list.stdout)
-        .lines()
-        .filter(|line| !line.trim_start().starts_with('|'))
-        .count();
-
-    // === Downloader ===
-    set_download_path(app.clone()).await;
-
-    let mut cmd = Command::new("gallery-dl");
-    cmd.args(["-d", "."]);
-
-    if settings.user_agent != "None" {
-        cmd.args(["-a", &settings.user_agent]);
-    }
-    
     if let Ok(entries) = std::fs::read_dir(&cookies_dir) {
         for entry in entries.flatten() {
             let file_path = entry.path();
             if file_path.is_file() {
                 if let Some(file_name) = file_path.file_name().and_then(|n| n.to_str()) {
                     let file_name_lower = file_name.to_lowercase();
-                    let link_lower = link.to_lowercase();
-                    
+
                     if link_lower.contains(&file_name_lower) {
                         cmd.args(["-C", file_path.to_str().unwrap()]);
                         break; // Only use one cookie file
@@ -58,19 +47,42 @@ async fn gallery_dl(app: tauri::AppHandle, link: &str) -> Result<(), Box<dyn std
             }
         }
     }
+    Ok(())
+}
 
+async fn gallery_dl(app: tauri::AppHandle, link: &str) -> Result<()> {
+    let mut downloaded: Vec<String> = Vec::new();
+
+    let settings = load_settings(&app).await?;
+    set_download_path(app.clone()).await;
+
+    let version = base_command("gallery-dl").arg("--version").output().await?;
+    println!("[MediaMagnet] gallery-dl version: {}", String::from_utf8_lossy(&version.stdout));
+
+    // === Total urls in link ===
+    let url_list = base_command("gallery-dl").args(["-g", link]).output().await?;
+
+    let total_urls = String::from_utf8_lossy(&url_list.stdout)
+        .lines()
+        .filter(|line| !line.trim().starts_with('|'))
+        .count();
+
+    // === Downloader ===
+    let mut cmd = base_command("gallery-dl");
+    cmd.args(["-d", "."]);
+    if settings.user_agent != "None" {
+        cmd.args(["-a", &settings.user_agent]);
+    }
+    apply_cookies(&mut cmd, &app, link)?;
     cmd.args([link]);
-
-    #[cfg(target_os = "windows")]
-    cmd.creation_flags(winapi::um::winbase::CREATE_NO_WINDOW);
 
     let mut downloader = cmd
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
         .spawn()?;
 
-    let stdout = downloader.stdout.take().unwrap();
-    let stderr = downloader.stderr.take().unwrap();
+    let stdout = downloader.stdout.take().ok_or("Failed to capture stdout")?;
+    let stderr = downloader.stderr.take().ok_or("Failed to capture stderr")?;
 
     {
         let current_download = get_current_download();
@@ -89,52 +101,49 @@ async fn gallery_dl(app: tauri::AppHandle, link: &str) -> Result<(), Box<dyn std
     //stdout
     let stdout_handle = tokio::spawn(async move {
         while let Ok(Some(line)) = stdout_reader.next_line().await {
-            app_stdout.emit("download-status", &line).unwrap();
+            let _ = app_stdout.emit("download-status", &line);
             downloaded.push(line);
             let progress = (downloaded.len() as f64 / total_urls as f64) * 100.0;
-            app_stdout.emit("download-progress", progress).unwrap();
+            let _ = app_stdout.emit("download-progress", progress);
         }
     });
 
-    //stderr
     let stderr_handle = tokio::spawn(async move {
         while let Ok(Some(line)) = stderr_reader.next_line().await {
             println!("{:#}", &line);
             if line.contains("[error") {
-                app_stderr.emit("download-error", &line).unwrap();
+                let _ = app_stderr.emit("download-error", &line);
             } else {
-                app_stderr.emit("notification", &line).unwrap();
+                let _ = app_stderr.emit("notification", &line);
             }
         }
     });
 
-    let mut completed = false;
-    while !completed {
+    loop {
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-        
         let current_download = get_current_download();
-        let mut download_guard = current_download.lock().unwrap();
-        
-        if download_guard.is_none() {
-            completed = true;
-        } else if let Some(child) = download_guard.as_mut() {
+        let mut download_guard = current_download.lock().map_err(|_| "Lock on download handle")?;
+        if download_guard.is_none() { break; } // Cancelled by user 
+
+        if let Some(child) = download_guard.as_mut() {
             match child.try_wait() {
-                Ok(Some(_status)) => {
-                    *download_guard = None;
-                    completed = true;
+                Ok(Some(_)) => { 
+                    *download_guard = None; 
+                    break;
                 }
-                Ok(None) => {}
-                Err(_) => {
-                    *download_guard = None;
-                    completed = true;
+                Err(e) => { 
+                    println!("[MediaMagnet] Error checking child process status: {}", e);
+                    *download_guard = None; 
+                    break;
                 }
+                Ok(None) => {} 
             }
         }
     }
 
-    let _ = stdout_handle.await;
-    let _ = stderr_handle.await;
+    let _ = tokio::join!(stdout_handle, stderr_handle);
 
+    // === Cleanup ===
     let directlink = std::path::Path::new("directlink");
     if directlink.exists() && directlink.is_dir() {
         for entry in std::fs::read_dir(directlink)? {
@@ -143,7 +152,7 @@ async fn gallery_dl(app: tauri::AppHandle, link: &str) -> Result<(), Box<dyn std
             if file_path.is_file() {
                 let file_name = file_path.file_name().unwrap();
                 let new_path = std::path::Path::new(".").join(file_name);
-                std::fs::rename(&file_path, new_path)?;
+                std::fs::rename(&file_path, new_path)?; 
             }
         }
         std::fs::remove_dir(directlink)?;
@@ -155,27 +164,30 @@ async fn gallery_dl(app: tauri::AppHandle, link: &str) -> Result<(), Box<dyn std
 #[tauri::command]
 pub async fn downloader(app: tauri::AppHandle, url: String) {
     if !url.to_lowercase().contains("http") {
-        app.emit("download-error", "Invalid URL").unwrap();
+        let _ = app.emit("download-error", "Invalid URL");
         return;
     }
 
-    // Start download
-    app.emit("download-started", ()).unwrap();
-    let _ = gallery_dl(app.clone(), &url).await;
-    app.emit("download-finished", ()).unwrap();
+    let _ = app.emit("download-started", ());
+    
+    if let Err(e) = gallery_dl(app.clone(), &url).await {
+        println!("[MediaMagnet] Download failed: {}", e);
+    }
+    
+    let _ = app.emit("download-finished", ());
 }
 
 #[tauri::command]
-pub async fn cancel_download() -> Result<(), String> {
+pub async fn cancel_download() -> std::result::Result<(), String> {
     let current_download = get_current_download();
     
     let child = {
-        let mut download_guard = current_download.lock().unwrap();
+        let mut download_guard = current_download.lock().map_err(|_| "Failed to acquire lock to cancel")?;
         download_guard.take()
     };
     
     if let Some(mut child) = child {
-        if let Err(e) = child.start_kill() {
+        if let Err(e) = child.kill().await { 
             return Err(format!("Failed to kill process: {}", e));
         }
         
