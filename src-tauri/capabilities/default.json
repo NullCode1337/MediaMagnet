@@ -16,6 +16,8 @@
     "core:window:allow-set-position",
     
     "shell:default",
+    "shell:allow-execute",
+
     "dialog:default",
     "process:default",
 
