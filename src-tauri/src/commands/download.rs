@@ -2,6 +2,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 use tauri::{Emitter, Manager};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
+use tauri_plugin_shell::ShellExt;
 
 use super::settings::Settings;
 use super::utils::set_download_path;
@@ -21,7 +22,18 @@ async fn load_settings(app: &tauri::AppHandle) -> Result<Settings> {
     Ok(settings)
 }
 
-fn base_command(command: &str) -> Command {
+async fn base_command(app: &tauri::AppHandle, command: &str) -> Command {
+    let mut cmd = Command::new(command);
+    #[cfg(target_os = "windows")]
+    cmd.creation_flags(winapi::um::winbase::CREATE_NO_WINDOW);
+    
+    if cmd.arg("--version").output().await.is_err() {
+        if let Ok(sidecar_cmd) = app.shell().sidecar(command) {
+            let std_cmd: std::process::Command = sidecar_cmd.into();
+            return std_cmd.into();
+        }
+    }
+    
     let mut cmd = Command::new(command);
     #[cfg(target_os = "windows")]
     cmd.creation_flags(winapi::um::winbase::CREATE_NO_WINDOW);
@@ -55,12 +67,10 @@ async fn gallery_dl(app: tauri::AppHandle, link: &str) -> Result<()> {
 
     let settings = load_settings(&app).await?;
     set_download_path(app.clone()).await;
-
-    //let version = base_command("gallery-dl").arg("--version").output().await?;
-    //println!("[MediaMagnet] gallery-dl version: {}", String::from_utf8_lossy(&version.stdout));
+    
 
     // === Total urls in link ===
-    let url_list = base_command("gallery-dl").args(["-g", link]).output().await?;
+    let url_list = base_command(&app, "gallery-dl").await.args(["-g", link]).output().await?;
 
     let total_urls = String::from_utf8_lossy(&url_list.stdout)
         .lines()
@@ -68,7 +78,7 @@ async fn gallery_dl(app: tauri::AppHandle, link: &str) -> Result<()> {
         .count();
 
     // === Downloader ===
-    let mut cmd = base_command("gallery-dl");
+    let mut cmd = base_command(&app, "gallery-dl").await;
     cmd.args(["-d", "."]);
     if settings.user_agent != "None" {
         cmd.args(["-a", &settings.user_agent]);
