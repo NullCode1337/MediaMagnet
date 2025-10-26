@@ -4,12 +4,12 @@
   import {
     showCookieDialog,
     cookieDomain,
-    cookieFile,
+    cookieInput,
     addNotification,
     cookies
   } from "$lib/stores/store";
 
-  $: isFormValid = $cookieDomain.trim() !== "" && $cookieFile.trim() !== "";
+  $: isFormValid = $cookieDomain.trim() !== "" && $cookieInput.trim() !== "";
 
   // @ts-ignore
   function handleOverlayClick(event) {
@@ -21,7 +21,7 @@
   function handleClose() {
     $showCookieDialog = false;
     $cookieDomain = "";
-    $cookieFile = "";
+    $cookieInput = "";
   }
 
   // @ts-ignore
@@ -43,46 +43,33 @@
       });
 
       if (selected) {
-        $cookieFile = selected;
+        $cookieInput = selected;
       }
     } catch (error) {
       addNotification("Failed to select file", "error");
     }
   }
 
-  // @ts-ignore
-  async function handleFileInput(event) {
-    const value = event.target.value.trim();
-    const isFilePath = value.includes('.txt') || value.includes('.json') || value.includes('.cookies');
-
-    if (!$cookieDomain.trim()) {
-      addNotification("Enter Website domain first!", "error");
-      return;
-    }
-
-    if (!isFilePath && value !== '') {
-      try {
-        const filePath = await invoke("create_cookie", {
-          content: value,
-          domain: $cookieDomain.trim()
-        });
-        
-        $cookieFile = filePath;
-      } catch (e) {
-        addNotification(e, "error");
-        $cookieFile = "";
-      }
-    }
-  }
-
   async function saveCookie() {
     if (!isFormValid) return;
 
+    const domain = $cookieDomain.trim();
+    const input = $cookieInput.trim();
+
+    const isFilePath =
+      input.endsWith('.txt') ||
+      input.endsWith('.json') ||
+      input.endsWith('.cookies');
+
+    let payload;
+    if (isFilePath) {
+      payload = { type: 'FilePath', value: input };
+    } else {
+      payload = { type: 'Content', value: input };
+    }
+
     try {
-      await invoke("add_cookie", {
-        domain: $cookieDomain.trim(),
-        filePath: $cookieFile,
-      });
+      await invoke("save_cookie", { domain, input: payload });
 
       $cookies = await invoke("get_cookies");
       addNotification("Cookie added successfully", "success");
@@ -110,7 +97,7 @@
 
 {#if $showCookieDialog}
   <!-- svelte-ignore a11y_click_events_have_key_events -->
-   <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="dialog-overlay" on:click={handleOverlayClick}>
     <div class="dialog" role="dialog" aria-labelledby="cookie-dialog-title">
       <div class="dialog-header">
@@ -142,8 +129,7 @@
           <div class="file-input-group">
             <input
               id="file-input"
-              bind:value={$cookieFile}
-              on:change={handleFileInput}
+              bind:value={$cookieInput}
               type="text"
               placeholder="Select cookie file or paste cookie text..."
               autocomplete="off"
