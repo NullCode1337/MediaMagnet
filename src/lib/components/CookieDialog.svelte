@@ -54,7 +54,7 @@
     if (!isFormValid) return;
 
     const domain = $cookieDomain.trim();
-    const input = $cookieInput.trim();
+    const input = $cookieInput;
 
     const isFilePath =
       input.endsWith('.txt') ||
