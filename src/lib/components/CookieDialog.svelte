@@ -127,13 +127,13 @@
         <div class="input-group">
           <label for="file-input">Cookie File Location / Cookie Text</label>
           <div class="file-input-group">
-            <input
+            <textarea
               id="file-input"
               bind:value={$cookieInput}
-              type="text"
               placeholder="Select cookie file or paste cookie text..."
               autocomplete="off"
-            />
+              rows="3"
+            ></textarea>
             <button
               class="browse-btn"
               on:click={browseFile}
@@ -248,7 +248,7 @@
     font-weight: 600;
   }
 
-  .input-group input {
+  .input-group textarea, input {
     width: 100%;
     padding: 12px 16px;
     border: 1px solid var(--input-border);
@@ -261,6 +261,7 @@
     box-sizing: border-box;
   }
 
+  .input-group textarea:focus,
   .input-group input:focus {
     outline: none;
     border-color: #6e8efb;
@@ -272,7 +273,7 @@
     gap: 8px;
   }
 
-  .file-input-group input {
+  .file-input-group textarea {
     flex: 1;
   }
 
