@@ -16,7 +16,7 @@ export let settings = writable({
 export let cookies = writable({});
 export const showCookieDialog = writable(false);
 export const cookieDomain = writable('');
-export const cookieFile = writable('');
+export const cookieInput = writable('');
 
 // Variables
 export let pendingDownloads = writable([]);
