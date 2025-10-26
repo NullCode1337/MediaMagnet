@@ -1,6 +1,6 @@
 use std::{
-    io::Write, 
-    path::PathBuf
+    io::{BufRead, BufReader, Write},
+    path::PathBuf,
 };
 
 use tauri::{Emitter, Manager};
@@ -9,41 +9,49 @@ use super::settings::Settings;
 
 // Check if a cookies file is Netscape
 pub fn is_netscape(file_path: &PathBuf) -> Result<bool, String> {
-    let content = std::fs::read_to_string(file_path)
-        .map_err(|e| format!("Failed to read file: {}", e))?;
+    let file = std::fs::File::open(file_path).map_err(|e| format!("Failed to open file: {}", e))?;
+    let reader = BufReader::new(file);
 
-    let lines: Vec<&str> = content.lines().collect();
-    if lines.is_empty() {
-        return Ok(false);
+    let mut has_header = false;
+    let mut has_valid_cookie = false;
+    let mut lines_iter = reader.lines().peekable();
+
+    if let Some(Ok(first_line)) = lines_iter.peek() {
+        let trimmed_first_line = first_line.trim();
+        if trimmed_first_line.starts_with("# HTTP Cookie File")
+            || trimmed_first_line.starts_with("# Netscape HTTP Cookie File")
+        {
+            has_header = true;
+        }
     }
 
-    let has_header = lines[0].starts_with("# HTTP Cookie File") || 
-                     lines[0].starts_with("# Netscape HTTP Cookie File");
-    
-    let mut has_valid_cookie = false;
-    for line in lines {
-        if line.trim().is_empty() || line.starts_with('#') {
+    for line_result in lines_iter {
+        let line = line_result.map_err(|e| format!("Failed to read line: {}", e))?;
+        let trimmed_line = line.trim();
+
+        if trimmed_line.is_empty() || trimmed_line.starts_with('#') {
             continue;
         }
-        
-        let fields: Vec<&str> = line.split('\t').collect();
-        if fields.len() == 7 {
+
+        if trimmed_line.split('\t').count() == 7 {
             has_valid_cookie = true;
             break;
         }
     }
-    Ok(has_valid_cookie || has_header)
+
+    Ok(has_header || has_valid_cookie)
 }
 
 // Convert a JSON cookie file into Netscape
 pub fn convert_json(source_path: &PathBuf, dest_path: &PathBuf) -> Result<(), String> {
     let content = std::fs::read_to_string(source_path)
         .map_err(|e| format!("Failed to read JSON file: {}", e))?;
-    
-    let json_data: serde_json::Value = serde_json::from_str(&content)
-        .map_err(|e| format!("Invalid JSON format: {}", e))?;
-    
-    let mut output = std::fs::File::create(dest_path).unwrap();
+
+    let json_data: serde_json::Value =
+        serde_json::from_str(&content).map_err(|e| format!("Invalid JSON format: {}", e))?;
+
+    let output_file = std::fs::File::create(dest_path).unwrap();
+    let mut output = std::io::BufWriter::new(output_file);
 
     writeln!(output, "# Netscape HTTP Cookie File").unwrap();
     writeln!(output, "# This file was generated from JSON by MediaMagnet").unwrap();
@@ -60,59 +68,78 @@ pub fn convert_json(source_path: &PathBuf, dest_path: &PathBuf) -> Result<(), St
         }
         _ => return Err("JSON must be an array or object".to_string()),
     };
-    
+
     for cookie in cookies {
         if let serde_json::Value::Object(cookie_obj) = cookie {
-            let domain = cookie_obj.get("domain")
+            let domain = cookie_obj
+                .get("domain")
                 .and_then(|v| v.as_str())
                 .unwrap_or("unknown")
                 .to_string();
-            
-            let flag = cookie_obj.get("httpOnly")
+
+            let flag = if domain.starts_with('.') {
+                "TRUE"
+            } else {
+                "FALSE"
+            };
+
+            let is_http_only = cookie_obj
+                .get("httpOnly")
                 .and_then(|v| v.as_bool())
-                .map(|b| if b { "TRUE" } else { "FALSE" })
-                .unwrap_or("FALSE")
-                .to_string();
-            
-            let path = cookie_obj.get("path")
+                .unwrap_or(false);
+            let line_prefix = if is_http_only { "#HttpOnly_" } else { "" };
+
+            let path = cookie_obj
+                .get("path")
                 .and_then(|v| v.as_str())
-                .unwrap_or("/")
-                .to_string();
-            
-            let secure = cookie_obj.get("secure")
+                .unwrap_or("/");
+
+            let secure = cookie_obj
+                .get("secure")
                 .and_then(|v| v.as_bool())
                 .map(|b| if b { "TRUE" } else { "FALSE" })
-                .unwrap_or("FALSE")
-                .to_string();
-            
-            let expiration = cookie_obj.get("expirationDate")
+                .unwrap_or("FALSE");
+
+            let expiration = cookie_obj
+                .get("expirationDate")
                 .or_else(|| cookie_obj.get("expires"))
                 .and_then(|v| {
                     if let Some(num) = v.as_f64() {
                         Some(num as i64)
                     } else if let Some(str) = v.as_str() {
-                        str.parse().ok()
+                        str.parse::<f64>()
+                            .ok()
+                            .map(|f| f as i64)
+                            .or_else(|| str.parse().ok())
                     } else {
                         None
                     }
                 })
                 .unwrap_or(0);
-            
-            let name = cookie_obj.get("name")
+
+            let name = cookie_obj
+                .get("name")
                 .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string();
-            
-            let value = cookie_obj.get("value")
+                .unwrap_or("");
+
+            let value = cookie_obj
+                .get("value")
                 .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string();
-            
-            writeln!(output, "{}\t{}\t{}\t{}\t{}\t{}\t{}", 
-                    domain, flag, path, secure, expiration, name, value)
-                .map_err(|e| format!("Failed to write cookie data: {}", e))?;
+                .unwrap_or("");
+
+            writeln!(
+                output,
+                "{}{}\t{}\t{}\t{}\t{}\t{}\t{}",
+                line_prefix, domain, flag, path, secure, expiration, name, value
+            )
+            .map_err(|e| format!("Failed to write cookie data: {}", e))?;
         }
     }
+
+    output
+        .flush()
+        .map_err(|e| format!("Failed to flush cookie file: {}", e))?;
+
     Ok(())
 }
 
