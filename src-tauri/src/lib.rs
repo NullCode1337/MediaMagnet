@@ -13,11 +13,10 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
-            commands::cookie::add_cookie,
             commands::cookie::clear_cookies,
-            commands::cookie::create_cookie,
             commands::cookie::delete_cookie,
             commands::cookie::get_cookies,
+            commands::cookie::save_cookie,
             commands::download::cancel_download,
             commands::download::downloader,
             commands::init::check_links,
