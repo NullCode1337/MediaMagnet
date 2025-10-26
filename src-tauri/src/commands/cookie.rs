@@ -55,8 +55,7 @@ pub async fn save_cookie(
         }
 
         CookieInput::Content(content) => {
-            let content_trimmed = content.trim();
-            let is_json = content_trimmed.starts_with('{') || content_trimmed.starts_with('[');
+            let is_json = content.trim_start().starts_with('{') || content.trim_start().starts_with('[');
 
             if is_json {
                 let temp_json = cookies_dir.join("temp_json.json");
@@ -66,15 +65,10 @@ pub async fn save_cookie(
                 let _ = std::fs::remove_file(&temp_json); 
                 convert_result?;
             } else {
-                let temp_txt = cookies_dir.join("temp_text.txt");
-                std::fs::write(&temp_txt, &content).map_err(|e| e.to_string())?;
+                std::fs::write(&dest_path, &content).map_err(|e| e.to_string())?;
 
-                let is_netscape_valid = is_netscape(&temp_txt)?;
-
-                if is_netscape_valid {
-                    std::fs::rename(&temp_txt, &dest_path).map_err(|e| e.to_string())?;
-                } else {
-                    let _ = std::fs::remove_file(&temp_txt);
+                if !is_netscape(&dest_path)? {
+                    let _ = std::fs::remove_file(&dest_path);
                     return Err(
                         "Invalid format. Please provide Netscape/JSON cookies or cookie file path"
                             .to_string(),
