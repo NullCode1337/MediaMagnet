@@ -9,9 +9,6 @@
     cookies
   } from "$lib/stores/store";
 
-  let domainInput;
-  let fileInput;
-
   $: isFormValid = $cookieDomain.trim() !== "" && $cookieFile.trim() !== "";
 
   // @ts-ignore
@@ -54,10 +51,10 @@
   }
 
   // @ts-ignore
-  async function fileInputCng(event) {
-    const value = event.target.value.trim();  
+  async function handleFileInput(event) {
+    const value = event.target.value.trim();
     const isFilePath = value.includes('.txt') || value.includes('.json') || value.includes('.cookies');
-    
+
     if (!$cookieDomain.trim()) {
       addNotification("Enter Website domain first!", "error");
       return;
@@ -69,7 +66,7 @@
           content: value,
           domain: $cookieDomain.trim()
         });
-
+        
         $cookieFile = filePath;
       } catch (e) {
         addNotification(e, "error");
@@ -86,7 +83,7 @@
         domain: $cookieDomain.trim(),
         filePath: $cookieFile,
       });
-      
+
       $cookies = await invoke("get_cookies");
       addNotification("Cookie added successfully", "success");
       handleClose();
@@ -113,7 +110,7 @@
 
 {#if $showCookieDialog}
   <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
+   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="dialog-overlay" on:click={handleOverlayClick}>
     <div class="dialog" role="dialog" aria-labelledby="cookie-dialog-title">
       <div class="dialog-header">
@@ -132,11 +129,10 @@
           <label for="domain-input">Website Domain</label>
           <input
             id="domain-input"
-            bind:this={domainInput}
-            value={$cookieDomain}
+            bind:value={$cookieDomain}
             on:input={noSymbols}
             type="text"
-            placeholder="e.g. tiktok, facebook"
+            placeholder="e.g. 'tiktok', 'facebook'"
             autocomplete="off"
           />
         </div>
@@ -144,15 +140,14 @@
         <div class="input-group">
           <label for="file-input">Cookie File Location / Cookie Text</label>
           <div class="file-input-group">
-          <input
-            id="file-input"
-            bind:this={fileInput}
-            bind:value={$cookieFile}
-            on:input={fileInputCng}
-            type="text"
-            placeholder="Select cookie file or paste cookie text..."
-            autocomplete="off"
-          />
+            <input
+              id="file-input"
+              bind:value={$cookieFile}
+              on:change={handleFileInput}
+              type="text"
+              placeholder="Select cookie file or paste cookie text..."
+              autocomplete="off"
+            />
             <button
               class="browse-btn"
               on:click={browseFile}
