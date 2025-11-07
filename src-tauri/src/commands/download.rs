@@ -161,6 +161,10 @@ async fn gallery_dl(app: tauri::AppHandle, link: &str) -> Result<()> {
             let file_path = entry.path();
             if file_path.is_file() {
                 if let Some(file_name) = file_path.file_name().and_then(|n| n.to_str()) {
+                    if file_name.to_lowercase().contains("part") {
+                        continue;
+                    }
+
                     let domain = file_name.split('_').next().unwrap_or("unknown");
                     let domain_dir = std::path::Path::new(".").join(domain);
                     
@@ -173,7 +177,9 @@ async fn gallery_dl(app: tauri::AppHandle, link: &str) -> Result<()> {
                 }
             }
         }
-        std::fs::remove_dir(directlink)?;
+        if directlink.read_dir()?.next().is_none() {
+            std::fs::remove_dir(directlink)?;
+        }
     }
 
     Ok(())
