@@ -2200,6 +2200,7 @@ version = "0.4.2"
 dependencies = [
  "dirs",
  "fix-path-env",
+ "regex",
  "serde",
  "serde_json",
  "tauri",
