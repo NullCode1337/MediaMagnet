@@ -1,6 +1,6 @@
 {
   "name": "mediamagnet",
-  "version": "0.1.0",
+  "version": "0.4.2",
   "description": "Cross-platform GUI for gallery-dl, an image/media downloader",
   "type": "module",
   "scripts": {
