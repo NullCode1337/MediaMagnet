@@ -225,7 +225,7 @@
               </div>
 
               <div class="settings-group">
-                <h4>Notifications (WIP)</h4>
+                <h4>Notifications</h4>
 
                 <div class="setting-item checkbox">
                   <input

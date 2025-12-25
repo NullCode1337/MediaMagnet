@@ -9,7 +9,7 @@ pub struct Settings {
     pub always_on_top: bool,
     pub show_decor: bool,
     pub notifications: bool,
-    pub clear_on_exit: bool
+    pub clear_on_exit: bool,
 }
 
 impl Default for Settings {
@@ -21,7 +21,7 @@ impl Default for Settings {
             always_on_top: true,
             show_decor: true,
             notifications: false,
-            clear_on_exit: false
+            clear_on_exit: false,
         }
     }
 }

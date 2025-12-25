@@ -3,9 +3,9 @@ use std::{
     path::PathBuf,
 };
 
-use tauri::{Emitter, Manager};
-
 use super::settings::Settings;
+use tauri::{Emitter, Manager};
+use tauri_plugin_notification::NotificationExt;
 
 // Check if a cookies file is Netscape
 pub fn is_netscape(file_path: &PathBuf) -> Result<bool, String> {
@@ -199,4 +199,14 @@ pub async fn set_download_path(app: tauri::AppHandle) {
     };
 
     std::env::set_current_dir(&final_dir).unwrap();
+}
+
+#[tauri::command]
+pub fn system_notify(app: tauri::AppHandle, message: String, mtype: String) {
+    app.notification()
+        .builder()
+        .title("MediaMagnet")
+        .body(message)
+        .show()
+        .unwrap();
 }

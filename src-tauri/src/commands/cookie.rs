@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use tauri::{Emitter, Manager}; 
+use tauri::{Emitter, Manager};
 
 use super::utils::{convert_json, is_netscape};
 
@@ -55,14 +55,15 @@ pub async fn save_cookie(
         }
 
         CookieInput::Content(content) => {
-            let is_json = content.trim_start().starts_with('{') || content.trim_start().starts_with('[');
+            let is_json =
+                content.trim_start().starts_with('{') || content.trim_start().starts_with('[');
 
             if is_json {
                 let temp_json = cookies_dir.join("temp_json.json");
                 std::fs::write(&temp_json, &content).map_err(|e| e.to_string())?;
 
                 let convert_result = convert_json(&temp_json, &dest_path);
-                let _ = std::fs::remove_file(&temp_json); 
+                let _ = std::fs::remove_file(&temp_json);
                 convert_result?;
             } else {
                 std::fs::write(&dest_path, &content).map_err(|e| e.to_string())?;
@@ -108,7 +109,7 @@ pub fn get_cookies(app: tauri::AppHandle) -> Result<HashMap<String, String>, Str
 pub fn clear_cookies(app: tauri::AppHandle) {
     let cookies_dir = app.path().app_data_dir().unwrap().join("cookies");
     let mut deleted_count = 0;
-    
+
     if let Ok(entries) = std::fs::read_dir(&cookies_dir) {
         for entry in entries.flatten() {
             let path = entry.path();

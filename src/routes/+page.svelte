@@ -360,7 +360,9 @@
   </main>
 </div>
 
-<Notification />
+{#if $settings.notifications == false}
+  <Notification />
+{/if}
 
 <!-- #endregion -->
 
