@@ -34,6 +34,7 @@ async fn base_command(app: &tauri::AppHandle, command: &str) -> Command {
         }
     }
 
+    #[allow(unused_mut)]
     let mut cmd = Command::new(command);
     #[cfg(target_os = "windows")]
     cmd.creation_flags(winapi::um::winbase::CREATE_NO_WINDOW);
