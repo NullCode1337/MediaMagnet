@@ -1,8 +1,8 @@
 use std::sync::{Arc, Mutex, OnceLock};
 use tauri::{Emitter, Manager};
+use tauri_plugin_shell::ShellExt;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
-use tauri_plugin_shell::ShellExt;
 
 use super::settings::Settings;
 use super::utils::set_download_path;
@@ -26,14 +26,14 @@ async fn base_command(app: &tauri::AppHandle, command: &str) -> Command {
     let mut cmd = Command::new(command);
     #[cfg(target_os = "windows")]
     cmd.creation_flags(winapi::um::winbase::CREATE_NO_WINDOW);
-    
+
     if cmd.arg("--version").output().await.is_err() {
         if let Ok(sidecar_cmd) = app.shell().sidecar(command) {
             let std_cmd: std::process::Command = sidecar_cmd.into();
             return std_cmd.into();
         }
     }
-    
+
     let mut cmd = Command::new(command);
     #[cfg(target_os = "windows")]
     cmd.creation_flags(winapi::um::winbase::CREATE_NO_WINDOW);
@@ -67,10 +67,13 @@ async fn gallery_dl(app: tauri::AppHandle, link: &str) -> Result<()> {
 
     let settings = load_settings(&app).await?;
     set_download_path(app.clone()).await;
-    
 
     // === Total urls in link ===
-    let url_list = base_command(&app, "gallery-dl").await.args(["-g", link]).output().await?;
+    let url_list = base_command(&app, "gallery-dl")
+        .await
+        .args(["-g", link])
+        .output()
+        .await?;
 
     let total_urls = String::from_utf8_lossy(&url_list.stdout)
         .lines()
@@ -132,21 +135,25 @@ async fn gallery_dl(app: tauri::AppHandle, link: &str) -> Result<()> {
     loop {
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
         let current_download = get_current_download();
-        let mut download_guard = current_download.lock().map_err(|_| "Lock on download handle")?;
-        if download_guard.is_none() { break; } // Cancelled by user 
+        let mut download_guard = current_download
+            .lock()
+            .map_err(|_| "Lock on download handle")?;
+        if download_guard.is_none() {
+            break;
+        } // Cancelled by user
 
         if let Some(child) = download_guard.as_mut() {
             match child.try_wait() {
-                Ok(Some(_)) => { 
-                    *download_guard = None; 
+                Ok(Some(_)) => {
+                    *download_guard = None;
                     break;
                 }
-                Err(e) => { 
+                Err(e) => {
                     println!("[MediaMagnet] Error checking child process status: {}", e);
-                    *download_guard = None; 
+                    *download_guard = None;
                     break;
                 }
-                Ok(None) => {} 
+                Ok(None) => {}
             }
         }
     }
@@ -167,11 +174,11 @@ async fn gallery_dl(app: tauri::AppHandle, link: &str) -> Result<()> {
 
                     let domain = file_name.split('_').next().unwrap_or("unknown");
                     let domain_dir = std::path::Path::new(".").join(domain);
-                    
+
                     if !domain_dir.exists() {
                         std::fs::create_dir(&domain_dir)?;
                     }
-                    
+
                     let new_path = domain_dir.join(file_name);
                     std::fs::rename(&file_path, new_path)?;
                 }
@@ -193,28 +200,30 @@ pub async fn downloader(app: tauri::AppHandle, url: String) {
     }
 
     let _ = app.emit("download-started", ());
-    
+
     if let Err(e) = gallery_dl(app.clone(), &url).await {
         println!("[MediaMagnet] Download failed: {}", e);
     }
-    
+
     let _ = app.emit("download-finished", ());
 }
 
 #[tauri::command]
 pub async fn cancel_download() -> std::result::Result<(), String> {
     let current_download = get_current_download();
-    
+
     let child = {
-        let mut download_guard = current_download.lock().map_err(|_| "Failed to acquire lock to cancel")?;
+        let mut download_guard = current_download
+            .lock()
+            .map_err(|_| "Failed to acquire lock to cancel")?;
         download_guard.take()
     };
-    
+
     if let Some(mut child) = child {
-        if let Err(e) = child.kill().await { 
+        if let Err(e) = child.kill().await {
             return Err(format!("Failed to kill process: {}", e));
         }
-        
+
         match child.wait().await {
             Ok(_) => Ok(()),
             Err(e) => Err(format!("Error waiting for process: {}", e)),

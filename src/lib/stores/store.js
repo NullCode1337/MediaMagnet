@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { writable } from "svelte/store";
+import { invoke } from "@tauri-apps/api/core";
 
 // Settings
 export let settings = writable({
@@ -31,6 +32,14 @@ export let notifications = writable([]);
 export let statusMessages = writable([]);
 
 export function addNotification(message, type = "info") {
+  settings.subscribe(value => {
+    if (value.notifications == true) {
+      invoke("system_notify", {message: message, mtype: type});
+      return;
+    }
+  });
+
+
   const newNotification = {
     message,
     type,
