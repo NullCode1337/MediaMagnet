@@ -32,8 +32,12 @@ export let notifications = writable([]);
 export let statusMessages = writable([]);
 
 export function addNotification(message, type = "info") {
-  sendNotification({ title: 'MediaMagnet', body: message });
-
+  settings.subscribe(store => {
+    if (store.notifications == true) {
+      sendNotification({ title: 'MediaMagnet', body: message });
+    } 
+  });
+  
   const newNotification = {
     message,
     type,
