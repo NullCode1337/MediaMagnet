@@ -72,7 +72,7 @@ pub fn init_config(app: tauri::AppHandle) {
             .map_err(|e| format!("Failed to write default settings to file: {}", e))
             .unwrap();
     }
-    
+
     if links_json.exists() {
         if let Ok(content) = std::fs::read_to_string(&links_json) {
             if serde_json::from_str::<serde_json::Value>(&content).is_ok() {
