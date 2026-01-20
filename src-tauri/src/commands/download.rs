@@ -196,7 +196,6 @@ async fn gallery_dl(app: tauri::AppHandle, link: &str) -> Result<()> {
 }
 
 async fn yt_dlp(app: tauri::AppHandle, link: &str) -> Result<()> {
-    let mut downloaded_count = 0;
 
     let settings = load_settings(&app).await?;
     set_download_path(app.clone()).await;
@@ -205,18 +204,6 @@ async fn yt_dlp(app: tauri::AppHandle, link: &str) -> Result<()> {
     if cmd_check.arg("--version").output().await.is_err() {
         return Err("yt-dlp is not installed or available in PATH".into());
     }
-
-    // === Total urls in link ===
-    let mut info_cmd = base_command(&app, "yt-dlp").await?;
-    let info_output = info_cmd
-        .args(["--print", "id", link])
-        .output()
-        .await?;
-
-    let total_urls = String::from_utf8_lossy(&info_output.stdout)
-        .lines()
-        .filter(|line| !line.trim().is_empty())
-        .count();
 
     // === Downloader ===
     let mut cmd = base_command(&app, "yt-dlp").await?;
@@ -257,7 +244,7 @@ async fn yt_dlp(app: tauri::AppHandle, link: &str) -> Result<()> {
     //stdout
     let stdout_handle = tokio::spawn(async move {
         while let Ok(Some(line)) = stdout_reader.next_line().await {
-            // Try to parse the JSON progress template
+            println!("{:#}", line);
             if let Ok(progress_data) = serde_json::from_str::<serde_json::Value>(&line) {
                 if let Some(status) = progress_data.get("status").and_then(|s| s.as_str()) {
                     if status == "downloading" {
