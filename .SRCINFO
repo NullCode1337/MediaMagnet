@@ -1,0 +1,23 @@
+pkgbase = MediaMagnet
+	pkgdesc = Download any and all media
+	pkgver = 0.4.2
+	pkgrel = 1
+	url = https://github.com/NullCode1337/MediaMagnet
+	install = MediaMagnet.install
+	arch = x86_64
+	license = MIT
+	depends = cairo
+	depends = desktop-file-utils
+	depends = gdk-pixbuf2
+	depends = glib2
+	depends = gtk3
+	depends = hicolor-icon-theme
+	depends = libsoup
+	depends = pango
+	depends = webkit2gtk-4.1
+	options = !strip
+	options = !emptydirs
+	source_x86_64 = https://github.com/NullCode1337/MediaMagnet/releases/download/v0.4.2-alpha/MediaMagnet_0.4.2_amd64.deb
+	sha256sums_x86_64 = c6a567947da30f23bdc16bfe3dc4a6b296ea618be9a4f7c1f999c075abe886d3
+
+pkgname = MediaMagnet
