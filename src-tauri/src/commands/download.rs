@@ -23,19 +23,33 @@ async fn load_settings(app: &tauri::AppHandle) -> Result<Settings> {
 }
 
 async fn base_command(app: &tauri::AppHandle, command: &str) -> Result<Command> {
-    let mut cmd = Command::new(command);
-    #[cfg(target_os = "windows")]
-    cmd.creation_flags(winapi::um::winbase::CREATE_NO_WINDOW);
-
-    if cmd.arg("--version").output().await.is_err() {
-        if let Ok(sidecar_cmd) = app.shell().sidecar(command) {
-            let std_cmd: std::process::Command = sidecar_cmd.into();
-            return Ok(std_cmd.into())
-        }   
-        return Err(format!("{} is not installed or available in PATH", command).into());
+    let check_cmd = Command::new(command)
+        .arg("--version")
+        .output()
+        .await;
+    
+    if check_cmd.is_ok() {
+        #[allow(unused_mut)]
+        let mut cmd = Command::new(command);
+        #[cfg(target_os = "windows")]
+        cmd.creation_flags(winapi::um::winbase::CREATE_NO_WINDOW);
+        return Ok(cmd);
     }
-
-    Ok(cmd)
+    
+    if let Ok(sidecar) = app.shell().sidecar(command) {
+        let std_cmd: std::process::Command = sidecar.into();
+        #[cfg(target_os = "windows")]
+        {
+            #[allow(unused_mut)]
+            let mut cmd: Command = std_cmd.into();
+            cmd.creation_flags(winapi::um::winbase::CREATE_NO_WINDOW);
+            return Ok(cmd);
+        }
+        #[cfg(not(target_os = "windows"))]
+        return Ok(std_cmd.into());
+    }
+    
+    Err(format!("{} is not installed or available", command).into())
 }
 
 fn apply_cookies(cmd: &mut Command, app: &tauri::AppHandle, link: &str) -> Result<()> {
@@ -192,7 +206,7 @@ pub async fn downloader(app: tauri::AppHandle, url: String) {
     let is_youtube = lc.contains("youtube") || lc.contains("youtu.be") || lc.contains("music.youtube") ||
         lc.contains("twitch") || lc.contains("vimeo") || lc.contains("soundcloud") ||
         lc.contains("bandcamp") || lc.contains("twitter") || lc.contains("x.com") ||
-        lc.contains("instagram") || lc.contains("facebook") || lc.contains("tiktok");
+        lc.contains("instagram") || lc.contains("facebook");
 
     let _ = app.emit("download-started", ());
     
