@@ -9,7 +9,7 @@ use super::utils::set_download_path;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
-fn get_current_download() -> &'static Arc<Mutex<Option<tokio::process::Child>>> {
+fn get_current_download() -> &'static Arc<Mutex<Option<tokio::process::Child>>> { // no idea
     static CURRENT_DOWNLOAD: OnceLock<Arc<Mutex<Option<tokio::process::Child>>>> = OnceLock::new();
     CURRENT_DOWNLOAD.get_or_init(|| Arc::new(Mutex::new(None)))
 }
@@ -30,33 +30,26 @@ async fn base_command(app: &tauri::AppHandle, command: &str) -> Result<Command> 
     if cmd.arg("--version").output().await.is_err() {
         if let Ok(sidecar_cmd) = app.shell().sidecar(command) {
             let std_cmd: std::process::Command = sidecar_cmd.into();
-            return Ok(std_cmd.into());
-        } else {
-            return Err(format!("{} is not installed or available in PATH", command).into());
-        }
+            return Ok(std_cmd.into())
+        }   
+        return Err(format!("{} is not installed or available in PATH", command).into());
     }
 
-    #[allow(unused_mut)]
-    let mut cmd = Command::new(command);
-    #[cfg(target_os = "windows")]
-    cmd.creation_flags(winapi::um::winbase::CREATE_NO_WINDOW);
     Ok(cmd)
 }
 
 fn apply_cookies(cmd: &mut Command, app: &tauri::AppHandle, link: &str) -> Result<()> {
-    let cookies_dir = app.path().app_data_dir().unwrap().join("cookies");
-    let link_lower = link.to_lowercase();
+    let cookies_dir: std::path::PathBuf = app.path().app_data_dir().unwrap().join("cookies");
 
     if let Ok(entries) = std::fs::read_dir(&cookies_dir) {
         for entry in entries.flatten() {
-            let file_path = entry.path();
-            if file_path.is_file() {
-                if let Some(file_name) = file_path.file_name().and_then(|n| n.to_str()) {
-                    let file_name_lower = file_name.to_lowercase();
+            let path = entry.path();
 
-                    if link_lower.contains(&file_name_lower) {
-                        cmd.args(["-C", file_path.to_str().unwrap()]);
-                        break; // Only use one cookie file
+            if path.is_file() {
+                if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                    if link.to_lowercase().contains(&name.to_lowercase()) {
+                        cmd.args(["-C", path.to_str().unwrap()]);
+                        break;
                     }
                 }
             }
@@ -65,326 +58,176 @@ fn apply_cookies(cmd: &mut Command, app: &tauri::AppHandle, link: &str) -> Resul
     Ok(())
 }
 
-async fn gallery_dl(app: tauri::AppHandle, link: &str) -> Result<()> {
-    let mut downloaded: Vec<String> = Vec::new();
-
-    let settings = load_settings(&app).await?;
+async fn run_downloader(app: tauri::AppHandle, mut cmd: Command, link: &str, ytdlp: bool) -> Result<()> {
+    let app_stdout = app.clone();
+    let app_stderr = app.clone();
     set_download_path(app.clone()).await;
-
-    // === Total urls in link ===
-    let url_list = base_command(&app, "gallery-dl")
-        .await?
-        .args(["-g", link])
-        .output()
-        .await?;
-
-    let total_urls = String::from_utf8_lossy(&url_list.stdout)
-        .lines()
-        .filter(|line| !line.trim().starts_with('|'))
-        .count();
-
-    // === Downloader ===
-    let mut cmd = base_command(&app, "gallery-dl").await?;
-    cmd.args(["-d", "."]);
-    if settings.user_agent != "None" {
-        cmd.args(["-a", &settings.user_agent]);
-    }
-    apply_cookies(&mut cmd, &app, link)?;
-    cmd.args([link]);
-
-    let mut downloader = cmd
+    
+    let mut child = cmd
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
         .spawn()?;
 
-    let stdout = downloader.stdout.take().ok_or("Failed to capture stdout")?;
-    let stderr = downloader.stderr.take().ok_or("Failed to capture stderr")?;
-
+    let stdout = child.stdout.take().unwrap();
+    let stderr = child.stderr.take().unwrap();
+    
     {
-        let current_download = get_current_download();
-        let mut download_guard = current_download.lock().unwrap();
-        *download_guard = Some(downloader);
-    }
-
-    let (mut stdout_reader, mut stderr_reader) = (
-        BufReader::new(stdout).lines(),
-        BufReader::new(stderr).lines(),
-    );
-
-    let app_stdout = app.clone();
-    let app_stderr = app.clone();
-
-    //stdout
-    let stdout_handle = tokio::spawn(async move {
-        while let Ok(Some(line)) = stdout_reader.next_line().await {
-            let _ = app_stdout.emit("download-status", &line);
-            downloaded.push(line);
-            let progress = (downloaded.len() as f64 / total_urls as f64) * 100.0;
-            let _ = app_stdout.emit("download-progress", progress);
-        }
-    });
-
-    let stderr_handle = tokio::spawn(async move {
-        while let Ok(Some(line)) = stderr_reader.next_line().await {
-            println!("{:#}", &line);
-            if line.contains("[error") {
-                let _ = app_stderr.emit("download-error", &line);
-            } else {
-                let _ = app_stderr.emit("notification", &line);
-            }
-        }
-    });
-
-    loop {
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-        let current_download = get_current_download();
-        let mut download_guard = current_download
-            .lock()
-            .map_err(|_| "Lock on download handle")?;
-        if download_guard.is_none() {
-            break;
-        } // Cancelled by user
-
-        if let Some(child) = download_guard.as_mut() {
-            match child.try_wait() {
-                Ok(Some(_)) => {
-                    *download_guard = None;
-                    break;
-                }
-                Err(e) => {
-                    println!("[MediaMagnet] Error checking child process status: {}", e);
-                    *download_guard = None;
-                    break;
-                }
-                Ok(None) => {}
-            }
-        }
-    }
-
-    let _ = tokio::join!(stdout_handle, stderr_handle);
-
-    // === Cleanup ===
-    let directlink = std::path::Path::new("directlink");
-    if directlink.exists() && directlink.is_dir() {
-        for entry in std::fs::read_dir(directlink)? {
-            let entry = entry?;
-            let file_path = entry.path();
-            if file_path.is_file() {
-                if let Some(file_name) = file_path.file_name().and_then(|n| n.to_str()) {
-                    if file_name.to_lowercase().contains("part") {
-                        continue;
-                    }
-
-                    let domain = file_name.split('_').next().unwrap_or("unknown");
-                    let domain_dir = std::path::Path::new(".").join(domain);
-
-                    if !domain_dir.exists() {
-                        std::fs::create_dir(&domain_dir)?;
-                    }
-
-                    let new_path = domain_dir.join(file_name);
-                    std::fs::rename(&file_path, new_path)?;
-                }
-            }
-        }
-        if directlink.read_dir()?.next().is_none() {
-            std::fs::remove_dir(directlink)?;
-        }
-    }
-
-    Ok(())
-}
-
-async fn yt_dlp(app: tauri::AppHandle, link: &str) -> Result<()> {
-
-    let settings = load_settings(&app).await?;
-    set_download_path(app.clone()).await;
-
-    let mut cmd_check = base_command(&app, "yt-dlp").await?;
-    if cmd_check.arg("--version").output().await.is_err() {
-        return Err("yt-dlp is not installed or available in PATH".into());
-    }
-
-    // === Downloader ===
-    let mut cmd = base_command(&app, "yt-dlp").await?;
-    cmd.args(["-o", "%(title)s.%(ext)s"]);
-    cmd.args(["-f", "244"]);
-    cmd.args(["--progress-template", "%(progress)j"]);
-    if settings.user_agent != "None" {
-        cmd.args(["--user-agent", &settings.user_agent]);
+        let mut guard = get_current_download().lock().unwrap();
+        *guard = Some(child);
     }
     
-    // Apply cookies if available
-    apply_cookies(&mut cmd, &app, link)?;
+    let mut out_reader = BufReader::new(stdout).lines();
+    let mut err_reader = BufReader::new(stderr).lines();
+
+    let total_urls = if !ytdlp {
+        let out = base_command(&app, "gallery-dl").await?.args(["-g", link]).output().await?;
+        String::from_utf8_lossy(&out.stdout).lines().filter(|l| !l.trim().starts_with('|')).count()
+    } else { 0 };
+
+    let mut downloaded = Vec::new();
     
-    cmd.args([link]);
+    let out_handle = tokio::spawn(async move {
+        while let Ok(Some(line)) = out_reader.next_line().await {
+            if ytdlp {
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&line) {
+                    if let (Some("downloading"), Some(percent)) = (
+                        json.get("status").and_then(|s| s.as_str()),
+                        json.get("_percent").and_then(|p| p.as_f64()),
+                    ) {
+                        let _ = app_stdout.emit("download-progress", percent);
 
-    let mut downloader = cmd
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .spawn()?;
+                        let mut msg = String::new();
 
-    let stdout = downloader.stdout.take().ok_or("Failed to capture stdout")?;
-    let stderr = downloader.stderr.take().ok_or("Failed to capture stderr")?;
-
-    {
-        let current_download = get_current_download();
-        let mut download_guard = current_download.lock().unwrap();
-        *download_guard = Some(downloader);
-    }
-
-    let (mut stdout_reader, mut stderr_reader) = (
-        BufReader::new(stdout).lines(),
-        BufReader::new(stderr).lines(),
-    );
-
-    let app_stdout = app.clone();
-    let app_stderr = app.clone();
-
-    //stdout
-    let stdout_handle = tokio::spawn(async move {
-        while let Ok(Some(line)) = stdout_reader.next_line().await {
-            println!("{:#}", line);
-            if let Ok(progress_data) = serde_json::from_str::<serde_json::Value>(&line) {
-                if let Some(status) = progress_data.get("status").and_then(|s| s.as_str()) {
-                    if status == "downloading" {
-                        if let Some(percent_num) = progress_data.get("_percent").and_then(|p| p.as_f64()) {
-                            let _ = app_stdout.emit("download-progress", percent_num);
-                            
-                            // Emit status with speed and ETA info
-                            let mut status_msg = String::new();
-                            if let Some(percent_str) = progress_data.get("_percent_str").and_then(|p| p.as_str()) {
-                                status_msg.push_str(&format!("Downloading: {}", strip_ansi_codes(percent_str)));
-                            }
-                            if let Some(speed_str) = progress_data.get("_speed_str").and_then(|s| s.as_str()) {
-                                status_msg.push_str(&format!(" Speed: {}", strip_ansi_codes(speed_str)));
-                            }
-                            if let Some(eta_str) = progress_data.get("_eta_str").and_then(|e| e.as_str()) {
-                                status_msg.push_str(&format!(" ETA: {}", strip_ansi_codes(eta_str)));
-                            }
-                            let _ = app_stdout.emit("download-status", status_msg);
+                        if let Some(p) = json.get("_percent_str").and_then(|p| p.as_str()) {
+                            msg.push_str(&format!("Downloading: {}", strip_ansi_codes(p)));
                         }
-                    } else if status == "finished" {
+                        if let Some(s) = json.get("_speed_str").and_then(|s| s.as_str()) {
+                            msg.push_str(&format!(" Speed: {}", strip_ansi_codes(s)));
+                        }
+                        if let Some(e) = json.get("_eta_str").and_then(|e| e.as_str()) {
+                            msg.push_str(&format!(" ETA: {}", strip_ansi_codes(e)));
+                        }
+
+                        let _ = app_stdout.emit("download-status", msg);
+                    } else if json.get("status").and_then(|s| s.as_str()) == Some("finished") {
                         let _ = app_stdout.emit("download-progress", 100.0);
                         let _ = app_stdout.emit("download-status", "Download finished");
                     }
+                } else {
+                    let _ = app_stdout.emit("download-status", &line);
                 }
             } else {
-                // If not JSON, treat as regular status line
                 let _ = app_stdout.emit("download-status", &line);
+                downloaded.push(line);
+                let _ = app_stdout.emit("download-progress", 
+                    (downloaded.len() as f64 / total_urls as f64) * 100.0);
             }
         }
     });
 
-    //stderr
-    let stderr_handle = tokio::spawn(async move {
-        while let Ok(Some(line)) = stderr_reader.next_line().await {
-            println!("{:#}", &line);
-            if line.to_lowercase().contains("error") {
-                let _ = app_stderr.emit("download-error", &line);
-            } else if line.to_lowercase().contains("downloaded") || line.to_lowercase().contains("merged") {
-                let _ = app_stderr.emit("download-status", &line);
+    let err_handle = tokio::spawn(async move {
+        while let Ok(Some(line)) = err_reader.next_line().await {
+            println!("{:#}", line);
+            let (event, msg) = if line.contains("[error") || line.to_lowercase().contains("error") {
+                ("download-error", line.clone())
+            } else if !ytdlp || line.to_lowercase().contains("downloaded") || line.to_lowercase().contains("merged") {
+                ("download-status", line.clone())
             } else {
-                let _ = app_stderr.emit("notification", &line);
-            }
+                ("notification", line.clone())
+            };
+            let _ = app_stderr.emit(event, msg);
         }
     });
 
     loop {
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-        let current_download = get_current_download();
-        let mut download_guard = current_download
-            .lock()
-            .map_err(|_| "Lock on download handle")?;
-        if download_guard.is_none() {
-            break;
-        } // Cancelled by user
-
-        if let Some(child) = download_guard.as_mut() {
+        let mut guard = get_current_download().lock().map_err(|_| "Lock failed")?;
+        if guard.is_none() { break; }
+        
+        if let Some(child) = guard.as_mut() {
             match child.try_wait() {
-                Ok(Some(_)) => {
-                    *download_guard = None;
-                    break;
-                }
-                Err(e) => {
-                    println!("[MediaMagnet] Error checking child process status: {}", e);
-                    *download_guard = None;
-                    break;
-                }
+                Ok(Some(_)) | Err(_) => { *guard = None; break; }
                 Ok(None) => {}
             }
         }
     }
 
-    let _ = tokio::join!(stdout_handle, stderr_handle);
+    let _ = tokio::join!(out_handle, err_handle);
+    
+    if !ytdlp { // === directlink file cleanup ===
+        let dl_path = std::path::Path::new("directlink");
+        if dl_path.exists() && dl_path.is_dir() {
+            for entry in std::fs::read_dir(dl_path)? {
+                let entry = entry?;
+                let path = entry.path();
+                if path.is_file() {
+                    if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                        if name.to_lowercase().contains("part") { continue; }
+                        let domain_dir = std::path::Path::new(".").join(name.split('_').next().unwrap_or("unknown"));
+                        if !domain_dir.exists() { std::fs::create_dir(&domain_dir)?; }
+                        std::fs::rename(&path, domain_dir.join(name))?;
+                    }
+                }
+            }
+            if dl_path.read_dir()?.next().is_none() { std::fs::remove_dir(dl_path)?; }
+        }
+    }
 
     Ok(())
 }
 
 fn strip_ansi_codes(s: &str) -> String {
-    let ansi_regex = regex::Regex::new(r"\x1b\[[0-9;]*m").unwrap();
-    ansi_regex.replace_all(s, "").to_string()
+    regex::Regex::new(r"\x1b\[[0-9;]*m").unwrap().replace_all(s, "").to_string()
 }
 
 #[tauri::command]
 pub async fn downloader(app: tauri::AppHandle, url: String) {
-    if !url.to_lowercase().contains("http") {
+    let lc = url.to_lowercase();
+
+    if !lc.contains("http") {
         let _ = app.emit("download-error", "Invalid URL");
         return;
     }
 
-    let url_lower = url.to_lowercase();
-    let is_youtube = url_lower.contains("youtube") || 
-                    url_lower.contains("youtu.be") || 
-                    url_lower.contains("music.youtube") ||
-                    url_lower.contains("twitch") ||
-                    url_lower.contains("vimeo") ||
-                    url_lower.contains("soundcloud") ||
-                    url_lower.contains("bandcamp") ||
-                    url_lower.contains("twitter") ||
-                    url_lower.contains("x.com") ||
-                    url_lower.contains("instagram") ||
-                    url_lower.contains("facebook") ||
-                    url_lower.contains("tiktok");
+    let is_youtube = lc.contains("youtube") || lc.contains("youtu.be") || lc.contains("music.youtube") ||
+        lc.contains("twitch") || lc.contains("vimeo") || lc.contains("soundcloud") ||
+        lc.contains("bandcamp") || lc.contains("twitter") || lc.contains("x.com") ||
+        lc.contains("instagram") || lc.contains("facebook") || lc.contains("tiktok");
 
     let _ = app.emit("download-started", ());
-
-    if is_youtube {
-        if let Err(e) = yt_dlp(app.clone(), &url).await {
-            println!("[MediaMagnet] Yt-dlp download failed: {}", e);
-            let _ = app.emit("download-error", format!("Yt-dlp download failed: {}", e));
-        }
+    
+    let settings = load_settings(&app).await.unwrap();
+    let mut cmd = base_command(&app, if is_youtube { "yt-dlp" } else { "gallery-dl" }).await.unwrap();
+    
+    if is_youtube { // TODO: make this customizable
+        cmd.args(["-o", "%(title)s.%(ext)s", "-f", "244", "--progress-template", "%(progress)j"]);
+        if settings.user_agent != "None" { cmd.args(["--user-agent", &settings.user_agent]); }
+    } else {
+        cmd.args(["-d", "."]);
+        if settings.user_agent != "None" { cmd.args(["-a", &settings.user_agent]); }
     }
-    else {
-        if let Err(e) = gallery_dl(app.clone(), &url).await {
-            println!("[MediaMagnet] Gallery-dl download failed: {}", e);
-            let _ = app.emit("download-error", format!("Gallery-dl download failed: {}", e));
-        }
-    } 
+    
+    apply_cookies(&mut cmd, &app, &url).unwrap();
+    cmd.args([&url]);
 
+    let result = run_downloader(app.clone(), cmd, &url, is_youtube).await;
+    
+    if let Err(e) = result {
+        println!("[MediaMagnet] Download failed: {}", e);
+        let _ = app.emit("download-error", format!("Download failed: {}", e));
+    }
+    
     let _ = app.emit("download-finished", ());
 }
 
 #[tauri::command]
 pub async fn cancel_download() -> std::result::Result<(), String> {
-    let current_download = get_current_download();
-
-    let child = {
-        let mut download_guard = current_download
-            .lock()
-            .map_err(|_| "Failed to acquire lock to cancel")?;
-        download_guard.take()
-    };
-
+    let child = get_current_download().lock().map_err(|_| "Lock failed")?.take();
+    
     if let Some(mut child) = child {
-        if let Err(e) = child.kill().await {
-            return Err(format!("Failed to kill process: {}", e));
-        }
-
-        match child.wait().await {
-            Ok(_) => Ok(()),
-            Err(e) => Err(format!("Error waiting for process: {}", e)),
-        }
+        child.kill().await.map_err(|e| format!("Kill failed: {}", e))?;
+        child.wait().await.map_err(|e| format!("Wait failed: {}", e))?;
+        Ok(())
     } else {
         Err("No download in progress".to_string())
     }
