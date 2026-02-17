@@ -53,17 +53,23 @@ async fn base_command(app: &tauri::AppHandle, command: &str) -> Result<Command> 
 }
 
 fn apply_cookies(cmd: &mut Command, app: &tauri::AppHandle, link: &str) -> Result<()> {
-    let cookies_dir: std::path::PathBuf = app.path().app_data_dir().unwrap().join("cookies");
+    let cookies_dir = app.path().app_data_dir().unwrap().join("cookies");
+    let link_lc = link.to_lowercase();
 
     if let Ok(entries) = std::fs::read_dir(&cookies_dir) {
         for entry in entries.flatten() {
             let path = entry.path();
 
             if path.is_file() {
-                if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                    if link.to_lowercase().contains(&name.to_lowercase()) {
-                        cmd.args(["-C", path.to_str().unwrap()]);
-                        break;
+                if let Some(file_stem) = path.file_stem().and_then(|s| s.to_str()) {
+                    let stem_lc = file_stem.to_lowercase();
+                    
+                    if link_lc.contains(&stem_lc) {
+                        if let Some(path_str) = path.to_str() {
+                            cmd.args(["--cookies", path_str]);
+                            println!("[MediaMagnet] Applied cookies from: {}", path_str);
+                            return Ok(());
+                        }
                     }
                 }
             }
