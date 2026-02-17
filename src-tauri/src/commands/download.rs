@@ -220,7 +220,8 @@ pub async fn downloader(app: tauri::AppHandle, url: String) {
     let mut cmd = base_command(&app, if is_youtube { "yt-dlp" } else { "gallery-dl" }).await.unwrap();
     
     if is_youtube { // TODO: make this customizable
-        cmd.args(["-o", "%(title)s.%(ext)s", "-f", "244", "--progress-template", "%(progress)j"]);
+        cmd.args(["-o", "%(title)s.%(ext)s", "--progress-template", "%(progress)j"]);
+        if lc.contains("youtu") { cmd.args(["-f", "244"]); }
         if settings.user_agent != "None" { cmd.args(["--user-agent", &settings.user_agent]); }
     } else {
         cmd.args(["-d", "."]);
