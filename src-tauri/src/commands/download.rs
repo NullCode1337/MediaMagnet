@@ -19,7 +19,7 @@ async fn load_settings(app: &tauri::AppHandle) -> Result<Settings> {
     let settings_path = app.path().app_config_dir().unwrap().join("settings.json");
     let settings: Settings =
         serde_json::from_str(&std::fs::read_to_string(&settings_path).unwrap()).unwrap();
-    println!("[MediaMagnet][Download] Settings loaded from: {}", settings_path.to_str().unwrap());
+    println!("\n[MediaMagnet][Download] Settings loaded from: {}", settings_path.to_str().unwrap());
     Ok(settings)
 }
 
@@ -60,40 +60,46 @@ async fn base_command(app: &tauri::AppHandle, command: &str) -> Result<Command> 
     let check_cmd = Command::new(command)
         .arg("--version")
         .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
         .output()
-        .await
-        .map_err(|e| format!("Failed to execute command: {}", e))?;
+        .await;
 
-    if check_cmd.status.success() {
-        let mut checked_set = version.lock().map_err(|_| "Lock failed")?;
-        if !checked_set.contains(command) {
-            let version_out = String::from_utf8_lossy(&check_cmd.stdout);
-            println!("\n[MediaMagnet][Download] Backend: Local {}, Version: {}", command, version_out.trim());
-            checked_set.insert(command.to_string());
+    match check_cmd {
+        Ok(check_cmd) if check_cmd.status.success() => {
+            let mut checked_set = version.lock().map_err(|_| "Lock failed")?;
+            if !checked_set.contains(command) {
+                let version_out = String::from_utf8_lossy(&check_cmd.stdout);
+                println!("[MediaMagnet][Download] Backend: Local {}, Version: {}", command, version_out.trim());
+                checked_set.insert(command.to_string());
+            }
+            
+            #[allow(unused_mut)]
+            let mut cmd = Command::new(command);
+            #[cfg(target_os = "windows")]
+            cmd.creation_flags(winapi::um::winbase::CREATE_NO_WINDOW);
+            return Ok(cmd);
         }
-        
-        #[allow(unused_mut)]
-        let mut cmd = Command::new(command);
-        #[cfg(target_os = "windows")]
-        cmd.creation_flags(winapi::um::winbase::CREATE_NO_WINDOW);
-        return Ok(cmd);
-    }
-    
-    if let Ok(sidecar) = app.shell().sidecar(command) {
-        let mut checked_set = version.lock().map_err(|_| "Lock failed")?;
-        if !checked_set.contains(command) {
-            println!("\n[MediaMagnet][Download] Backend: Prebuilt {}", command);
-            println!("  -> This is usually out-of-date, please download the latest version and put in PATH!");
-            checked_set.insert(command.to_string());
+        Ok(_) | Err(_) => {         
+            match app.shell().sidecar(command) {
+                Ok(sidecar) => {
+                    let mut checked_set = version.lock().map_err(|_| "Lock failed")?;
+                    if !checked_set.contains(command) {
+                        println!("\n[MediaMagnet][Download] Backend: Prebuilt {}", command);
+                        println!("  -> This is usually out-of-date, please download the latest version and put in PATH!");
+                        checked_set.insert(command.to_string());
+                    }
+                    
+                    let std_cmd: std::process::Command = sidecar.into();
+                    #[cfg(target_os = "windows")]
+                    std_cmd.creation_flags(winapi::um::winbase::CREATE_NO_WINDOW);
+                    return Ok(std_cmd.into());
+                }
+                Err(e) => {
+                    return Err(format!("{} is not installed and no sidecar available: {}", command, e).into());
+                }
+            }
         }
-        
-        let std_cmd: std::process::Command = sidecar.into();
-        #[cfg(target_os = "windows")]
-        std_cmd.creation_flags(winapi::um::winbase::CREATE_NO_WINDOW);
-        return Ok(std_cmd.into());
     }
-    
-    Err(format!("[MediaMagnet][Download] FATAL! {} is not installed or available! ", command).into())
 }
 
 async fn run_downloader(app: tauri::AppHandle, mut cmd: Command, link: &str, ytdlp: bool) -> Result<()> {
