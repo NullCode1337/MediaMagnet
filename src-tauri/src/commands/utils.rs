@@ -6,35 +6,36 @@ use std::{
 use super::settings::Settings;
 use tauri::{Emitter, Manager};
 
-// Check if a cookies file is Netscape
-pub fn is_netscape(file_path: &PathBuf) -> Result<bool, String> {
-    let file = std::fs::File::open(file_path).map_err(|e| format!("Failed to open file: {}", e))?;
+pub fn is_netscape(file_path: &std::path::Path) -> Result<bool, String> {
+    let file = std::fs::File::open(file_path)
+        .map_err(|e| format!("[MediaMagnet][Utils] Failed to open cookie file '{}': {}", file_path.display(), e))?;
+    
     let reader = BufReader::new(file);
-
     let mut has_header = false;
     let mut has_valid_cookie = false;
-    let mut lines_iter = reader.lines().peekable();
 
-    if let Some(Ok(first_line)) = lines_iter.peek() {
-        let trimmed_first_line = first_line.trim();
-        if trimmed_first_line.starts_with("# HTTP Cookie File")
-            || trimmed_first_line.starts_with("# Netscape HTTP Cookie File")
-        {
+    for (line_num, result) in reader.lines().enumerate() {
+        let line = result
+            .map_err(|e| format!("Failed to read line {}: {}", line_num + 1, e))?;
+        
+        let trimmed = line.trim();
+
+        if trimmed.is_empty() { continue; }
+        if trimmed.starts_with("# Netscape") || trimmed.starts_with("# HTTP Cookie File") {            
             has_header = true;
-        }
-    }
-
-    for line_result in lines_iter {
-        let line = line_result.map_err(|e| format!("Failed to read line: {}", e))?;
-        let trimmed_line = line.trim();
-
-        if trimmed_line.is_empty() || trimmed_line.starts_with('#') {
             continue;
         }
 
-        if trimmed_line.split('\t').count() == 7 {
+        if trimmed.starts_with('#') && !trimmed.to_lowercase().starts_with("#httponly_") {
+            continue;
+        }
+
+        let fields: Vec<&str> = line.split('\t').collect();
+        if fields.len() == 7 {
             has_valid_cookie = true;
-            break;
+            if has_header {
+                break;
+            }
         }
     }
 
