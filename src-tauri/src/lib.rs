@@ -4,7 +4,18 @@ mod commands;
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
+            const LOGO: &str = r#"
+                 _ _                                     _   
+  /\/\   ___  __| (_) __ _  /\/\   __ _  __ _ _ __   ___| |_ 
+ /    \ / _ \/ _` | |/ _` |/    \ / _` |/ _` | '_ \ / _ \ __|
+/ /\/\ \  __/ (_| | | (_| / /\/\ \ (_| | (_| | | | |  __/ |_ 
+\/    \/\___|\__,_|_|\__,_\/    \/\__,_|\__, |_| |_|\___|\__|
+       Download any and all media       |___/                "#;
+            
+            println!("{}\n", LOGO);
+            println!("-> Version: {}", app.package_info().version.to_string());
             commands::init::init_config(app.handle().clone());
+            
             Ok(())
         })
         .plugin(tauri_plugin_notification::init())
