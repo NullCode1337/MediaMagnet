@@ -19,16 +19,46 @@ async fn load_settings(app: &tauri::AppHandle) -> Result<Settings> {
     let settings_path = app.path().app_config_dir().unwrap().join("settings.json");
     let settings: Settings =
         serde_json::from_str(&std::fs::read_to_string(&settings_path).unwrap()).unwrap();
+    println!("[MediaMagnet] Settings loaded from: {}", settings_path.to_str().unwrap());
     Ok(settings)
+}
+
+fn apply_cookies(cmd: &mut Command, app: &tauri::AppHandle, link: &str) -> Result<()> {
+    let cookies_dir = app.path().app_data_dir().unwrap().join("cookies");
+
+    if let Ok(entries) = std::fs::read_dir(&cookies_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+
+            if path.is_file() {
+                if let Some(file_stem) = path.file_stem().and_then(|s| s.to_str()) {
+                    let stem_lc = file_stem.to_lowercase();
+                    
+                    if link.to_lowercase().contains(&stem_lc) {
+                        if let Some(path_str) = path.to_str() {
+                            cmd.args(["--cookies", path_str]);
+                            println!("[MediaMagnet] Applied cookies from: {}", path_str);
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 async fn base_command(app: &tauri::AppHandle, command: &str) -> Result<Command> {
     let check_cmd = Command::new(command)
         .arg("--version")
+        .stdout(std::process::Stdio::piped())
         .output()
-        .await;
-    
-    if check_cmd.is_ok() {
+        .await
+        .map_err(|e| format!("Failed to execute command: {}", e))?;
+
+    if check_cmd.status.success() {
+        let version_out = String::from_utf8_lossy(&check_cmd.stdout);
+        println!("Using local {}, version: {}", command, version_out.trim());
         #[allow(unused_mut)]
         let mut cmd = Command::new(command);
         #[cfg(target_os = "windows")]
@@ -50,32 +80,6 @@ async fn base_command(app: &tauri::AppHandle, command: &str) -> Result<Command> 
     }
     
     Err(format!("{} is not installed or available", command).into())
-}
-
-fn apply_cookies(cmd: &mut Command, app: &tauri::AppHandle, link: &str) -> Result<()> {
-    let cookies_dir = app.path().app_data_dir().unwrap().join("cookies");
-    let link_lc = link.to_lowercase();
-
-    if let Ok(entries) = std::fs::read_dir(&cookies_dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-
-            if path.is_file() {
-                if let Some(file_stem) = path.file_stem().and_then(|s| s.to_str()) {
-                    let stem_lc = file_stem.to_lowercase();
-                    
-                    if link_lc.contains(&stem_lc) {
-                        if let Some(path_str) = path.to_str() {
-                            cmd.args(["--cookies", path_str]);
-                            println!("[MediaMagnet] Applied cookies from: {}", path_str);
-                            return Ok(());
-                        }
-                    }
-                }
-            }
-        }
-    }
-    Ok(())
 }
 
 async fn run_downloader(app: tauri::AppHandle, mut cmd: Command, link: &str, ytdlp: bool) -> Result<()> {
