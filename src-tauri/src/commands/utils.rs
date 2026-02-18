@@ -1,12 +1,18 @@
 use std::{
-    io::{BufRead, BufReader, Write},
-    path::PathBuf,
+    io::{
+        BufRead, 
+        BufReader, 
+        BufWriter, 
+        Write
+    },
+    path::Path,
 };
+use serde_json::Value;
 
 use super::settings::Settings;
 use tauri::{Emitter, Manager};
 
-pub fn is_netscape(file_path: &std::path::Path) -> Result<bool, String> {
+pub fn is_netscape(file_path: &Path) -> Result<bool, String> {
     let file = std::fs::File::open(file_path)
         .map_err(|e| format!("[MediaMagnet][Utils] Failed to open cookie file '{}': {}", file_path.display(), e))?;
     
@@ -43,103 +49,68 @@ pub fn is_netscape(file_path: &std::path::Path) -> Result<bool, String> {
 }
 
 // Convert a JSON cookie file into Netscape
-pub fn convert_json(source_path: &PathBuf, dest_path: &PathBuf) -> Result<(), String> {
+pub fn convert_json(source_path: &Path, dest_path: &Path) -> Result<(), String> {
     let content = std::fs::read_to_string(source_path)
-        .map_err(|e| format!("Failed to read JSON file: {}", e))?;
+        .map_err(|e| format!("[MediaMagnet][Utils] Failed to read JSON file: {}", e))?;
 
-    let json_data: serde_json::Value =
-        serde_json::from_str(&content).map_err(|e| format!("Invalid JSON format: {}", e))?;
+    let json_data: Value = serde_json::from_str(&content)
+        .map_err(|e| format!("[MediaMagnet][Utils] Invalid JSON format: {}", e))?;
 
-    let output_file = std::fs::File::create(dest_path).unwrap();
-    let mut output = std::io::BufWriter::new(output_file);
+    let output_file = std::fs::File::create(dest_path)
+        .map_err(|e| format!("[MediaMagnet][Utils] Failed to create destination cookie file: {}", e))?;
 
-    writeln!(output, "# Netscape HTTP Cookie File").unwrap();
-    writeln!(output, "# This file was generated from JSON by MediaMagnet").unwrap();
-    writeln!(output, "").unwrap();
+    let mut output = BufWriter::new(output_file);
+
+    writeln!(output, "# Netscape HTTP Cookie File")
+        .map_err(|e| format!("Write error: {}", e))?;
+    writeln!(output, "# This file was generated from JSON by MediaMagnet\n")
+        .map_err(|e| format!("Write error: {}", e))?;
 
     let cookies = match json_data {
-        serde_json::Value::Array(arr) => arr,
-        serde_json::Value::Object(obj) => {
-            if let Some(serde_json::Value::Array(cookies)) = obj.get("cookies") {
+        Value::Array(arr) => arr,
+        Value::Object(obj) => {
+            if let Some(Value::Array(cookies)) = obj.get("cookies") {
                 cookies.clone()
             } else {
-                vec![serde_json::Value::Object(obj)]
+                vec![Value::Object(obj)]
             }
         }
         _ => return Err("JSON must be an array or object".to_string()),
     };
 
     for cookie in cookies {
-        if let serde_json::Value::Object(cookie_obj) = cookie {
-            let domain = cookie_obj
-                .get("domain")
-                .and_then(|v| v.as_str())
-                .unwrap_or("unknown")
-                .to_string();
+        if let Value::Object(c) = cookie {
+            let domain = c.get("domain").and_then(|v| v.as_str()).unwrap_or("");
+            
+            let flag = if domain.starts_with('.') { "TRUE" } else { "FALSE" };
 
-            let flag = if domain.starts_with('.') {
-                "TRUE"
-            } else {
-                "FALSE"
-            };
-
-            let is_http_only = cookie_obj
-                .get("httpOnly")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(false);
-            let line_prefix = if is_http_only { "#HttpOnly_" } else { "" };
-
-            let path = cookie_obj
-                .get("path")
-                .and_then(|v| v.as_str())
-                .unwrap_or("/");
-
-            let secure = cookie_obj
-                .get("secure")
+            let path = c.get("path").and_then(|v| v.as_str()).unwrap_or("/");
+            
+            let secure = c.get("secure")
                 .and_then(|v| v.as_bool())
                 .map(|b| if b { "TRUE" } else { "FALSE" })
                 .unwrap_or("FALSE");
 
-            let expiration = cookie_obj
-                .get("expirationDate")
-                .or_else(|| cookie_obj.get("expires"))
-                .and_then(|v| {
-                    if let Some(num) = v.as_f64() {
-                        Some(num as i64)
-                    } else if let Some(str) = v.as_str() {
-                        str.parse::<f64>()
-                            .ok()
-                            .map(|f| f as i64)
-                            .or_else(|| str.parse().ok())
-                    } else {
-                        None
-                    }
-                })
+            let expiration = c.get("expirationDate")
+                .or_else(|| c.get("expires"))
+                .and_then(|v| v.as_f64().map(|f| f as i64))
                 .unwrap_or(0);
 
-            let name = cookie_obj
-                .get("name")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+            let name = c.get("name").and_then(|v| v.as_str()).unwrap_or("");
+            let value = c.get("value").and_then(|v| v.as_str()).unwrap_or("");
 
-            let value = cookie_obj
-                .get("value")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+            let http_only: bool = c.get("httpOnly").and_then(|v| v.as_bool()).unwrap_or(false);
+            let prefix = if http_only { "#HttpOnly_" } else { "" };
 
             writeln!(
                 output,
                 "{}{}\t{}\t{}\t{}\t{}\t{}\t{}",
-                line_prefix, domain, flag, path, secure, expiration, name, value
-            )
-            .map_err(|e| format!("Failed to write cookie data: {}", e))?;
+                prefix, domain, flag, path, secure, expiration, name, value
+            ).map_err(|e| format!("[MediaMagnet][Utils] Failed to write cookie: {}", e))?;
         }
     }
 
-    output
-        .flush()
-        .map_err(|e| format!("Failed to flush cookie file: {}", e))?;
-
+    output.flush().map_err(|e| format!("Flush error: {}", e))?;
     Ok(())
 }
 
