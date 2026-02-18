@@ -26,6 +26,11 @@ async fn load_settings(app: &tauri::AppHandle) -> Result<Settings> {
 fn apply_cookies(cmd: &mut Command, app: &tauri::AppHandle, link: &str) -> Result<()> {
     let cookies_dir = app.path().app_data_dir().unwrap().join("cookies");
 
+    if !cookies_dir.exists() {
+        println!("[MediaMagnet][Download] No cookies directory found, ignoring...");
+        return Ok(());
+    }
+
     if let Ok(entries) = std::fs::read_dir(&cookies_dir) {
         for entry in entries.flatten() {
             let path = entry.path();
