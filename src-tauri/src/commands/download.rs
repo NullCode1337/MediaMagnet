@@ -19,7 +19,7 @@ async fn load_settings(app: &tauri::AppHandle) -> Result<Settings> {
     let settings_path = app.path().app_config_dir().unwrap().join("settings.json");
     let settings: Settings =
         serde_json::from_str(&std::fs::read_to_string(&settings_path).unwrap()).unwrap();
-    println!("[MediaMagnet] Settings loaded from: {}", settings_path.to_str().unwrap());
+    println!("[MediaMagnet][Download] Settings loaded from: {}", settings_path.to_str().unwrap());
     Ok(settings)
 }
 
@@ -54,6 +54,9 @@ fn apply_cookies(cmd: &mut Command, app: &tauri::AppHandle, link: &str) -> Resul
 }
 
 async fn base_command(app: &tauri::AppHandle, command: &str) -> Result<Command> {
+    static VERSION: OnceLock<Arc<Mutex<std::collections::HashSet<String>>>> = OnceLock::new();
+    let version = VERSION.get_or_init(|| Arc::new(Mutex::new(std::collections::HashSet::new())));
+    
     let check_cmd = Command::new(command)
         .arg("--version")
         .stdout(std::process::Stdio::piped())
@@ -62,8 +65,13 @@ async fn base_command(app: &tauri::AppHandle, command: &str) -> Result<Command> 
         .map_err(|e| format!("Failed to execute command: {}", e))?;
 
     if check_cmd.status.success() {
-        let version_out = String::from_utf8_lossy(&check_cmd.stdout);
-        println!("Using local {}, version: {}", command, version_out.trim());
+        let mut checked_set = version.lock().map_err(|_| "Lock failed")?;
+        if !checked_set.contains(command) {
+            let version_out = String::from_utf8_lossy(&check_cmd.stdout);
+            println!("\n[MediaMagnet][Download] Backend: Local {}, Version: {}", command, version_out.trim());
+            checked_set.insert(command.to_string());
+        }
+        
         #[allow(unused_mut)]
         let mut cmd = Command::new(command);
         #[cfg(target_os = "windows")]
@@ -72,19 +80,20 @@ async fn base_command(app: &tauri::AppHandle, command: &str) -> Result<Command> 
     }
     
     if let Ok(sidecar) = app.shell().sidecar(command) {
+        let mut checked_set = version.lock().map_err(|_| "Lock failed")?;
+        if !checked_set.contains(command) {
+            println!("\n[MediaMagnet][Download] Backend: Prebuilt {}", command);
+            println!("  -> This is usually out-of-date, please download the latest version and put in PATH!");
+            checked_set.insert(command.to_string());
+        }
+        
         let std_cmd: std::process::Command = sidecar.into();
         #[cfg(target_os = "windows")]
-        {
-            #[allow(unused_mut)]
-            let mut cmd: Command = std_cmd.into();
-            cmd.creation_flags(winapi::um::winbase::CREATE_NO_WINDOW);
-            return Ok(cmd);
-        }
-        #[cfg(not(target_os = "windows"))]
+        std_cmd.creation_flags(winapi::um::winbase::CREATE_NO_WINDOW);
         return Ok(std_cmd.into());
     }
     
-    Err(format!("{} is not installed or available", command).into())
+    Err(format!("[MediaMagnet][Download] FATAL! {} is not installed or available! ", command).into())
 }
 
 async fn run_downloader(app: tauri::AppHandle, mut cmd: Command, link: &str, ytdlp: bool) -> Result<()> {
