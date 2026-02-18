@@ -102,13 +102,25 @@ async fn run_downloader(app: tauri::AppHandle, mut cmd: Command, link: &str, ytd
     
     let mut out_reader = BufReader::new(stdout).lines();
     let mut err_reader = BufReader::new(stderr).lines();
+    
+    let mut downloaded = Vec::new();
 
     let total_urls = if !ytdlp {
-        let out = base_command(&app, "gallery-dl").await?.args(["-g", link]).output().await?;
-        String::from_utf8_lossy(&out.stdout).lines().filter(|l| !l.trim().starts_with('|')).count()
-    } else { 0 };
+        println!("\n[MediaMagnet][gallery-dl] Counting total urls...");
 
-    let mut downloaded = Vec::new();
+        let mut count_cmd = base_command(&app, "gallery-dl").await?;
+        let _ = apply_cookies(&mut count_cmd, &app, link);
+        
+        let out = count_cmd.args(["-g", link]).output().await?;
+        String::from_utf8_lossy(&out.stdout)
+            .lines()
+            .filter(|l| !l.trim().is_empty() && !l.trim().starts_with('|'))
+            .count()
+    } else { 0 };
+    
+    if !ytdlp {
+        println!("[MediaMagnet][Download] Found {} total items to download", total_urls);
+    }
     
     let out_handle = tokio::spawn(async move {
         while let Ok(Some(line)) = out_reader.next_line().await {
