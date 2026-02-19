@@ -98,7 +98,7 @@
 
         <div class="header-actions">
           <button
-            class="reset-settings"
+            class="reset-settings {$settings.show_decor ? 'titlebar' : ''}"
             on:click={resetSettings}
             aria-label="Reset all settings to default"
             title="Reset settings"
@@ -438,8 +438,7 @@
   }
 
   .reset-settings {
-    position: fixed;
-    right: 122px;
+    position: inherit;
     top: 15px;
     color: #ffa502;
     background-color: var(--main-bg);
@@ -450,6 +449,11 @@
     cursor: pointer;
     transition: all 0.2s ease;
     font-family: "noto-sans-semibold", sans-serif;
+  }
+
+  .reset-settings.titlebar {
+    position: fixed;
+    right: 122px;
   }
 
   .reset-settings:hover {

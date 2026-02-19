@@ -6,6 +6,7 @@
     activePanel,
     openPanel,
     closePanel,
+    settings
   } from "$lib/stores/store";
 
   import { invoke } from "@tauri-apps/api/core";
@@ -118,7 +119,7 @@
         <div class="header-actions">
           {#if $pendingDownloads.length > 0 || $failedDownloads.length > 0}
             <button
-              class="clear-all"
+              class="clear-all {$settings.show_decor ? 'titlebar' : ''}"
               on:click={clearAllDownloads}
               aria-label="Clear all downloads"
               title="Clear all downloads"
@@ -348,8 +349,7 @@
   }
 
   .clear-all {
-    position: fixed;
-    right: 122px;
+    position: inherit;
     top: 15px;
     color: #ff4757;
     background-color: #191923;
@@ -362,6 +362,11 @@
     font-family: "noto-sans-semibold", sans-serif;
   }
 
+  .clear-all.titlebar {
+    position: fixed;
+    right: 122px;
+  }
+  
   .clear-all:hover {
     background: rgba(255, 71, 87, 0.3);
   }
