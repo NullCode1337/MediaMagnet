@@ -328,6 +328,17 @@
                     Add Cookie
                   </button>
 
+                  <button
+                    class="action-button secondary"
+                    on:click={async() => {
+                      $cookies = await invoke("get_cookies");
+                      addNotification("Cookies refreshed!")}}
+                    title="Refresh list"
+                  >
+                    <i class="fas fa-sync-alt"></i>
+                    Refresh
+                  </button>
+
                   <CookieDialog />
 
                   <button 
