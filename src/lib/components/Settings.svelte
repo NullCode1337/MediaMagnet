@@ -17,6 +17,7 @@
   import "@fortawesome/fontawesome-free/css/all.min.css";
 
   let activeSection = "appearance";
+  let deletingCookie = "";
 
   function toggleSettingsPanel() {
     if ($activePanel === "settings") {
@@ -60,6 +61,21 @@
     });
 
     updateSetting("download_path", dir);
+  }
+
+  // @ts-ignore
+  function openDeleteConfirm(path) { deletingCookie = path; }
+  function cancelDelete() { deletingCookie = ""; }
+
+  // @ts-ignore
+  async function confirmDelete(path) {
+    try {
+      await invoke("delete_cookie", { path });
+      $cookies = await invoke("get_cookies");
+      deletingCookie = "";
+    } catch (error) {
+      addNotification(`Error: ${error}`, "error");
+    }
   }
 </script>
 
@@ -262,12 +278,21 @@
                 <h4>Stored Cookies</h4>
 
                 <div class="cookies-list">
-                  {#if Object.keys($cookies || {}).length === 0}
-                    <div class="cookies-empty"> No cookies stored!</div>
-                  {:else}
-                    {#each Object.entries($cookies) as [name, path]}
-                      <div class="cookie-item">
-                        <!-- svelte-ignore a11y_no_static_element_interactions -->
+                {#if Object.keys($cookies || {}).length === 0}
+                  <div class="cookies-empty"> No cookies stored!</div>
+                {:else}
+                  {#each Object.entries($cookies) as [name, path]}
+                    <div class="cookie-item {deletingCookie === path ? 'confirming' : ''}">
+                      <!-- svelte-ignore a11y_no_static_element_interactions -->
+                      {#if deletingCookie === path}
+                        <div class="inline-confirm">
+                          <span class="confirm-text">Delete <strong>{name}</strong>?</span>
+                          <div class="confirm-actions">
+                            <button class="btn-text cancel" on:click={cancelDelete}>Cancel</button>
+                            <button class="btn-text delete" on:click={() => confirmDelete(path)}>Confirm</button>
+                          </div>
+                        </div>
+                      {:else}
                         <div class="cookie-info">
                           <span class="cookie-name">{name}</span>
                           <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -282,17 +307,15 @@
                           class="cookie-delete"
                           title="Delete cookie"
                           aria-label="Click this button to delete the cookie"
-                          on:click={async () => {
-                            await invoke("delete_cookie", { path });
-                            $cookies = await invoke("get_cookies");
-                          }}
+                          on:click={() => openDeleteConfirm(path)}
                         >
                           <i class="fas fa-trash"></i>
                         </button>
-                      </div>
-                    {/each}
-                  {/if}
-                </div>
+                      {/if}
+                    </div>
+                  {/each}
+                {/if}
+              </div>
 
                 <div class="cookie-actions">
                   <button
@@ -704,6 +727,63 @@
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
+  }
+
+  .cookie-item {
+    transition: all 0.2s ease;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+  }
+
+  .cookie-item.confirming {
+    border-color: rgba(255, 107, 107, 0.3);
+  }
+
+  .inline-confirm {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .confirm-text {
+    font-size: 14px;
+    color: var(--text-color);
+  }
+
+  .confirm-text strong {
+    color: #ff6b6b;
+  }
+
+  .confirm-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-text {
+    background: transparent;
+    border: none;
+    font-family: "noto-sans-semibold", sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+
+  .btn-text.cancel {
+    color: var(--text-color);
+    opacity: 0.7;
+  }
+
+  .btn-text.delete {
+    color: #ff6b6b;
+    background: rgba(255, 107, 107, 0.1);
+  }
+
+  .btn-text.delete:hover {
+    background: rgba(255, 107, 107, 0.2);
   }
 
   .action-button {
