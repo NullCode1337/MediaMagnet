@@ -389,6 +389,7 @@
     --text-color: #fff;
     --input-bg: rgba(47, 19, 67, 0.95);
     --input-border: rgba(255, 255, 255, 0.1);
+    --input-focused-border: #8b5cf6;
     --input-placeholder: rgba(255, 255, 255, 0.6);
   }
 
@@ -494,12 +495,9 @@
   }
 
   .url-input:focus {
-    border: 1px solid rgba(110, 142, 251, 0.4);
+    border: 1.5px solid var(--input-focused-border); 
     outline: none;
-    box-shadow:
-      0 8px 32px rgba(110, 142, 251, 0.18),
-      0 4px 12px rgba(110, 142, 251, 0.12),
-      0 2px 4px rgba(110, 142, 251, 0.08);
+    box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.1); 
   }
 
   .url-input::placeholder {
