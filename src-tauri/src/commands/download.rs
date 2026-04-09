@@ -90,8 +90,6 @@ async fn base_command(app: &tauri::AppHandle, command: &str) -> Result<Command> 
                     }
                     
                     let std_cmd: std::process::Command = sidecar.into();
-                    #[cfg(target_os = "windows")]
-                    std_cmd.creation_flags(winapi::um::winbase::CREATE_NO_WINDOW);
                     return Ok(std_cmd.into());
                 }
                 Err(e) => {
