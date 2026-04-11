@@ -18,6 +18,8 @@
   // @ts-ignore
   let downloadsContainer;
 
+  $: pendingCount = $pendingDownloads.length;
+  $: failedCount = $failedDownloads.length;
   $: totalDownloads = $pendingDownloads.length + $failedDownloads.length;
 
   function toggleDownloadsPanel() {
@@ -114,7 +116,13 @@
     <div class="downloads-panel">
       <div class="panel-header" data-tauri-drag-region>
         <h3>
-          Downloads {#if $pendingDownloads.length > 0 || $failedDownloads.length > 0}({totalDownloads}){/if}
+          Downloads 
+          {#if totalDownloads > 0}
+            <span class="status-summary">
+              | {#if $pendingDownloads.length > 0}Pending: {$pendingDownloads.length}{/if}{#if $pendingDownloads.length > 0 && $failedDownloads.length > 0}, {/if}
+              {#if $failedDownloads.length > 0}Failed: {$failedDownloads.length}{/if}{#if totalDownloads > 0}, Total: {totalDownloads}{/if}
+            </span>
+          {/if}
         </h3>
         <div class="header-actions">
           {#if $pendingDownloads.length > 0 || $failedDownloads.length > 0}
