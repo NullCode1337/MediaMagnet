@@ -121,7 +121,7 @@ async fn run_downloader(app: tauri::AppHandle, mut cmd: Command, link: &str, ytd
     let mut out_reader = BufReader::new(stdout).lines();
     let mut err_reader = BufReader::new(stderr).lines();
     
-    let mut downloaded = Vec::new();
+    let mut downloaded = 0;
 
     let total_urls = if !ytdlp {
         println!("\n[MediaMagnet][gallery-dl] Counting total urls...");
@@ -173,9 +173,9 @@ async fn run_downloader(app: tauri::AppHandle, mut cmd: Command, link: &str, ytd
                 }
             } else {
                 let _ = app_stdout.emit("download-status", &line);
-                downloaded.push(line);
+                downloaded += 1;
                 let _ = app_stdout.emit("download-progress", 
-                    (downloaded.len() as f64 / total_urls as f64) * 100.0);
+                    (downloaded as f64 / total_urls as f64) * 100.0);
             }
         }
     });
