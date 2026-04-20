@@ -62,22 +62,15 @@ export const activePanel = writable(null);
 export const panelHistory = writable([]);
 
 export function openPanel(panelName) {
-  activePanel.update(current => {
-    if (current && current !== panelName) {
-      panelHistory.update(h => [...h, current]);
-    }
-    return panelName;
-  });
+    panelHistory.update(history => {
+        activePanel.update(current => {
+            if (current) history.push(current);
+            return panelName;
+        });
+        return history;
+    });
 }
 
 export function closePanel() {
-  panelHistory.update(h => {
-    if (h.length === 0) {
-      activePanel.set(null);
-      return [];
-    }
-    const previous = h[h.length - 1];
-    activePanel.set(previous);
-    return h.slice(0, -1);
-  });
+    activePanel.set(null);
 }
