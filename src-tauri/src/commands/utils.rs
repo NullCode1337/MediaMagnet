@@ -185,3 +185,28 @@ pub async fn set_download_path(app: tauri::AppHandle) {
 
     std::env::set_current_dir(&final_dir).unwrap();
 }
+
+#[tauri::command]
+pub async fn get_free_space(app: tauri::AppHandle) -> Result<f64, String> {
+    let settings = Settings::load(&app);
+    let download_path = if settings.download_path == "Default" {
+        app.path().download_dir().unwrap_or_default()
+    } else {
+        Path::new(&settings.download_path).to_path_buf()
+    };
+
+    let disks = sysinfo::Disks::new_with_refreshed_list();
+
+    let disk = disks.iter()
+        .filter(|d| download_path.starts_with(d.mount_point()))
+        .max_by_key(|d| d.mount_point().as_os_str().len());
+
+    if let Some(d) = disk {
+        let total = d.total_space() as f64;
+        let available = d.available_space() as f64;
+        let used_percent = ((total - available) / total) * 100.0;
+        Ok(used_percent)
+    } else {
+        Err("Could not determine disk usage".to_string())
+    }
+}
