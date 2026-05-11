@@ -12,6 +12,7 @@
     "opener:default",
     "notification:default",
     "dialog:default",
-    "clipboard-manager:default"
+    "clipboard-manager:default",
+    "os:default"
   ]
 }
