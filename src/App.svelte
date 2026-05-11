@@ -1,124 +1,118 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { Plus, Download, Library, Globe } from '@lucide/svelte';
   import { Button } from "$lib/components/ui/button";
-  import { Input } from "$lib/components/ui/input";
-  import { ScrollArea } from "$lib/components/ui/scroll-area";
+  import * as Card from "$lib/components/ui/card";
+  import { Progress } from "$lib/components/ui/progress";
+  import { Download, Settings, HardDrive, Plus, Menu, X, File, Folder } from "@lucide/svelte";
 
-  let appWindow: any = null;
-  let url = "";
-  let isProcessing = false;
-  let downloads: any[] = []; 
+  // State Runes
+  let isCollapsed = $state(false);
+  let innerWidth = $state(0);
+  let files = $state<File[]>([]);
 
-  onMount(async () => {
-    try {
-      const { window } = await import('@tauri-apps/api');
-      appWindow = window.getCurrent();
-    } catch (e) { console.warn("Web mode active"); }
+  // Effect Rune: Replaces the $: reactive statement
+  $effect(() => {
+    isCollapsed = innerWidth < 768;
   });
+
+  function handleFileSelect(e: Event) {
+    const target = e.target as HTMLInputElement;
+    if (target.files) {
+      files = [...files, ...Array.from(target.files)];
+    }
+  }
+
+  function removeFile(index: number) {
+    files = files.filter((_, i) => i !== index);
+  }
 </script>
 
-<div class="relative flex h-screen w-full flex-col overflow-hidden bg-[#050505] text-zinc-300 antialiased">
-  <div class="absolute inset-0 z-0 overflow-hidden">
-    <div class="blob blob-1 absolute -top-[10%] -left-[10%] h-[500px] w-[500px] rounded-full bg-emerald-500/10 blur-[120px]"></div>
-    <div class="blob blob-2 absolute top-[20%] -right-[5%] h-[400px] w-[400px] rounded-full bg-blue-500/10 blur-[100px]"></div>
-    <div class="blob blob-3 absolute -bottom-[10%] left-[20%] h-[600px] w-[600px] rounded-full bg-purple-500/10 blur-[150px]"></div>
-  </div>
+<svelte:window bind:innerWidth />
 
-  <div class="noise-overlay pointer-events-none absolute inset-0 z-1 opacity-[0.02]"></div>
+<div class="flex h-screen bg-background text-foreground overflow-hidden">
+  <aside 
+    class="flex flex-col border-r bg-muted/20 transition-all duration-300 {isCollapsed ? 'w-20' : 'w-64'}"
+  >
+    <div class="p-4 flex items-center justify-between">
+      {#if !isCollapsed}<span class="font-bold tracking-tight px-2 text-sm">LOADER</span>{/if}
+      <Button variant="ghost" size="icon" onclick={() => (isCollapsed = !isCollapsed)} class="mx-auto">
+        <Menu size={20} />
+      </Button>
+    </div>
 
-  <div class="relative z-10 flex flex-1 overflow-hidden p-2 md:p-4">
-    <aside 
-      class="flex w-20 flex-col items-center border border-white/10 bg-white/[0.03] backdrop-blur-3xl md:w-64 md:rounded-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.8)]"
-    >
-      <div class="flex h-full w-full flex-col p-6">
-        <div class="mb-10 flex gap-2" data-tauri-drag-region>
-          <button on:click={() => appWindow?.close()} class="h-3 w-3 rounded-full bg-red-500/20 hover:bg-red-500 transition-all shadow-[0_0_10px_rgba(239,68,68,0.2)]" />
-          <button class="h-3 w-3 rounded-full bg-white/10 hover:bg-white/20 transition-all" />
+    <nav class="flex-1 p-3 space-y-2">
+      <label class="flex items-center justify-center w-full cursor-pointer">
+        <input type="file" class="hidden" onchange={handleFileSelect} multiple />
+        <div class="flex h-10 w-full items-center justify-center rounded-md bg-primary text-primary-foreground hover:opacity-90 transition-opacity">
+          <Plus size={20} />
+          {#if !isCollapsed}<span class="ml-2 text-sm font-medium">New Task</span>{/if}
         </div>
+      </label>
 
-        <nav class="flex-1 space-y-4">
-          <div class="space-y-1">
-             <Button variant="ghost" class="w-full justify-start gap-4 rounded-xl bg-white/5 px-4 py-6 text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] hover:bg-white/10">
-              <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400 shadow-inner">
-                <Plus size={18} />
+      <Button variant="ghost" class="w-full {isCollapsed ? 'justify-center' : 'justify-start gap-3'}">
+        <Download size={20} />
+        {#if !isCollapsed}<span>Downloads</span>{/if}
+      </Button>
+      <Button variant="ghost" class="w-full {isCollapsed ? 'justify-center' : 'justify-start gap-3'}">
+        <Folder size={20} />
+        {#if !isCollapsed}<span>Local Files</span>{/if}
+      </Button>
+    </nav>
+
+    <div class="p-4 border-t space-y-4">
+      <div class="bg-muted/50 rounded-lg p-3">
+        <div class="flex items-center gap-3 {isCollapsed ? 'justify-center' : ''}">
+          <HardDrive size={18} class="text-muted-foreground" />
+          {#if !isCollapsed}
+            <div class="flex-1">
+              <p class="text-[10px] uppercase font-bold text-muted-foreground">Disk Space</p>
+              <Progress value={72} class="h-1.5 mt-1" />
+            </div>
+          {/if}
+        </div>
+      </div>
+      <Button variant="ghost" class="w-full {isCollapsed ? 'justify-center' : 'justify-start gap-3'}">
+        <Settings size={20} />
+        {#if !isCollapsed}<span>Settings</span>{/if}
+      </Button>
+    </div>
+  </aside>
+
+  <main class="flex-1 flex flex-col min-w-0">
+    <header class="h-14 border-b flex items-center px-6 bg-background justify-between">
+      <h1 class="font-semibold text-sm">Queue ({files.length})</h1>
+      <div class="text-[10px] text-muted-foreground opacity-50 hidden sm:block">V0.4.2</div>
+    </header>
+
+    <div class="flex-1 p-4 sm:p-8 overflow-y-auto">
+      {#if files.length === 0}
+        <div class="h-full flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed rounded-xl opacity-50">
+          <Download size={40} class="mb-4" />
+          <p class="text-sm font-medium">No active tasks</p>
+        </div>
+      {:else}
+      <div class="grid gap-3">
+        {#each files as file, i (file.name + file.size + i)}
+          <Card.Root>
+            <Card.Content class="p-4 flex items-center gap-4">
+              <div class="bg-primary/10 p-2 rounded">
+                <File size={20} class="text-primary" />
               </div>
-              <span class="hidden font-semibold md:block">New Task</span>
-            </Button>
-          </div>
-
-          <div class="flex flex-col gap-1">
-            <Button variant="ghost" class="w-full justify-start gap-4 text-zinc-400 hover:text-white">
-              <Download size={20} /><span class="hidden md:block">Active</span>
-            </Button>
-            <Button variant="ghost" class="w-full justify-start gap-4 text-zinc-400 hover:text-white">
-              <Library size={20} /><span class="hidden md:block">Library</span>
-            </Button>
-          </div>
-        </nav>
-    </aside>
-
-    <main class="flex flex-1 flex-col px-4 md:px-8">
-      <header class="flex h-24 items-center" data-tauri-drag-region>
-        <div class="relative flex flex-1 items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-2 pr-3 backdrop-blur-2xl shadow-2xl">
-          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-emerald-400">
-            <Globe size={18} />
-          </div>
-          <Input 
-            bind:value={url}
-            placeholder="Drop a link here..." 
-            class="h-12 border-none bg-transparent text-lg font-medium placeholder:text-zinc-600 focus-visible:ring-0"
-          />
-          <Button 
-            disabled={!url || isProcessing}
-            class="h-12 rounded-xl bg-emerald-500 px-8 font-black tracking-tight text-black transition-all hover:scale-[1.02] hover:bg-emerald-400 active:scale-95 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
-          >
-            {isProcessing ? 'WORKING...' : 'PROCESS'}
-          </Button>
-        </div>
-      </header>
-
-      <ScrollArea class="flex-1">
-        {#if downloads.length === 0}
-          <div class="flex h-full flex-col items-center justify-center pt-20">
-             <div class="relative mb-6">
-                <div class="absolute inset-0 animate-pulse rounded-full bg-emerald-500/20 blur-2xl"></div>
-                <div class="relative flex h-24 w-24 items-center justify-center rounded-full border border-white/10 bg-white/5 backdrop-blur-xl">
-                  <Download size={32} class="text-emerald-500/50" />
+              <div class="flex-1 min-w-0">
+                <div class="flex justify-between items-start mb-1">
+                  <p class="font-medium text-xs truncate uppercase tracking-tight">
+                    {file.name}
+                  </p>
+                  <button onclick={() => removeFile(i)}>
+                    <X size={14} class="text-muted-foreground hover:text-destructive" />
+                  </button>
                 </div>
-             </div>
-             <h2 class="text-2xl font-light tracking-tight text-white/90">MediaMagnet</h2>
-             <p class="mt-2 text-zinc-500">Paste a URL (or multiple URLs)</p>
-          </div>
-        {/if}
-      </ScrollArea>
-    </main>
-  </div>
+                <Progress value={0} class="h-1" />
+              </div>
+            </Card.Content>
+          </Card.Root>
+        {/each}
+      </div>
+      {/if}
+    </div>
+  </main>
 </div>
-
-<style lang="postcss">
-  :global(body) {
-    background-color: #050505;
-    margin: 0;
-  }
-
-  .blob {
-    transition: all 10s ease-in-out;
-    animation: move 25s infinite alternate;
-  }
-  .blob-2 { animation-duration: 30s; animation-delay: -5s; }
-  .blob-3 { animation-duration: 35s; animation-delay: -10s; }
-
-  @keyframes move {
-    from { transform: translate(0, 0) scale(1); }
-    to { transform: translate(100px, 50px) scale(1.1); }
-  }
-
-  .noise-overlay {
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  }
-
-  :global([data-radix-scroll-area-viewport]) {
-    mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
-  }
-</style>
