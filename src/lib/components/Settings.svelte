@@ -1,142 +1,330 @@
 <script lang="ts">
-  import { invoke } from "@tauri-apps/api/core";
-  import { onMount } from "svelte";
   import * as Dialog from "$lib/components/ui/dialog";
-  import Switch from "$lib/components/ui/switch/switch.svelte";
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
+  import { Switch } from "$lib/components/ui/switch";
   import { Separator } from "$lib/components/ui/separator";
-  import { Settings as SettingsIcon, RotateCcw, Check } from "@lucide/svelte";
+  import { invoke } from "@tauri-apps/api/core";
+  import { onMount } from "svelte";
+  import {
+    Settings as SettingsIcon,
+    RotateCcw,
+    Monitor,
+    Download,
+    Sun,
+    Moon,
+    ShieldCheck,
+  } from "@lucide/svelte";
+  import { toggleMode, mode } from "mode-watcher";
 
-  let { isCollapsed = false } = $props();
+  let { isCollapsed } = $props();
+  let activeTab = $state("general");
 
-  interface Settings {
-    download_path: string;
-    user_agent: string;
-    dark_mode: boolean;
-    always_on_top: boolean;
-    show_decor: boolean;
-    notifications: boolean;
-    clear_on_exit: boolean;
-  }
-
-  let config = $state<Settings>({
+  let config = $state({
     download_path: "",
     user_agent: "",
     dark_mode: true,
-    always_on_top: false,
+    always_on_top: true,
     show_decor: true,
     notifications: false,
     clear_on_exit: false,
   });
 
-  let initialized = $state(false);
+  const TABS = [
+    { id: "general", label: "Appearance", icon: Monitor },
+    { id: "downloads", label: "Downloads", icon: Download },
+    { id: "privacy", label: "Privacy & Alerts", icon: ShieldCheck },
+  ];
 
-  async function loadSettings() {
-    const res = await invoke<Settings>("settings", { action: "check" });
-    config = res;
-    setTimeout(() => initialized = true, 100);
-  }
-
-  $effect(() => {
-    if (initialized) {
-      invoke("update_settings", { settings: $state.snapshot(config) });
+  onMount(async () => {
+    try {
+      const savedConfig = await invoke<Partial<typeof config>>("settings", {
+        action: "check",
+      });
+      config = { ...config, ...savedConfig };
+    } catch (err) {
+      console.error("Failed to load settings:", err);
     }
   });
 
-  async function resetSettings() {
-    if (confirm("Reset all settings to default?")) {
-      initialized = false;
-      config = await invoke("settings", { action: "reset" });
-      setTimeout(() => initialized = true, 100);
-    }
+  async function save() {
+    config.dark_mode = mode.current === "dark";
+    await invoke("update_settings", { settings: $state.snapshot(config) });
   }
 
-  onMount(loadSettings);
+  function handleThemeToggle() {
+    toggleMode();
+    setTimeout(save, 50);
+  }
+
+  async function handleReset() {
+    config = await invoke("settings", { action: "reset" });
+  }
 </script>
 
 <Dialog.Root>
   <Dialog.Trigger>
     {#snippet child({ props })}
-      <Button 
-        {...props} 
-        variant="ghost" 
-        class="w-full {isCollapsed ? 'justify-center' : 'justify-start gap-3'}"
+      <Button
+        {...props}
+        variant="ghost"
+        class="w-full h-11 transition-all duration-200 {isCollapsed
+          ? 'justify-center'
+          : 'justify-start gap-4 px-4'}"
       >
-        <SettingsIcon size={18} />
-        {#if !isCollapsed}<span>Preferences</span>{/if}
+        <SettingsIcon size={20} class="text-muted-foreground" />
+        {#if !isCollapsed}<span class="font-medium text-[15px]">Settings</span
+          >{/if}
       </Button>
     {/snippet}
   </Dialog.Trigger>
 
-  <Dialog.Content class="w-[95vw] sm:max-w-[420px] max-h-[85vh] flex flex-col bg-background border shadow-2xl overflow-hidden p-0">
-    <div class="p-6">
-      <Dialog.Header>
-        <Dialog.Title class="text-lg font-medium">Preferences</Dialog.Title>
-        <Dialog.Description class="text-xs">
-          System configuration and interface settings.
-        </Dialog.Description>
-      </Dialog.Header>
-    </div>
-
-    <div class="flex-1 overflow-y-auto px-6 custom-scrollbar">
-      <div class="space-y-6 pb-6">
-        <!-- Text Fields -->
-        <div class="grid gap-4">
-          <div class="space-y-2">
-            <Label for="path" class="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">Download Path</Label>
-            <Input id="path" bind:value={config.download_path} class="bg-muted/20 border-muted-foreground/10 focus-visible:ring-primary/30" />
-          </div>
-          <div class="space-y-2">
-            <Label for="ua" class="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">User Agent</Label>
-            <Input id="ua" bind:value={config.user_agent} class="bg-muted/20 border-muted-foreground/10 focus-visible:ring-primary/30" />
-          </div>
+  <Dialog.Content
+    class="sm:max-w-none w-[850px] h-[600px] p-0 gap-0 overflow-hidden border-border/40 bg-background/95 backdrop-blur-3xl shadow-2xl rounded-3xl translate-x-[-50%]! translate-y-[-50%]!"
+  >
+    <div class="flex flex-row w-full h-full items-stretch">
+      <!-- Sidebar -->
+      <aside
+        class="w-[240px] border-r border-border/40 bg-muted/10 p-8 flex flex-col shrink-0"
+      >
+        <div class="px-2 mb-8">
+          <h2
+            class="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/70"
+          >
+            Configuration
+          </h2>
         </div>
 
-        <Separator class="opacity-50" />
+        <nav class="flex-1 space-y-2">
+          {#each TABS as tab (tab.id)}
+            <button
+              onclick={() => (activeTab = tab.id)}
+              class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all relative group {activeTab ===
+              tab.id
+                ? 'bg-primary/10 text-primary font-semibold'
+                : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}"
+            >
+              {#if activeTab === tab.id}
+                <div
+                  class="absolute left-0 w-1 h-5 bg-primary rounded-full"
+                ></div>
+              {/if}
+              <tab.icon size={18} />
+              {tab.label}
+            </button>
+          {/each}
+        </nav>
 
-        <!-- Minimal Toggles -->
-        <div class="space-y-1">
-          <p class="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-3">Application</p>
-          {@render settingToggle("Always on Top", "always_on_top")}
-          {@render settingToggle("Hide Decorations", "show_decor")}
-          {@render settingToggle("Notifications", "notifications")}
-          {@render settingToggle("Clear on Exit", "clear_on_exit")}
-        </div>
-      </div>
-    </div>
-
-    <div class="p-4 bg-muted/5 border-t mt-auto">
-      <Dialog.Footer class="flex flex-row justify-between items-center w-full">
-        <div class="flex items-center gap-1.5 text-[10px] text-muted-foreground italic">
-          <Check size={12} class="text-primary" />
-          Auto-saved
-        </div>
-        <Button variant="link" size="sm" onclick={resetSettings} class="h-auto p-0 text-[11px] text-muted-foreground hover:text-destructive">
-          <RotateCcw size={12} class="mr-1" /> Restore defaults
+        <Button
+          variant="ghost"
+          class="justify-start gap-3 rounded-xl opacity-60 hover:opacity-100"
+          onclick={handleReset}
+        >
+          <RotateCcw size={16} /> Reset to Defaults
         </Button>
-      </Dialog.Footer>
+      </aside>
+
+      <!-- Content Area -->
+      <main class="flex-1 min-w-0 flex flex-col bg-background/50">
+        <div class="p-12 overflow-y-auto flex-1 custom-scrollbar">
+          {#if activeTab === "general"}
+            <div
+              class="w-full space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-300"
+            >
+              <header class="space-y-3">
+                <h3 class="text-3xl font-extrabold tracking-tight">
+                  Appearance
+                </h3>
+                <p class="text-base text-muted-foreground leading-relaxed">
+                  Customize how the application looks and behaves
+                </p>
+              </header>
+
+              <div class="space-y-6">
+                <div
+                  class="flex items-center justify-between p-6 rounded-2xl border border-border/50 bg-muted/20"
+                >
+                  <div class="space-y-1">
+                    <Label class="text-base font-semibold">Visual Mode</Label>
+                    <p class="text-sm text-muted-foreground">
+                      Toggle between light and dark themes
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onclick={handleThemeToggle}
+                    class="h-12 px-6 rounded-xl border-border/50 bg-background flex gap-3 shadow-sm active:scale-95 transition-all"
+                  >
+                    {#if mode.current === "dark"}
+                      <Moon size={18} class="text-blue-400" />
+                      <span class="text-xs font-bold uppercase tracking-wider"
+                        >Dark</span
+                      >
+                    {:else}
+                      <Sun size={18} class="text-orange-500" />
+                      <span class="text-xs font-bold uppercase tracking-wider"
+                        >Light</span
+                      >
+                    {/if}
+                  </Button>
+                </div>
+
+                <div class="space-y-4 pt-4">
+                  <div class="flex items-center justify-between px-2">
+                    <div class="space-y-1">
+                      <Label for="always-on-top" class="text-[15px] font-medium"
+                        >Keep Always on Top</Label
+                      >
+                      <p class="text-xs text-muted-foreground">
+                        Prevent other windows from covering the app
+                      </p>
+                    </div>
+                    <Switch
+                      id="always-on-top"
+                      bind:checked={config.always_on_top}
+                      onCheckedChange={save}
+                    />
+                  </div>
+                  <Separator class="opacity-20" />
+                  <div class="flex items-center justify-between px-2">
+                    <div class="space-y-1">
+                      <Label for="decor" class="text-[15px] font-medium"
+                        >Native Decorations</Label
+                      >
+                      <p class="text-xs text-muted-foreground">
+                        Show standard title bars and window borders
+                      </p>
+                    </div>
+                    <Switch
+                      id="decor"
+                      bind:checked={config.show_decor}
+                      onCheckedChange={save}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          {:else if activeTab === "downloads"}
+            <div
+              class="w-full space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-300"
+            >
+              <header class="space-y-3">
+                <h3 class="text-3xl font-extrabold tracking-tight">
+                  Downloads
+                </h3>
+                <p class="text-base text-muted-foreground leading-relaxed">
+                  Manage file locations and network identification.
+                </p>
+              </header>
+
+              <div class="space-y-8">
+                <div class="space-y-3">
+                  <Label
+                    class="text-sm font-bold uppercase tracking-widest text-primary/80"
+                    >Download Location</Label
+                  >
+                  <div class="flex gap-2">
+                    <Input
+                      bind:value={config.download_path}
+                      placeholder="/home/user/downloads"
+                      class="rounded-xl bg-muted/20"
+                    />
+                    <Button variant="secondary" class="rounded-xl px-4"
+                      >Browse</Button
+                    >
+                  </div>
+                </div>
+
+                <div class="space-y-3">
+                  <Label
+                    class="text-sm font-bold uppercase tracking-widest text-primary/80"
+                    >Custom User Agent</Label
+                  >
+                  <Input
+                    bind:value={config.user_agent}
+                    placeholder="Mozilla/5.0..."
+                    class="rounded-xl bg-muted/20 font-mono text-xs"
+                  />
+                  <p class="text-[11px] text-muted-foreground">
+                    Identify this app to web servers when fetching metadata.
+                  </p>
+                </div>
+              </div>
+            </div>
+          {:else if activeTab === "privacy"}
+            <div
+              class="w-full space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-300"
+            >
+              <header class="space-y-3">
+                <h3 class="text-3xl font-extrabold tracking-tight">Privacy</h3>
+              </header>
+
+              <div class="space-y-4">
+                <div class="flex items-center justify-between px-2">
+                  <div class="space-y-1">
+                    <Label for="notifications" class="text-[15px] font-medium"
+                      >Desktop Notifications</Label
+                    >
+                    <p class="text-xs text-muted-foreground">
+                      Alert when downloads finish or fail
+                    </p>
+                  </div>
+                  <Switch
+                    id="notifications"
+                    bind:checked={config.notifications}
+                    onCheckedChange={save}
+                  />
+                </div>
+                <Separator class="opacity-20" />
+                <div class="flex items-center justify-between px-2">
+                  <div class="space-y-1">
+                    <Label for="clear-exit" class="text-[15px] font-medium"
+                      >Clear History on Exit</Label
+                    >
+                    <p class="text-xs text-muted-foreground">
+                      Wipe temporary data and cache when closing
+                    </p>
+                  </div>
+                  <Switch
+                    id="clear-exit"
+                    bind:checked={config.clear_on_exit}
+                    onCheckedChange={save}
+                  />
+                </div>
+              </div>
+            </div>
+          {/if}
+        </div>
+
+        <footer
+          class="px-12 py-6 border-t border-border/40 bg-muted/5 flex justify-end items-center gap-4"
+        >
+          <Dialog.Close>
+            {#snippet child({ props })}
+              <Button {...props} variant="ghost" class="rounded-xl px-6"
+                >Cancel</Button
+              >
+            {/snippet}
+          </Dialog.Close>
+          <Button
+            onclick={save}
+            class="px-8 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-primary/20"
+          >
+            Apply Changes
+          </Button>
+        </footer>
+      </main>
     </div>
   </Dialog.Content>
 </Dialog.Root>
 
-{#snippet settingToggle(title: string, key: keyof Settings)}
-  <label 
-    class="flex items-center justify-between p-3 rounded-lg hover:bg-muted/30 transition-colors cursor-pointer group"
-  >
-    <span class="text-sm font-medium text-foreground/80 group-hover:text-foreground">
-      {title}
-    </span>
-    
-    <Switch 
-      bind:checked={config[key] as boolean}
-      class="
-        border-2 border-transparent
-        data-[state=unchecked]:bg-muted-foreground/20 
-        data-[state=checked]:bg-primary
-        transition-colors
-      "
-    />
-  </label>
-{/snippet}
+<style>
+  :global(.custom-scrollbar::-webkit-scrollbar) {
+    width: 6px;
+  }
+  :global(.custom-scrollbar::-webkit-scrollbar-thumb) {
+    background: hsl(var(--border) / 0.5);
+    border-radius: 10px;
+  }
+</style>
