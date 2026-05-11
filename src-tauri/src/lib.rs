@@ -35,6 +35,7 @@ pub fn run() {
             commands::init::check_links,
             commands::settings::settings,
             commands::settings::update_settings,
+            commands::utils::get_free_space,
             commands::utils::overwrite_json,
         ])
         .run(tauri::generate_context!())
