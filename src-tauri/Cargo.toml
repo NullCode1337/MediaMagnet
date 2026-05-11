@@ -36,3 +36,4 @@ tauri-plugin-clipboard-manager = "2"
 dirs = "6.0.0"
 tokio = { version = "1.52.3", features = ["macros", "process", "time"] }
 regex = "1.12.3"
+tauri-plugin-os = "2"

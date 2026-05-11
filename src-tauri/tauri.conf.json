@@ -19,7 +19,8 @@
         "backgroundColor": "#2e2e32",
         "alwaysOnTop": true,
         "dragDropEnabled": true,
-        "decorations": false
+        "decorations": true,
+        "transparent": true
       }
     ],
     "security": {
