@@ -61,6 +61,9 @@
   async function handleReset() {
     config = await invoke("settings", { action: "reset" });
   }
+
+  const switchClass =
+    "data-[state=checked]:bg-primary data-[state=unchecked]:bg-input border-2 border-transparent transition-colors";
 </script>
 
 <Dialog.Root>
@@ -127,7 +130,9 @@
 
       <!-- Content Area -->
       <main class="flex-1 min-w-0 flex flex-col bg-background/50">
-        <div class="p-12 overflow-y-auto flex-1 custom-scrollbar">
+        <div
+          class="p-12 overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-border/50"
+        >
           {#if activeTab === "general"}
             <div
               class="w-full space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-300"
@@ -146,28 +151,23 @@
                   class="flex items-center justify-between p-6 rounded-2xl border border-border/50 bg-muted/20"
                 >
                   <div class="space-y-1">
-                    <Label class="text-base font-semibold">Visual Mode</Label>
+                    <Label class="text-base font-semibold">Dark Mode</Label>
                     <p class="text-sm text-muted-foreground">
-                      Toggle between light and dark themes
+                      Apply a high-contrast dark theme
                     </p>
                   </div>
-                  <Button
-                    variant="outline"
-                    onclick={handleThemeToggle}
-                    class="h-12 px-6 rounded-xl border-border/50 bg-background flex gap-3 shadow-sm active:scale-95 transition-all"
-                  >
+                  <div class="flex items-center gap-4">
                     {#if mode.current === "dark"}
-                      <Moon size={18} class="text-blue-400" />
-                      <span class="text-xs font-bold uppercase tracking-wider"
-                        >Dark</span
-                      >
+                      <Moon size={18} class="text-primary fill-primary/20" />
                     {:else}
                       <Sun size={18} class="text-orange-500" />
-                      <span class="text-xs font-bold uppercase tracking-wider"
-                        >Light</span
-                      >
                     {/if}
-                  </Button>
+                    <Switch
+                      checked={mode.current === "dark"}
+                      onCheckedChange={handleThemeToggle}
+                      class={switchClass}
+                    />
+                  </div>
                 </div>
 
                 <div class="space-y-4 pt-4">
@@ -184,6 +184,7 @@
                       id="always-on-top"
                       bind:checked={config.always_on_top}
                       onCheckedChange={save}
+                      class={switchClass}
                     />
                   </div>
                   <Separator class="opacity-20" />
@@ -200,6 +201,7 @@
                       id="decor"
                       bind:checked={config.show_decor}
                       onCheckedChange={save}
+                      class={switchClass}
                     />
                   </div>
                 </div>
@@ -228,7 +230,7 @@
                     <Input
                       bind:value={config.download_path}
                       placeholder="/home/user/downloads"
-                      class="rounded-xl bg-muted/20"
+                      class="rounded-xl bg-muted/20 border-border/40 focus:ring-primary"
                     />
                     <Button variant="secondary" class="rounded-xl px-4"
                       >Browse</Button
@@ -244,11 +246,8 @@
                   <Input
                     bind:value={config.user_agent}
                     placeholder="Mozilla/5.0..."
-                    class="rounded-xl bg-muted/20 font-mono text-xs"
+                    class="rounded-xl bg-muted/20 font-mono text-xs border-border/40 focus:ring-primary"
                   />
-                  <p class="text-[11px] text-muted-foreground">
-                    Identify this app to web servers when fetching metadata.
-                  </p>
                 </div>
               </div>
             </div>
@@ -259,7 +258,6 @@
               <header class="space-y-3">
                 <h3 class="text-3xl font-extrabold tracking-tight">Privacy</h3>
               </header>
-
               <div class="space-y-4">
                 <div class="flex items-center justify-between px-2">
                   <div class="space-y-1">
@@ -274,6 +272,7 @@
                     id="notifications"
                     bind:checked={config.notifications}
                     onCheckedChange={save}
+                    class={switchClass}
                   />
                 </div>
                 <Separator class="opacity-20" />
@@ -290,6 +289,7 @@
                     id="clear-exit"
                     bind:checked={config.clear_on_exit}
                     onCheckedChange={save}
+                    class={switchClass}
                   />
                 </div>
               </div>
@@ -309,7 +309,7 @@
           </Dialog.Close>
           <Button
             onclick={save}
-            class="px-8 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-primary/20"
+            class="px-8 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-primary/20 bg-primary text-primary-foreground hover:brightness-110"
           >
             Apply Changes
           </Button>
@@ -318,13 +318,3 @@
     </div>
   </Dialog.Content>
 </Dialog.Root>
-
-<style>
-  :global(.custom-scrollbar::-webkit-scrollbar) {
-    width: 6px;
-  }
-  :global(.custom-scrollbar::-webkit-scrollbar-thumb) {
-    background: hsl(var(--border) / 0.5);
-    border-radius: 10px;
-  }
-</style>
