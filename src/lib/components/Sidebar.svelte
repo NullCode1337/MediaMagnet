@@ -2,18 +2,9 @@
   import { Button } from "$lib/components/ui/button";
   import { Progress } from "$lib/components/ui/progress";
   import { Input } from "$lib/components/ui/input";
-  import {
-    Download,
-    Plus,
-    Menu,
-    History,
-    Sun,
-    Moon,
-    HardDrive,
-  } from "@lucide/svelte";
+  import { Download, Plus, Menu, HardDrive } from "@lucide/svelte";
 
-  import { toggleMode, mode } from "mode-watcher";
-  import SettingsDialog from "./Settings.svelte"; 
+  import SettingsDialog from "./Settings.svelte";
 
   let {
     isCollapsed = $bindable(),
@@ -29,11 +20,12 @@
     ? 'w-[80px]'
     : 'w-[280px]'}"
 >
-  <!-- Header -->
   <div class="p-6 flex items-center justify-between">
     {#if !isCollapsed}
       <div class="flex items-center gap-2">
-        <div class="h-6 w-6 bg-primary rounded-md flex items-center justify-center">
+        <div
+          class="h-6 w-6 bg-primary rounded-md flex items-center justify-center"
+        >
           <Download size={14} class="text-primary-foreground" />
         </div>
         <span class="font-bold text-lg">MediaMagnet</span>
@@ -50,11 +42,13 @@
   </div>
 
   <div class="px-4 flex-1 space-y-6">
-    <!-- URL Input Section -->
     <div class="space-y-2">
       {#if !isCollapsed}
         <!-- svelte-ignore a11y_label_has_associated_control -->
-        <label class="text-[10px] font-bold uppercase text-muted-foreground px-2">Source URL</label>
+        <label
+          class="text-[10px] font-bold uppercase text-muted-foreground px-2"
+          >Source URL</label
+        >
         <div class="flex gap-2">
           <Input
             placeholder="https://..."
@@ -82,45 +76,23 @@
       {/if}
     </div>
 
-    <!-- Navigation -->
     <nav class="space-y-1">
-      <Button
-        variant="ghost"
-        class="w-full {isCollapsed ? 'justify-center' : 'justify-start gap-3'}"
-      >
-        <History size={18} />
-        {#if !isCollapsed}<span>All Activity</span>{/if}
-      </Button>
-
-      <!-- Preferences Component -->
       <SettingsDialog {isCollapsed} />
-
-      <!-- Theme Toggle -->
-      <Button
-        variant="ghost"
-        onclick={toggleMode}
-        class="w-full {isCollapsed ? 'justify-center' : 'justify-start gap-3'}"
-      >
-        {#if mode.current === "dark"}
-          <Sun size={18} />
-          {#if !isCollapsed}<span>Light Mode</span>{/if}
-        {:else}
-          <Moon size={18} />
-          {#if !isCollapsed}<span>Dark Mode</span>{/if}
-        {/if}
-      </Button>
     </nav>
   </div>
 
-  <!-- Footer / Disk Space -->
   <div class="p-6 border-t bg-muted/20">
     <div class="flex items-center gap-3 {isCollapsed ? 'justify-center' : ''}">
       <HardDrive size={18} class="text-muted-foreground shrink-0" />
       {#if !isCollapsed}
         <div class="flex-1 min-w-0">
           <div class="flex justify-between text-[10px] mb-1 font-medium">
-            <span class="text-muted-foreground uppercase tracking-wider">Storage</span>
-            <span class={diskUsage > 90 ? "text-destructive" : ""}>{diskUsage.toFixed(1)}%</span>
+            <span class="text-muted-foreground uppercase tracking-wider"
+              >Storage</span
+            >
+            <span class={diskUsage > 90 ? "text-destructive" : ""}
+              >{diskUsage.toFixed(1)}%</span
+            >
           </div>
           <Progress value={diskUsage} class="h-1" />
         </div>
