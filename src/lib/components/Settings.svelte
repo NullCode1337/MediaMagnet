@@ -14,6 +14,9 @@
     Download,
     Sun,
     Moon,
+    Cookie,
+    FileKey,
+    Trash2,
     ShieldCheck,
   } from "@lucide/svelte";
   import { toggleMode, mode } from "mode-watcher";
@@ -33,8 +36,21 @@
   const TABS = [
     { id: "general", label: "Appearance", icon: Monitor },
     { id: "downloads", label: "Downloads", icon: Download },
+    { id: "cookies", label: "Cookie Manager", icon: Cookie },
     { id: "privacy", label: "Privacy & Alerts", icon: ShieldCheck },
   ];
+
+  let cookieDomain = $state("");
+  let cookieRawContent = $state("");
+  let savedCookies = $state<Record<string, string>>({});
+
+  async function loadCookies() {
+    try {
+      savedCookies = await invoke("get_cookies");
+    } catch (err) {
+      console.error("Failed to load cookies:", err);
+    }
+  }
 
   onMount(async () => {
     try {
@@ -45,11 +61,36 @@
     } catch (err) {
       console.error("Failed to load settings:", err);
     }
+    loadCookies();
   });
 
   async function save() {
     config.dark_mode = mode.current === "dark";
     await invoke("update_settings", { settings: $state.snapshot(config) });
+  }
+
+  async function handleSaveCookie() {
+    try {
+      await invoke("save_cookie", {
+        domain: cookieDomain,
+        input: { type: "Content", value: cookieRawContent },
+      });
+      cookieDomain = "";
+      cookieRawContent = "";
+      await loadCookies();
+    } catch (err) {
+      console.error("Save error:", err);
+    }
+  }
+
+  async function handleDeleteCookie(path: string) {
+    await invoke("delete_cookie", { path });
+    await loadCookies();
+  }
+
+  async function handleClearAllCookies() {
+    await invoke("clear_cookies");
+    await loadCookies();
   }
 
   function handleThemeToggle() {
@@ -86,9 +127,9 @@
   </Dialog.Trigger>
 
   <Dialog.Content
-    class="sm:max-w-none w-[95vw] max-w-[850px] h-[90vh] max-h-[600px] p-0 gap-0 overflow-hidden border-border bg-background shadow-2xl rounded-3xl"
+    class="sm:max-w-none w-[95vw] max-w-[850px] h-[90vh] max-h-[600px] p-0 gap-0 overflow-hidden border-border bg-background shadow-2xl rounded-3xl flex flex-col"
   >
-    <div class="flex flex-row w-full h-full items-stretch">
+    <div class="flex flex-row w-full h-full items-stretch overflow-hidden">
       <aside
         class="w-[200px] sm:w-[240px] border-r border-sidebar-border bg-sidebar p-6 sm:p-8 flex flex-col shrink-0"
       >
@@ -129,8 +170,10 @@
         </Button>
       </aside>
 
-      <main class="flex-1 min-w-0 flex flex-col bg-background">
-        <div class="p-8 sm:p-12 overflow-y-auto flex-1 scrollbar-thin">
+      <main
+        class="flex-1 min-w-0 flex flex-col bg-background min-h-0 overflow-hidden"
+      >
+        <div class="flex-1 overflow-y-auto p-8 sm:p-12 scrollbar-thin">
           {#if activeTab === "general"}
             <div
               class="w-full space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300"
@@ -253,6 +296,99 @@
                     placeholder="Mozilla/5.0..."
                     class="rounded-xl bg-muted/20 font-mono text-xs border-border/40 focus:ring-primary"
                   />
+                </div>
+              </div>
+            </div>
+          {:else if activeTab === "cookies"}
+            <div
+              class="w-full space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-10"
+            >
+              <header class="flex justify-between items-end">
+                <div class="space-y-2">
+                  <h3
+                    class="text-3xl font-extrabold tracking-tight text-foreground"
+                  >
+                    Cookies
+                  </h3>
+                  <p class="text-sm text-muted-foreground">
+                    Import Netscape or JSON cookies by domain
+                  </p>
+                </div>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  class="rounded-xl gap-2"
+                  onclick={handleClearAllCookies}
+                >
+                  <Trash2 size={14} /> Clear All
+                </Button>
+              </header>
+
+              <div
+                class="p-6 rounded-2xl border border-border bg-card space-y-4"
+              >
+                <div class="space-y-2">
+                  <Label class="text-xs font-bold uppercase tracking-wider"
+                    >Domain Name</Label
+                  >
+                  <Input
+                    bind:value={cookieDomain}
+                    placeholder="example.com"
+                    class="rounded-lg"
+                  />
+                </div>
+                <div class="space-y-2">
+                  <Label class="text-xs font-bold uppercase tracking-wider"
+                    >Raw Content (JSON or Netscape)</Label
+                  >
+                  <textarea
+                    bind:value={cookieRawContent}
+                    class="w-full min-h-[120px] max-h-[200px] p-3 rounded-lg bg-muted text-xs font-mono border-none focus:ring-1 focus:ring-primary resize-none"
+                    placeholder={"[ { 'domain': '.google.com', ... } ] or # Netscape format..."}
+                  ></textarea>
+                </div>
+                <Button
+                  class="w-full rounded-xl"
+                  disabled={!cookieDomain || !cookieRawContent}
+                  onclick={handleSaveCookie}
+                >
+                  Import Cookie
+                </Button>
+              </div>
+
+              <div class="space-y-3">
+                <Label
+                  class="text-xs font-bold uppercase tracking-widest text-primary"
+                  >Active Sessions</Label
+                >
+                <div class="grid gap-2">
+                  {#each Object.entries(savedCookies) as [domain, path] (domain)}
+                    <div
+                      class="flex items-center justify-between p-3 rounded-xl border border-border/50 bg-muted/30"
+                    >
+                      <div class="flex items-center gap-3">
+                        <div class="p-2 rounded-lg bg-primary/10 text-primary">
+                          <FileKey size={16} />
+                        </div>
+                        <span class="text-sm font-medium">{domain}</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        class="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onclick={() => handleDeleteCookie(path)}
+                      >
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
+                  {/each}
+                  {#if Object.keys(savedCookies).length === 0}
+                    <p
+                      class="text-center py-8 text-sm text-muted-foreground italic"
+                    >
+                      No cookies stored
+                    </p>
+                  {/if}
                 </div>
               </div>
             </div>
