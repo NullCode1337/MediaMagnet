@@ -49,8 +49,7 @@
       } catch (err) {
         console.error("Clipboard access denied", err);
       }
-    }
-    else {
+    } else {
       await startDownload();
     }
   }
@@ -139,11 +138,18 @@
     >
       <div class="flex-1 max-w-2xl flex items-center gap-2">
         <div class="relative flex-1">
-          <Input
-            placeholder="Paste your link here..."
-            bind:value={urlInput}
-            class="pr-10 h-11 bg-muted/30 focus-visible:ring-1"
-          />
+          <form
+            onsubmit={(e) => {
+              e.preventDefault();
+              pasteOrDownload();
+            }}
+          >
+            <Input
+              placeholder="Paste your link here..."
+              bind:value={urlInput}
+              class="pr-10 h-11 bg-muted/30 focus-visible:ring-1"
+            />
+          </form>
         </div>
 
         <Button
@@ -158,7 +164,6 @@
             <Play size={16} fill="currentColor" />
             {activeTask.isDownloading ? "Working..." : "Download"}
           {/if}
-          
         </Button>
       </div>
     </header>
