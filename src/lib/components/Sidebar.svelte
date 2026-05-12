@@ -12,6 +12,7 @@
   class="flex flex-col border-r bg-card/50 transition-all duration-300 ease-in-out shrink-0 {isCollapsed
     ? 'w-[80px]'
     : 'w-[280px]'}"
+  data-tauri-drag-region
 >
   <div class="p-6 flex items-center justify-between">
     {#if !isCollapsed}
@@ -22,13 +23,6 @@
           <Download size={14} class="text-primary-foreground" />
         </div>
         <span class="font-bold text-lg">MediaMagnet</span>
-      </div>
-      <div class="ml-auto flex items-baseline gap-2">
-        <span
-          class="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold"
-        >
-          V0.4.2
-        </span>
       </div>
     {/if}
     <Button

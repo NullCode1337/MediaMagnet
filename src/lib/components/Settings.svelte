@@ -20,7 +20,6 @@
 
   let { isCollapsed } = $props();
   let activeTab = $state("general");
-
   let config = $state({
     download_path: "",
     user_agent: "",
@@ -84,12 +83,11 @@
   </Dialog.Trigger>
 
   <Dialog.Content
-    class="sm:max-w-none w-[850px] h-[600px] p-0 gap-0 overflow-hidden border-border/40 bg-background/95 backdrop-blur-3xl shadow-2xl rounded-3xl translate-x-[-50%]! translate-y-[-50%]!"
+    class="sm:max-w-none w-[95vw] max-w-[850px] h-[90vh] max-h-[600px] p-0 gap-0 overflow-hidden border-border/40 bg-background/95 backdrop-blur-3xl shadow-2xl rounded-3xl"
   >
     <div class="flex flex-row w-full h-full items-stretch">
-      <!-- Sidebar -->
       <aside
-        class="w-[240px] border-r border-border/40 bg-muted/10 p-8 flex flex-col shrink-0"
+        class="w-[200px] sm:w-[240px] border-r border-border/40 bg-muted/10 p-6 sm:p-8 flex flex-col shrink-0"
       >
         <div class="px-2 mb-8">
           <h2
@@ -128,31 +126,28 @@
         </Button>
       </aside>
 
-      <!-- Content Area -->
       <main class="flex-1 min-w-0 flex flex-col bg-background/50">
-        <div
-          class="p-12 overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-border/50"
-        >
+        <div class="p-8 sm:p-12 overflow-y-auto flex-1 scrollbar-thin">
           {#if activeTab === "general"}
             <div
-              class="w-full space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-300"
+              class="w-full space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300"
             >
-              <header class="space-y-3">
-                <h3 class="text-3xl font-extrabold tracking-tight">
+              <header class="space-y-2">
+                <h3 class="text-2xl sm:text-3xl font-extrabold tracking-tight">
                   Appearance
                 </h3>
-                <p class="text-base text-muted-foreground leading-relaxed">
+                <p class="text-sm sm:text-base text-muted-foreground">
                   Customize how the application looks and behaves
                 </p>
               </header>
 
               <div class="space-y-6">
                 <div
-                  class="flex items-center justify-between p-6 rounded-2xl border border-border/50 bg-muted/20"
+                  class="flex items-center justify-between p-5 rounded-2xl border border-border/50 bg-muted/20"
                 >
                   <div class="space-y-1">
                     <Label class="text-base font-semibold">Dark Mode</Label>
-                    <p class="text-sm text-muted-foreground">
+                    <p class="text-xs text-muted-foreground">
                       Apply a high-contrast dark theme
                     </p>
                   </div>
@@ -170,13 +165,13 @@
                   </div>
                 </div>
 
-                <div class="space-y-4 pt-4">
+                <div class="space-y-4 pt-2">
                   <div class="flex items-center justify-between px-2">
                     <div class="space-y-1">
-                      <Label for="always-on-top" class="text-[15px] font-medium"
+                      <Label for="always-on-top" class="text-sm font-medium"
                         >Keep Always on Top</Label
                       >
-                      <p class="text-xs text-muted-foreground">
+                      <p class="text-[11px] text-muted-foreground">
                         Prevent other windows from covering the app
                       </p>
                     </div>
@@ -190,10 +185,10 @@
                   <Separator class="opacity-20" />
                   <div class="flex items-center justify-between px-2">
                     <div class="space-y-1">
-                      <Label for="decor" class="text-[15px] font-medium"
+                      <Label for="decor" class="text-sm font-medium"
                         >Native Decorations</Label
                       >
-                      <p class="text-xs text-muted-foreground">
+                      <p class="text-[11px] text-muted-foreground">
                         Show standard title bars and window borders
                       </p>
                     </div>
@@ -298,21 +293,8 @@
         </div>
 
         <footer
-          class="px-12 py-6 border-t border-border/40 bg-muted/5 flex justify-end items-center gap-4"
+          class="px-8 sm:px-12 py-5 border-t border-border/40 bg-muted/5 flex justify-end items-center gap-4"
         >
-          <Dialog.Close>
-            {#snippet child({ props })}
-              <Button {...props} variant="ghost" class="rounded-xl px-6"
-                >Cancel</Button
-              >
-            {/snippet}
-          </Dialog.Close>
-          <Button
-            onclick={save}
-            class="px-8 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-primary/20 bg-primary text-primary-foreground hover:brightness-110"
-          >
-            Apply Changes
-          </Button>
         </footer>
       </main>
     </div>
