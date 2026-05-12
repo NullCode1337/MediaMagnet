@@ -1,18 +1,11 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button";
   import { Progress } from "$lib/components/ui/progress";
-  import { Input } from "$lib/components/ui/input";
-  import { Download, Plus, Menu, HardDrive } from "@lucide/svelte";
+  import { Download, Menu, HardDrive } from "@lucide/svelte";
 
   import SettingsDialog from "./Settings.svelte";
 
-  let {
-    isCollapsed = $bindable(),
-    urlInput = $bindable(),
-    diskUsage,
-    activeTask,
-    startDownload,
-  } = $props();
+  let { isCollapsed = $bindable(), diskUsage } = $props();
 </script>
 
 <aside
@@ -30,6 +23,13 @@
         </div>
         <span class="font-bold text-lg">MediaMagnet</span>
       </div>
+      <div class="ml-auto flex items-baseline gap-2">
+        <span
+          class="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold"
+        >
+          V0.4.2
+        </span>
+      </div>
     {/if}
     <Button
       variant="ghost"
@@ -42,40 +42,6 @@
   </div>
 
   <div class="px-4 flex-1 space-y-6">
-    <div class="space-y-2">
-      {#if !isCollapsed}
-        <!-- svelte-ignore a11y_label_has_associated_control -->
-        <label
-          class="text-[10px] font-bold uppercase text-muted-foreground px-2"
-          >Source URL</label
-        >
-        <div class="flex gap-2">
-          <Input
-            placeholder="https://..."
-            bind:value={urlInput}
-            class="h-9 text-xs bg-muted/50 border-none"
-          />
-          <Button
-            size="icon"
-            class="h-9 w-9 shrink-0"
-            onclick={startDownload}
-            disabled={activeTask.isDownloading}
-          >
-            <Plus size={18} />
-          </Button>
-        </div>
-      {:else}
-        <Button
-          variant="secondary"
-          size="icon"
-          class="w-full h-12"
-          onclick={() => (isCollapsed = false)}
-        >
-          <Plus size={20} />
-        </Button>
-      {/if}
-    </div>
-
     <nav class="space-y-1">
       <SettingsDialog {isCollapsed} />
     </nav>
