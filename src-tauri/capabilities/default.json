@@ -13,6 +13,7 @@
     "notification:default",
     "dialog:default",
     "clipboard-manager:default",
+    "clipboard-manager:allow-read-text",
     "os:default"
   ]
 }
