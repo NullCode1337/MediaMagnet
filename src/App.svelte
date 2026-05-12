@@ -5,13 +5,15 @@
   import { onMount } from "svelte";
   import { ModeWatcher } from "mode-watcher";
 
+  import { Button } from "$lib/components/ui/button";
+  import Input from "$lib/components/ui/input/input.svelte";
+
   import { Clipboard, Play } from "@lucide/svelte";
 
-  import { Button } from "$lib/components/ui/button";
   import Sidebar from "$lib/components/Sidebar.svelte";
   import Downloader from "$lib/components/Downloader.svelte";
   import History from "$lib/components/History.svelte";
-  import Input from "$lib/components/ui/input/input.svelte";
+  import Titlebar from "$lib/components/Titlebar.svelte";
 
   // eslint-disable-next-line svelte/prefer-writable-derived
   let isCollapsed = $state(false);
@@ -127,50 +129,52 @@
 <svelte:window bind:innerWidth />
 
 <div
-  class="flex h-screen w-full bg-background text-foreground overflow-hidden"
-  data-tauri-drag-region
+  class="flex flex-col h-screen w-full bg-background text-foreground overflow-hidden"
 >
-  <Sidebar bind:isCollapsed {diskUsage} />
+  <Titlebar showDecor={false} />
+  <div class="flex flex-1 w-full overflow-hidden">
+    <Sidebar bind:isCollapsed {diskUsage} />
 
-  <main class="flex-1 flex flex-col bg-muted/10 min-w-0">
-    <header
-      class="h-20 border-b flex items-center px-8 bg-background/50 backdrop-blur-md align-middle justify-center sticky top-0 z-10 gap-4"
-    >
-      <div class="flex-1 max-w-2xl flex items-center gap-2">
-        <div class="relative flex-1">
-          <form
-            onsubmit={(e) => {
-              e.preventDefault();
-              pasteOrDownload();
-            }}
+    <main class="flex-1 flex flex-col bg-muted/10 min-w-0 relative">
+      <header
+        class="h-20 border-b flex items-center px-8 bg-background/50 backdrop-blur-md align-middle justify-center sticky top-0 z-10 gap-4"
+      >
+        <div class="flex-1 max-w-2xl flex items-center gap-2">
+          <div class="relative flex-1">
+            <form
+              onsubmit={(e) => {
+                e.preventDefault();
+                pasteOrDownload();
+              }}
+            >
+              <Input
+                placeholder="Paste your link here..."
+                bind:value={urlInput}
+                class="pr-10 h-11 bg-muted/30 focus-visible:ring-1"
+              />
+            </form>
+          </div>
+
+          <Button
+            onclick={pasteOrDownload}
+            disabled={activeTask.isDownloading}
+            class="h-11 px-6 gap-2"
           >
-            <Input
-              placeholder="Paste your link here..."
-              bind:value={urlInput}
-              class="pr-10 h-11 bg-muted/30 focus-visible:ring-1"
-            />
-          </form>
+            {#if urlInput === ""}
+              <Clipboard size={16} fill="currentColor" />
+              Paste
+            {:else}
+              <Play size={16} fill="currentColor" />
+              {activeTask.isDownloading ? "Working..." : "Download"}
+            {/if}
+          </Button>
         </div>
+      </header>
 
-        <Button
-          onclick={pasteOrDownload}
-          disabled={activeTask.isDownloading}
-          class="h-11 px-6 gap-2"
-        >
-          {#if urlInput === ""}
-            <Clipboard size={16} fill="currentColor" />
-            Paste
-          {:else}
-            <Play size={16} fill="currentColor" />
-            {activeTask.isDownloading ? "Working..." : "Download"}
-          {/if}
-        </Button>
+      <div class="flex-1 p-8 overflow-y-auto overflow-x-hidden space-y-8">
+        <Downloader {activeTask} {stopDownload} />
+        <History bind:history />
       </div>
-    </header>
-
-    <div class="flex-1 p-8 overflow-y-auto overflow-x-hidden space-y-8">
-      <Downloader {activeTask} {stopDownload} />
-      <History bind:history />
-    </div>
-  </main>
+    </main>
+  </div>
 </div>
