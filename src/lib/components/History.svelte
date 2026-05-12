@@ -34,10 +34,10 @@
   </div>
 
   <div class="space-y-2">
-    {#each history as item (item.timestamp + item.name)}
+    {#each history as item, index (index)}
       <button
         type="button"
-        class="flex items-center justify-between p-3 bg-card border border-border rounded-lg group min-w-0 max-w-full transition-colors hover:bg-accent/50"
+        class="flex items-center justify-between p-3 bg-card border border-border rounded-lg group min-w-full transition-colors hover:bg-accent/50"
         onclick={() => copy(item.url || item.name)}
       >
         <div class="flex items-center gap-3 overflow-hidden min-w-0">
@@ -46,8 +46,8 @@
           {:else}
             <AlertCircle size={14} class="text-destructive shrink-0" />
           {/if}
-          <span class="text-xs truncate max-w-3/4 font-medium text-foreground"
-            >{item.name}</span
+          <span class="text-xs truncate font-medium text-foreground flex-1">
+            {item.name}</span
           >
         </div>
         <span class="text-[10px] text-muted-foreground shrink-0 font-mono">
