@@ -73,25 +73,28 @@
         variant="ghost"
         class="w-full h-11 transition-all duration-200 {isCollapsed
           ? 'justify-center'
-          : 'justify-start gap-4 px-4'}"
+          : 'justify-start gap-4 px-4'} hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
       >
-        <SettingsIcon size={20} class="text-muted-foreground" />
-        {#if !isCollapsed}<span class="font-medium text-[15px]">Settings</span
-          >{/if}
+        <SettingsIcon size={20} class="text-sidebar-foreground/70" />
+        {#if !isCollapsed}
+          <span class="font-medium text-[15px] text-sidebar-foreground"
+            >Settings</span
+          >
+        {/if}
       </Button>
     {/snippet}
   </Dialog.Trigger>
 
   <Dialog.Content
-    class="sm:max-w-none w-[95vw] max-w-[850px] h-[90vh] max-h-[600px] p-0 gap-0 overflow-hidden border-border/40 bg-background/95 backdrop-blur-3xl shadow-2xl rounded-3xl"
+    class="sm:max-w-none w-[95vw] max-w-[850px] h-[90vh] max-h-[600px] p-0 gap-0 overflow-hidden border-border bg-background shadow-2xl rounded-3xl"
   >
     <div class="flex flex-row w-full h-full items-stretch">
       <aside
-        class="w-[200px] sm:w-[240px] border-r border-border/40 bg-muted/10 p-6 sm:p-8 flex flex-col shrink-0"
+        class="w-[200px] sm:w-[240px] border-r border-sidebar-border bg-sidebar p-6 sm:p-8 flex flex-col shrink-0"
       >
         <div class="px-2 mb-8">
           <h2
-            class="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/70"
+            class="text-[11px] font-bold uppercase tracking-[0.2em] text-sidebar-foreground/50"
           >
             Configuration
           </h2>
@@ -103,12 +106,12 @@
               onclick={() => (activeTab = tab.id)}
               class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all relative group {activeTab ===
               tab.id
-                ? 'bg-primary/10 text-primary font-semibold'
-                : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}"
+                ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
+                : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'}"
             >
               {#if activeTab === tab.id}
                 <div
-                  class="absolute left-0 w-1 h-5 bg-primary rounded-full"
+                  class="absolute left-0 w-1 h-5 bg-sidebar-primary rounded-full"
                 ></div>
               {/if}
               <tab.icon size={18} />
@@ -119,21 +122,23 @@
 
         <Button
           variant="ghost"
-          class="justify-start gap-3 rounded-xl opacity-60 hover:opacity-100"
+          class="justify-start gap-3 rounded-xl text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
           onclick={handleReset}
         >
           <RotateCcw size={16} /> Reset to Defaults
         </Button>
       </aside>
 
-      <main class="flex-1 min-w-0 flex flex-col bg-background/50">
+      <main class="flex-1 min-w-0 flex flex-col bg-background">
         <div class="p-8 sm:p-12 overflow-y-auto flex-1 scrollbar-thin">
           {#if activeTab === "general"}
             <div
               class="w-full space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300"
             >
               <header class="space-y-2">
-                <h3 class="text-2xl sm:text-3xl font-extrabold tracking-tight">
+                <h3
+                  class="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground"
+                >
                   Appearance
                 </h3>
                 <p class="text-sm sm:text-base text-muted-foreground">
@@ -143,19 +148,21 @@
 
               <div class="space-y-6">
                 <div
-                  class="flex items-center justify-between p-5 rounded-2xl border border-border/50 bg-muted/20"
+                  class="flex items-center justify-between p-5 rounded-2xl border border-border bg-card"
                 >
                   <div class="space-y-1">
-                    <Label class="text-base font-semibold">Dark Mode</Label>
+                    <Label class="text-base font-semibold text-card-foreground"
+                      >Dark Mode</Label
+                    >
                     <p class="text-xs text-muted-foreground">
                       Apply a high-contrast dark theme
                     </p>
                   </div>
                   <div class="flex items-center gap-4">
                     {#if mode.current === "dark"}
-                      <Moon size={18} class="text-primary fill-primary/20" />
+                      <Moon size={18} class="text-primary" />
                     {:else}
-                      <Sun size={18} class="text-orange-500" />
+                      <Sun size={18} class="text-primary" />
                     {/if}
                     <Switch
                       checked={mode.current === "dark"}
@@ -168,7 +175,9 @@
                 <div class="space-y-4 pt-2">
                   <div class="flex items-center justify-between px-2">
                     <div class="space-y-1">
-                      <Label for="always-on-top" class="text-sm font-medium"
+                      <Label
+                        for="always-on-top"
+                        class="text-sm font-medium text-foreground"
                         >Keep Always on Top</Label
                       >
                       <p class="text-[11px] text-muted-foreground">
@@ -182,10 +191,12 @@
                       class={switchClass}
                     />
                   </div>
-                  <Separator class="opacity-20" />
+                  <Separator class="bg-border" />
                   <div class="flex items-center justify-between px-2">
                     <div class="space-y-1">
-                      <Label for="decor" class="text-sm font-medium"
+                      <Label
+                        for="decor"
+                        class="text-sm font-medium text-foreground"
                         >Native Decorations</Label
                       >
                       <p class="text-[11px] text-muted-foreground">
@@ -207,25 +218,24 @@
               class="w-full space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-300"
             >
               <header class="space-y-3">
-                <h3 class="text-3xl font-extrabold tracking-tight">
+                <h3
+                  class="text-3xl font-extrabold tracking-tight text-foreground"
+                >
                   Downloads
                 </h3>
-                <p class="text-base text-muted-foreground leading-relaxed">
-                  Manage file locations and network identification.
-                </p>
               </header>
 
               <div class="space-y-8">
                 <div class="space-y-3">
                   <Label
-                    class="text-sm font-bold uppercase tracking-widest text-primary/80"
+                    class="text-sm font-bold uppercase tracking-widest text-primary"
                     >Download Location</Label
                   >
                   <div class="flex gap-2">
                     <Input
                       bind:value={config.download_path}
-                      placeholder="/home/user/downloads"
-                      class="rounded-xl bg-muted/20 border-border/40 focus:ring-primary"
+                      placeholder="/downloads"
+                      class="rounded-xl bg-muted text-foreground border-border focus:ring-primary"
                     />
                     <Button variant="secondary" class="rounded-xl px-4"
                       >Browse</Button
@@ -291,11 +301,6 @@
             </div>
           {/if}
         </div>
-
-        <footer
-          class="px-8 sm:px-12 py-5 border-t border-border/40 bg-muted/5 flex justify-end items-center gap-4"
-        >
-        </footer>
       </main>
     </div>
   </Dialog.Content>
