@@ -16,7 +16,7 @@
 </script>
 
 <aside
-  class="flex flex-col border-r bg-card/50 transition-all duration-300 ease-in-out {isCollapsed
+  class="flex flex-col border-r bg-card/50 transition-all duration-300 ease-in-out shrink-0 {isCollapsed
     ? 'w-[80px]'
     : 'w-[280px]'}"
 >

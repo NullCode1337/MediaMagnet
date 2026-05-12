@@ -23,9 +23,9 @@
   <div class="space-y-2">
     {#each history as item (item.timestamp + item.name)}
       <div
-        class="flex items-center justify-between p-3 bg-background border rounded-lg group"
+        class="flex items-center justify-between p-3 bg-background border rounded-lg group min-w-0"
       >
-        <div class="flex items-center gap-3 overflow-hidden">
+        <div class="flex items-center gap-3 overflow-hidden min-w-0">
           {#if item.status === "success"}
             <CheckCircle2 size={14} class="text-green-500 shrink-0" />
           {:else}
