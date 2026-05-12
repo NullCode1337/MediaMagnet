@@ -1,12 +1,17 @@
 <script lang="ts">
   import { listen } from "@tauri-apps/api/event";
   import { invoke } from "@tauri-apps/api/core";
+  import { readText } from "@tauri-apps/plugin-clipboard-manager";
   import { onMount } from "svelte";
   import { ModeWatcher } from "mode-watcher";
 
+  import { Clipboard, Play } from "@lucide/svelte";
+
+  import { Button } from "$lib/components/ui/button";
   import Sidebar from "$lib/components/Sidebar.svelte";
   import Downloader from "$lib/components/Downloader.svelte";
   import History from "$lib/components/History.svelte";
+  import Input from "$lib/components/ui/input/input.svelte";
 
   // eslint-disable-next-line svelte/prefer-writable-derived
   let isCollapsed = $state(false);
@@ -30,6 +35,18 @@
       diskUsage = await invoke("get_free_space");
     } catch (e) {
       console.error("Disk fetch failed:", e);
+    }
+  }
+
+  async function pasteOrDownload() {
+    try {
+      const clipboardText = await readText();
+      if (clipboardText && clipboardText.startsWith("http")) {
+        urlInput = clipboardText;
+        await startDownload();
+      }
+    } catch (err) {
+      console.error("Clipboard access denied", err);
     }
   }
 
@@ -109,25 +126,35 @@
   class="flex h-screen w-full bg-background text-foreground overflow-hidden"
   data-tauri-drag-region
 >
-  <Sidebar
-    bind:isCollapsed
-    bind:urlInput
-    {diskUsage}
-    {activeTask}
-    {startDownload}
-  />
+  <Sidebar bind:isCollapsed {diskUsage} />
 
   <main class="flex-1 flex flex-col bg-muted/10 min-w-0">
     <header
-      class="h-16 border-b flex items-center px-8 bg-background/50 backdrop-blur-md sticky top-0 z-10"
+      class="h-20 border-b flex items-center px-8 bg-background/50 backdrop-blur-md align-middle justify-center sticky top-0 z-10 gap-4"
     >
-      <div class="flex items-baseline gap-2">
-        <h2 class="text-sm font-semibold tracking-tight">Current Session</h2>
-        <span
-          class="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold"
+      <div class="flex-1 max-w-2xl flex items-center gap-2">
+        <div class="relative flex-1">
+          <Input
+            placeholder="Paste your link here..."
+            bind:value={urlInput}
+            class="pr-10 h-11 bg-muted/30 focus-visible:ring-1"
+          />
+        </div>
+
+        <Button
+          onclick={pasteOrDownload}
+          disabled={activeTask.isDownloading}
+          class="h-11 px-6 gap-2"
         >
-          V0.4.2
-        </span>
+          {#if urlInput === ""}
+            <Clipboard size={16} fill="currentColor" />
+            Paste
+          {:else}
+            <Play size={16} fill="currentColor" />
+            {activeTask.isDownloading ? "Working..." : "Download"}
+          {/if}
+          
+        </Button>
       </div>
     </header>
 
