@@ -53,6 +53,14 @@
     }
   }
 
+  async function stopDownload() {
+    try {
+      await invoke("cancel_download");
+    } catch (e) {
+      console.error("Failed to cancel:", e);
+    }
+  }
+
   onMount(() => {
     updateDiskSpace();
     const interval = setInterval(updateDiskSpace, 60000);
@@ -97,7 +105,10 @@
 <ModeWatcher />
 <svelte:window bind:innerWidth />
 
-<div class="flex h-screen w-full bg-background text-foreground overflow-hidden">
+<div
+  class="flex h-screen w-full bg-background text-foreground overflow-hidden"
+  data-tauri-drag-region
+>
   <Sidebar
     bind:isCollapsed
     bind:urlInput
@@ -106,7 +117,7 @@
     {startDownload}
   />
 
-  <main class="flex-1 flex flex-col bg-muted/10">
+  <main class="flex-1 flex flex-col bg-muted/10 min-w-0">
     <header
       class="h-16 border-b flex items-center px-8 bg-background/50 backdrop-blur-md sticky top-0 z-10"
     >
@@ -120,8 +131,8 @@
       </div>
     </header>
 
-    <div class="flex-1 p-8 overflow-y-auto space-y-8">
-      <Downloader {activeTask} />
+    <div class="flex-1 p-8 overflow-y-auto overflow-x-hidden space-y-8">
+      <Downloader {activeTask} {stopDownload} />
       <History bind:history />
     </div>
   </main>
