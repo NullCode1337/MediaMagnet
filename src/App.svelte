@@ -39,14 +39,19 @@
   }
 
   async function pasteOrDownload() {
-    try {
-      const clipboardText = await readText();
-      if (clipboardText && clipboardText.startsWith("http")) {
-        urlInput = clipboardText;
-        await startDownload();
+    if (!urlInput) {
+      try {
+        const clipboardText = await readText();
+        if (clipboardText && clipboardText.startsWith("http")) {
+          urlInput = clipboardText;
+          await startDownload();
+        }
+      } catch (err) {
+        console.error("Clipboard access denied", err);
       }
-    } catch (err) {
-      console.error("Clipboard access denied", err);
+    }
+    else {
+      await startDownload();
     }
   }
 
