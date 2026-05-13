@@ -135,7 +135,10 @@
 <div
   class="flex flex-col h-screen w-full bg-background text-foreground overflow-hidden"
 >
-  <Titlebar />
+  <div class="relative z-100">
+    <Titlebar />
+  </div>
+
   {#if uiState.headless}
     <div class="relative flex items-center justify-center h-full w-full">
       <svg class="absolute w-32 h-32 -rotate-90">
