@@ -38,6 +38,7 @@ pub fn run() {
             commands::cookie::get_cookies,
             commands::cookie::save_cookie,
             commands::download::cancel_download,
+            commands::download::cancel_all_downloads,
             commands::download::downloader,
             commands::init::check_links,
             commands::settings::settings,
