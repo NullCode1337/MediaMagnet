@@ -36,8 +36,8 @@
   const TABS = [
     { id: "general", label: "Appearance", icon: Monitor },
     { id: "downloads", label: "Downloads", icon: Download },
-    { id: "cookies", label: "Cookie Manager", icon: Cookie },
-    { id: "privacy", label: "Privacy & Alerts", icon: ShieldCheck },
+    { id: "cookies", label: "Cookies", icon: Cookie },
+    { id: "privacy", label: "Privacy", icon: ShieldCheck },
   ];
 
   let cookieDomain = $state("");
@@ -127,13 +127,48 @@
   </Dialog.Trigger>
 
   <Dialog.Content
-    class="sm:max-w-none w-[95vw] max-w-[850px] h-[90vh] max-h-[600px] p-0 gap-0 overflow-hidden border-border bg-background shadow-2xl rounded-3xl flex flex-col"
+    class="sm:max-w-none w-[95vw] max-w-[850px] p-0 gap-0 overflow-hidden border-border bg-background shadow-2xl rounded-2xl flex flex-col !top-[calc(50%_+_20px)] h-[90vh] !max-h-[min(600px,calc(90vh_-_40px))]"
   >
-    <div class="flex flex-row w-full h-full items-stretch overflow-hidden">
-      <aside
-        class="w-[200px] sm:w-[240px] border-r border-sidebar-border bg-sidebar p-6 sm:p-8 flex flex-col shrink-0"
+    <div
+      class="flex flex-col sm:flex-row w-full h-full items-stretch overflow-hidden"
+    >
+      <div
+        class="sm:hidden flex items-center gap-1 border-b border-sidebar-border bg-sidebar px-3 py-2 shrink-0 overflow-x-auto scrollbar-none"
       >
-        <div class="px-2 mb-8">
+        <span
+          class="text-[10px] font-bold uppercase tracking-widest text-sidebar-foreground/40 mr-2 shrink-0"
+          >Settings</span
+        >
+        {#each TABS as tab (tab.id)}
+          <button
+            onclick={() => (activeTab = tab.id)}
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs whitespace-nowrap transition-all shrink-0 relative
+              {activeTab === tab.id
+              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
+              : 'text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'}"
+          >
+            {#if activeTab === tab.id}
+              <div
+                class="absolute bottom-0 left-2 right-2 h-0.5 bg-sidebar-primary rounded-full"
+              ></div>
+            {/if}
+            <tab.icon size={14} />
+            {tab.label}
+          </button>
+        {/each}
+        <button
+          onclick={handleReset}
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs whitespace-nowrap shrink-0 ml-auto text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all"
+        >
+          <RotateCcw size={13} />
+          Reset
+        </button>
+      </div>
+
+      <aside
+        class="hidden sm:flex w-[200px] lg:w-[240px] border-r border-sidebar-border bg-sidebar p-5 lg:p-8 flex-col shrink-0"
+      >
+        <div class="px-2 mb-6">
           <h2
             class="text-[11px] font-bold uppercase tracking-[0.2em] text-sidebar-foreground/50"
           >
@@ -141,12 +176,12 @@
           </h2>
         </div>
 
-        <nav class="flex-1 space-y-2">
+        <nav class="flex-1 space-y-1">
           {#each TABS as tab (tab.id)}
             <button
               onclick={() => (activeTab = tab.id)}
-              class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all relative group {activeTab ===
-              tab.id
+              class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all relative
+                {activeTab === tab.id
                 ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
                 : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'}"
             >
@@ -155,7 +190,7 @@
                   class="absolute left-0 w-1 h-5 bg-sidebar-primary rounded-full"
                 ></div>
               {/if}
-              <tab.icon size={18} />
+              <tab.icon size={17} />
               {tab.label}
             </button>
           {/each}
@@ -163,28 +198,28 @@
 
         <Button
           variant="ghost"
-          class="justify-start gap-3 rounded-xl text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+          class="justify-start gap-3 rounded-xl text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent text-sm"
           onclick={handleReset}
         >
-          <RotateCcw size={16} /> Reset to Defaults
+          <RotateCcw size={15} /> Reset to Defaults
         </Button>
       </aside>
 
       <main
         class="flex-1 min-w-0 flex flex-col bg-background min-h-0 overflow-hidden"
       >
-        <div class="flex-1 overflow-y-auto p-8 sm:p-12 scrollbar-thin">
+        <div class="flex-1 overflow-y-auto p-5 sm:p-7 lg:p-10 scrollbar-thin">
           {#if activeTab === "general"}
             <div
               class="w-full space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300"
             >
-              <header class="space-y-2">
+              <header class="space-y-1.5">
                 <h3
-                  class="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground"
+                  class="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-foreground"
                 >
                   Appearance
                 </h3>
-                <p class="text-sm sm:text-base text-muted-foreground">
+                <p class="text-xs sm:text-sm text-muted-foreground">
                   Customize how the application looks and behaves
                 </p>
               </header>
@@ -260,9 +295,9 @@
             <div
               class="w-full space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-300"
             >
-              <header class="space-y-3">
+              <header class="space-y-2">
                 <h3
-                  class="text-3xl font-extrabold tracking-tight text-foreground"
+                  class="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-foreground"
                 >
                   Downloads
                 </h3>
@@ -303,14 +338,14 @@
             <div
               class="w-full space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-10"
             >
-              <header class="flex justify-between items-end">
-                <div class="space-y-2">
+              <header class="flex flex-wrap justify-between items-end gap-3">
+                <div class="space-y-1">
                   <h3
-                    class="text-3xl font-extrabold tracking-tight text-foreground"
+                    class="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-foreground"
                   >
                     Cookies
                   </h3>
-                  <p class="text-sm text-muted-foreground">
+                  <p class="text-xs sm:text-sm text-muted-foreground">
                     Import Netscape or JSON cookies by domain
                   </p>
                 </div>
@@ -396,8 +431,12 @@
             <div
               class="w-full space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-300"
             >
-              <header class="space-y-3">
-                <h3 class="text-3xl font-extrabold tracking-tight">Privacy</h3>
+              <header class="space-y-2">
+                <h3
+                  class="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight"
+                >
+                  Privacy
+                </h3>
               </header>
               <div class="space-y-4">
                 <div class="flex items-center justify-between px-2">
@@ -420,10 +459,10 @@
                 <div class="flex items-center justify-between px-2">
                   <div class="space-y-1">
                     <Label for="clear-exit" class="text-[15px] font-medium"
-                      >Clear History on Exit</Label
+                      >Clear Cookies on Exit</Label
                     >
                     <p class="text-xs text-muted-foreground">
-                      Wipe temporary data and cache when closing
+                      Wipe cookies and cache when closing
                     </p>
                   </div>
                   <Switch
