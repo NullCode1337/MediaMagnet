@@ -68,7 +68,7 @@
   }
 
   async function startDownload(input: string) {
-    const urlRegex = /https?:\/\/[^\s,)]+/gi;
+    const urlRegex = /https?:\/\/[^\s,)"]+/gi;
     const matches = input.match(urlRegex);
 
     if (!matches || matches.length === 0) {
