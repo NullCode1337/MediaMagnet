@@ -356,6 +356,22 @@ fn strip_ansi_codes(s: &str) -> String {
 pub async fn downloader(app: tauri::AppHandle, url: String, download_id: String) {
     let lc = url.to_lowercase();
 
+    if lc.contains("didg") && lc.contains("ls.i") {
+        if !lc.contains("original") {
+            let _ = app.emit(
+                "download-status",
+                StatusPayload {
+                    id: download_id.clone(),
+                    value: "Skipped: Not original version".into(),
+                },
+            );
+
+            let _ = app.emit("download-finished", IdPayload { id: download_id });
+            
+            return; 
+        }
+    }
+
     if !lc.contains("http") {
         let _ = app.emit(
             "download-error",
