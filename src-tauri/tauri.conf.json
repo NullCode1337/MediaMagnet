@@ -16,6 +16,7 @@
         "title": "MediaMagnet",
         "width": 800,
         "height": 600,
+        "minHeight": 200,
         "backgroundColor": "#2e2e32",
         "alwaysOnTop": true,
         "dragDropEnabled": true,
