@@ -197,7 +197,8 @@ pub async fn get_free_space(app: tauri::AppHandle) -> Result<f64, String> {
 
     let disks = sysinfo::Disks::new_with_refreshed_list();
 
-    let disk = disks.iter()
+    let disk = disks
+        .iter()
         .filter(|d| download_path.starts_with(d.mount_point()))
         .max_by_key(|d| d.mount_point().as_os_str().len());
 

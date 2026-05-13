@@ -92,7 +92,9 @@ async fn base_command(app: &tauri::AppHandle, command: &str) -> Result<Command> 
                 let mut checked_set = version.lock().map_err(|_| "Lock failed")?;
                 if !checked_set.contains(command) {
                     println!("\n[MediaMagnet][Download] Backend: Prebuilt {}", command);
-                    println!("  -> This is usually out-of-date, please download the latest version and put in PATH!");
+                    println!(
+                        "  -> This is usually out-of-date, please download the latest version and put in PATH!"
+                    );
                     checked_set.insert(command.to_string());
                 }
 
