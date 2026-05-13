@@ -1,968 +1,482 @@
-<script>
-  import {
-    activePanel,
-    addNotification,
-    closePanel,
-    cookies,
-    openPanel,
-    settings,
-    showCookieDialog,
-  } from "$lib/stores/store";
-
+<script lang="ts">
+  import * as Dialog from "$lib/components/ui/dialog";
+  import { Button } from "$lib/components/ui/button";
+  import { Input } from "$lib/components/ui/input";
+  import { Label } from "$lib/components/ui/label";
+  import { Switch } from "$lib/components/ui/switch";
+  import { Separator } from "$lib/components/ui/separator";
   import { invoke } from "@tauri-apps/api/core";
-  import { ask, open } from "@tauri-apps/plugin-dialog";
-  import { writeText } from '@tauri-apps/plugin-clipboard-manager';
+  import { onMount } from "svelte";
+  import {
+    Settings as SettingsIcon,
+    RotateCcw,
+    Monitor,
+    Download,
+    Sun,
+    Moon,
+    Cookie,
+    FileKey,
+    Trash2,
+    ShieldCheck,
+  } from "@lucide/svelte";
+  import { toggleMode, mode } from "mode-watcher";
 
-  import CookieDialog from "./CookieDialog.svelte";
-  import "@fortawesome/fontawesome-free/css/all.min.css";
+  let { isCollapsed } = $props();
+  let activeTab = $state("general");
+  let config = $state({
+    download_path: "",
+    user_agent: "",
+    dark_mode: true,
+    always_on_top: true,
+    show_decor: true,
+    notifications: false,
+    clear_on_exit: false,
+  });
 
-  let activeSection = "appearance";
-  let deletingCookie = "";
+  const TABS = [
+    { id: "general", label: "Appearance", icon: Monitor },
+    { id: "downloads", label: "Downloads", icon: Download },
+    { id: "cookies", label: "Cookies", icon: Cookie },
+    { id: "privacy", label: "Privacy", icon: ShieldCheck },
+  ];
 
-  function toggleSettingsPanel() {
-    if ($activePanel === "settings") {
-      closePanel();
-    } else {
-      openPanel("settings");
-    }
-  }
+  let cookieDomain = $state("");
+  let cookieRawContent = $state("");
+  let savedCookies = $state<Record<string, string>>({});
 
-  // @ts-ignore
-  function setActiveSection(section) {
-    activeSection = section;
-  }
-
-  // @ts-ignore
-  async function updateSetting(key, value) {
-    $settings = { ...$settings, [key]: value };
-    console.log($settings);
-    await invoke("update_settings", { settings: $settings });
-  }
-
-  async function resetSettings() {
-    const confirm = await ask(
-      "Are you sure you want to reset all settings to default?",
-      {
-        title: "Reset Settings",
-        kind: "warning",
-      },
-    );
-
-    if (!confirm) return;
-
-    $settings = await invoke("settings", { action: "reset" });
-    addNotification("Settings reset to factory default", "success");
-  }
-
-  async function selectDir() {
-    const dir = await open({
-      multiple: false,
-      directory: true,
-    });
-
-    updateSetting("download_path", dir);
-  }
-
-  // @ts-ignore
-  function openDeleteConfirm(path) { deletingCookie = path; }
-  function cancelDelete() { deletingCookie = ""; }
-
-  // @ts-ignore
-  async function confirmDelete(path) {
+  async function loadCookies() {
     try {
-      await invoke("delete_cookie", { path });
-      $cookies = await invoke("get_cookies");
-      deletingCookie = "";
-    } catch (error) {
-      addNotification(`Error: ${error}`, "error");
+      savedCookies = await invoke("get_cookies");
+    } catch (err) {
+      console.error("Failed to load cookies:", err);
     }
   }
+
+  onMount(async () => {
+    try {
+      const savedConfig = await invoke<Partial<typeof config>>("settings", {
+        action: "check",
+      });
+      config = { ...config, ...savedConfig };
+    } catch (err) {
+      console.error("Failed to load settings:", err);
+    }
+    loadCookies();
+  });
+
+  async function save() {
+    config.dark_mode = mode.current === "dark";
+    await invoke("update_settings", { settings: $state.snapshot(config) });
+  }
+
+  async function handleSaveCookie() {
+    try {
+      await invoke("save_cookie", {
+        domain: cookieDomain,
+        input: { type: "Content", value: cookieRawContent },
+      });
+      cookieDomain = "";
+      cookieRawContent = "";
+      await loadCookies();
+    } catch (err) {
+      console.error("Save error:", err);
+    }
+  }
+
+  async function handleDeleteCookie(path: string) {
+    await invoke("delete_cookie", { path });
+    await loadCookies();
+  }
+
+  async function handleClearAllCookies() {
+    await invoke("clear_cookies");
+    await loadCookies();
+  }
+
+  function handleThemeToggle() {
+    toggleMode();
+    setTimeout(save, 50);
+  }
+
+  async function handleReset() {
+    config = await invoke("settings", { action: "reset" });
+  }
+
+  const switchClass =
+    "data-[state=checked]:bg-primary data-[state=unchecked]:bg-input border-2 border-transparent transition-colors";
 </script>
 
-<div class="settings-container">
-  <button
-    class="toolbar-button settings {$activePanel === 'settings'
-      ? 'active'
-      : ''}"
-    aria-label="Click to view settings"
-    title="Show settings"
-    on:click={toggleSettingsPanel}
-  >
-    <i class="fa-solid fa-gear fa-lg"></i>
-  </button>
-
-  {#if $activePanel === "settings"}
-    <div class="settings-panel">
-      <div class="panel-header" data-tauri-drag-region>
-        <h3 data-tauri-drag-region>Settings</h3>
-
-        <div class="header-actions">
-          <button
-            class="reset-settings {$settings.show_decor ? 'titlebar' : ''}"
-            on:click={resetSettings}
-            aria-label="Reset all settings to default"
-            title="Reset settings"
+<Dialog.Root>
+  <Dialog.Trigger>
+    {#snippet child({ props })}
+      <Button
+        {...props}
+        variant="ghost"
+        class="w-full h-11 transition-all duration-200 {isCollapsed
+          ? 'justify-center'
+          : 'justify-start gap-4 px-4'} hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+      >
+        <SettingsIcon size={20} class="text-sidebar-foreground/70" />
+        {#if !isCollapsed}
+          <span class="font-medium text-[15px] text-sidebar-foreground"
+            >Settings</span
           >
-            <i class="fas fa-undo"></i>
-            Reset Defaults
+        {/if}
+      </Button>
+    {/snippet}
+  </Dialog.Trigger>
+
+  <Dialog.Content
+    class="sm:max-w-none w-[95vw] max-w-[850px] p-0 gap-0 overflow-hidden border-border bg-background shadow-2xl rounded-2xl flex flex-col !top-[calc(50%_+_20px)] h-[90vh] !max-h-[min(600px,calc(90vh_-_40px))]"
+  >
+    <div
+      class="flex flex-col sm:flex-row w-full h-full items-stretch overflow-hidden"
+    >
+      <div
+        class="sm:hidden flex items-center gap-1 border-b border-sidebar-border bg-sidebar px-3 py-2 shrink-0 overflow-x-auto scrollbar-none"
+      >
+        <span
+          class="text-[10px] font-bold uppercase tracking-widest text-sidebar-foreground/40 mr-2 shrink-0"
+          >Settings</span
+        >
+        {#each TABS as tab (tab.id)}
+          <button
+            onclick={() => (activeTab = tab.id)}
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs whitespace-nowrap transition-all shrink-0 relative
+              {activeTab === tab.id
+              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
+              : 'text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'}"
+          >
+            {#if activeTab === tab.id}
+              <div
+                class="absolute bottom-0 left-2 right-2 h-0.5 bg-sidebar-primary rounded-full"
+              ></div>
+            {/if}
+            <tab.icon size={14} />
+            {tab.label}
           </button>
-        </div>
+        {/each}
+        <button
+          onclick={handleReset}
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs whitespace-nowrap shrink-0 ml-auto text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all"
+        >
+          <RotateCcw size={13} />
+          Reset
+        </button>
       </div>
 
-      <div class="settings-layout">
-        <div class="settings-sidebar">
-          <nav class="sidebar-nav" data-tauri-drag-region>
-            <button
-              class="nav-item {activeSection === 'appearance' ? 'active' : ''}"
-              on:click={() => setActiveSection("appearance")}
-            >
-              <i class="fas fa-palette"></i>
-              <span>Appearance</span>
-            </button>
-
-            <button
-              class="nav-item {activeSection === 'download' ? 'active' : ''}"
-              on:click={() => setActiveSection("download")}
-            >
-              <i class="fas fa-download"></i>
-              <span>Download</span>
-            </button>
-
-            <button
-              class="nav-item {activeSection === 'cookies' ? 'active' : ''}"
-              on:click={() => setActiveSection("cookies")}
-            >
-              <i class="fas fa-cookie"></i>
-              <span>Cookies</span>
-            </button>
-          </nav>
+      <aside
+        class="hidden sm:flex w-[200px] lg:w-[240px] border-r border-sidebar-border bg-sidebar p-5 lg:p-8 flex-col shrink-0"
+      >
+        <div class="px-2 mb-6">
+          <h2
+            class="text-[11px] font-bold uppercase tracking-[0.2em] text-sidebar-foreground/50"
+          >
+            Configuration
+          </h2>
         </div>
 
-        <div class="settings-content">
-          {#if activeSection === "appearance"}
-            <div class="settings-section">
-              <h2 class="section-title">Appearance Settings</h2>
+        <nav class="flex-1 space-y-1">
+          {#each TABS as tab (tab.id)}
+            <button
+              onclick={() => (activeTab = tab.id)}
+              class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all relative
+                {activeTab === tab.id
+                ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
+                : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'}"
+            >
+              {#if activeTab === tab.id}
+                <div
+                  class="absolute left-0 w-1 h-5 bg-sidebar-primary rounded-full"
+                ></div>
+              {/if}
+              <tab.icon size={17} />
+              {tab.label}
+            </button>
+          {/each}
+        </nav>
 
-              <div class="settings-group">
-                <h4>Theme</h4>
+        <Button
+          variant="ghost"
+          class="justify-start gap-3 rounded-xl text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent text-sm"
+          onclick={handleReset}
+        >
+          <RotateCcw size={15} /> Reset to Defaults
+        </Button>
+      </aside>
 
-                <div class="setting-item checkbox">
-                  <input
-                    id="darkMode"
-                    type="checkbox"
-                    bind:checked={$settings.dark_mode}
-                    on:change={() =>
-                      updateSetting("dark_mode", $settings.dark_mode)}
-                  />
-                  <label for="dark_mode">Dark Mode</label>
-                </div>
-              </div>
+      <main
+        class="flex-1 min-w-0 flex flex-col bg-background min-h-0 overflow-hidden"
+      >
+        <div class="flex-1 overflow-y-auto p-5 sm:p-7 lg:p-10 scrollbar-thin">
+          {#if activeTab === "general"}
+            <div
+              class="w-full space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300"
+            >
+              <header class="space-y-1.5">
+                <h3
+                  class="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-foreground"
+                >
+                  Appearance
+                </h3>
+                <p class="text-xs sm:text-sm text-muted-foreground">
+                  Customize how the application looks and behaves
+                </p>
+              </header>
 
-              <div class="settings-group">
-                <h4>Window Behavior</h4>
-
-                <div class="setting-item checkbox">
-                  <input
-                    id="alwaysOnTop"
-                    type="checkbox"
-                    bind:checked={$settings.always_on_top}
-                    on:change={() =>
-                      updateSetting("always_on_top", $settings.always_on_top)}
-                  />
-                  <label for="always_on_top">Always on Top</label>
-                </div>
-
-                <div class="setting-item checkbox">
-                  <input
-                    id="showDecor"
-                    type="checkbox"
-                    bind:checked={$settings.show_decor}
-                    on:change={() =>
-                      updateSetting("show_decor", $settings.show_decor)}
-                  />
-                  <label for="show_decor">Use custom titlebar</label>
-                </div>
-              </div>
-            </div>
-          {:else if activeSection === "download"}
-            <div class="settings-section">
-              <h2 class="section-title">Download Settings</h2>
-
-              <div class="settings-group">
-                <h4>Storage</h4>
-
-                <div class="setting-item text-input">
-                  <label for="downloadPath">Download Location</label>
-                  <div class="input-group">
-                    <input
-                      id="downloadPath"
-                      type="text"
-                      bind:value={$settings.download_path}
-                      on:change={() =>
-                        updateSetting("download_path", $settings.download_path)}
-                      placeholder="Select download directory"
-                    />
-                    <!-- svelte-ignore a11y_consider_explicit_label -->
-                    <button
-                      class="browse-button"
-                      title="Browse"
-                      on:click={selectDir}
+              <div class="space-y-6">
+                <div
+                  class="flex items-center justify-between p-5 rounded-2xl border border-border bg-card"
+                >
+                  <div class="space-y-1">
+                    <Label class="text-base font-semibold text-card-foreground"
+                      >Dark Mode</Label
                     >
-                      <i class="fas fa-folder-open"></i>
-                    </button>
+                    <p class="text-xs text-muted-foreground">
+                      Apply a high-contrast dark theme
+                    </p>
+                  </div>
+                  <div class="flex items-center gap-4">
+                    {#if mode.current === "dark"}
+                      <Moon size={18} class="text-primary" />
+                    {:else}
+                      <Sun size={18} class="text-primary" />
+                    {/if}
+                    <Switch
+                      checked={mode.current === "dark"}
+                      onCheckedChange={handleThemeToggle}
+                      class={switchClass}
+                    />
+                  </div>
+                </div>
+
+                <div class="space-y-4 pt-2">
+                  <div class="flex items-center justify-between px-2">
+                    <div class="space-y-1">
+                      <Label
+                        for="always-on-top"
+                        class="text-sm font-medium text-foreground"
+                        >Keep Always on Top</Label
+                      >
+                      <p class="text-[11px] text-muted-foreground">
+                        Prevent other windows from covering the app
+                      </p>
+                    </div>
+                    <Switch
+                      id="always-on-top"
+                      bind:checked={config.always_on_top}
+                      onCheckedChange={save}
+                      class={switchClass}
+                    />
+                  </div>
+                  <Separator class="bg-border" />
+                  <div class="flex items-center justify-between px-2">
+                    <div class="space-y-1">
+                      <Label
+                        for="decor"
+                        class="text-sm font-medium text-foreground"
+                        >Native Decorations</Label
+                      >
+                      <p class="text-[11px] text-muted-foreground">
+                        Show standard title bars and window borders
+                      </p>
+                    </div>
+                    <Switch
+                      id="decor"
+                      bind:checked={config.show_decor}
+                      onCheckedChange={save}
+                      class={switchClass}
+                    />
                   </div>
                 </div>
               </div>
+            </div>
+          {:else if activeTab === "downloads"}
+            <div
+              class="w-full space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-300"
+            >
+              <header class="space-y-2">
+                <h3
+                  class="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-foreground"
+                >
+                  Downloads
+                </h3>
+              </header>
 
-              <div class="settings-group">
-                <h4>Network</h4>
-
-                <div class="setting-item text-input">
-                  <label for="userAgent">User Agent</label>
-                  <div class="input-group">
-                    <input
-                      id="userAgent"
-                      type="text"
-                      bind:value={$settings.user_agent}
-                      on:change={() =>
-                        updateSetting("user_agent", $settings.user_agent)}
-                      placeholder="Enter custom user agent string"
+              <div class="space-y-8">
+                <div class="space-y-3">
+                  <Label
+                    class="text-sm font-bold uppercase tracking-widest text-primary"
+                    >Download Location</Label
+                  >
+                  <div class="flex gap-2">
+                    <Input
+                      bind:value={config.download_path}
+                      placeholder="/downloads"
+                      class="rounded-xl bg-muted text-foreground border-border focus:ring-primary"
                     />
-                    <!-- svelte-ignore a11y_consider_explicit_label -->
-                    <button
-                      class="browse-button"
-                      title="Reset to None"
-                      on:click={() => updateSetting("user_agent", "None")}
+                    <Button variant="secondary" class="rounded-xl px-4"
+                      >Browse</Button
                     >
-                      <i class="fas fa-undo"></i>
-                    </button>
                   </div>
                 </div>
-              </div>
 
-              <div class="settings-group">
-                <h4>Notifications</h4>
-
-                <div class="setting-item checkbox">
-                  <input
-                    id="notifications"
-                    type="checkbox"
-                    bind:checked={$settings.notifications}
-                    on:change={() =>
-                      updateSetting("notifications", $settings.notifications)}
+                <div class="space-y-3">
+                  <Label
+                    class="text-sm font-bold uppercase tracking-widest text-primary/80"
+                    >Custom User Agent</Label
+                  >
+                  <Input
+                    bind:value={config.user_agent}
+                    placeholder="Mozilla/5.0..."
+                    class="rounded-xl bg-muted/20 font-mono text-xs border-border/40 focus:ring-primary"
                   />
-                  <label for="notifications">Enable system notifications</label>
                 </div>
               </div>
             </div>
-          {:else if activeSection === "cookies"}
-            <div class="settings-section">
-              <h2 class="section-title">Cookie Management</h2>
-
-              <div class="settings-group">
-                <h4>Cookie Settings</h4>
-
-                <div class="setting-item checkbox">
-                  <input
-                    id="clear_on_exit"
-                    type="checkbox"
-                    bind:checked={$settings.clear_on_exit}
-                    on:change={() =>
-                      updateSetting("clear_on_exit", $settings.clear_on_exit)}
-                  />
-                  <label for="clear_on_exit">Delete cookies on app exit</label>
+          {:else if activeTab === "cookies"}
+            <div
+              class="w-full space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-10"
+            >
+              <header class="flex flex-wrap justify-between items-end gap-3">
+                <div class="space-y-1">
+                  <h3
+                    class="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-foreground"
+                  >
+                    Cookies
+                  </h3>
+                  <p class="text-xs sm:text-sm text-muted-foreground">
+                    Import Netscape or JSON cookies by domain
+                  </p>
                 </div>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  class="rounded-xl gap-2"
+                  onclick={handleClearAllCookies}
+                >
+                  <Trash2 size={14} /> Clear All
+                </Button>
+              </header>
+
+              <div
+                class="p-6 rounded-2xl border border-border bg-card space-y-4"
+              >
+                <div class="space-y-2">
+                  <Label class="text-xs font-bold uppercase tracking-wider"
+                    >Domain Name</Label
+                  >
+                  <Input
+                    bind:value={cookieDomain}
+                    placeholder="example.com"
+                    class="rounded-lg"
+                  />
+                </div>
+                <div class="space-y-2">
+                  <Label class="text-xs font-bold uppercase tracking-wider"
+                    >Raw Content (JSON or Netscape)</Label
+                  >
+                  <textarea
+                    bind:value={cookieRawContent}
+                    class="w-full min-h-[120px] max-h-[200px] p-3 rounded-lg bg-muted text-xs font-mono border-none focus:ring-1 focus:ring-primary resize-none"
+                    placeholder={"[ { 'domain': '.google.com', ... } ] or # Netscape format..."}
+                  ></textarea>
+                </div>
+                <Button
+                  class="w-full rounded-xl"
+                  disabled={!cookieDomain || !cookieRawContent}
+                  onclick={handleSaveCookie}
+                >
+                  Import Cookie
+                </Button>
               </div>
 
-              <div class="settings-group">
-                <h4>Stored Cookies</h4>
-
-                <div class="cookies-list">
-                {#if Object.keys($cookies || {}).length === 0}
-                  <div class="cookies-empty"> No cookies stored!</div>
-                {:else}
-                  {#each Object.entries($cookies) as [name, path]}
-                    <div class="cookie-item {deletingCookie === path ? 'confirming' : ''}">
-                      <!-- svelte-ignore a11y_no_static_element_interactions -->
-                      {#if deletingCookie === path}
-                        <div class="inline-confirm">
-                          <span class="confirm-text">Delete <strong>{name}</strong>?</span>
-                          <div class="confirm-actions">
-                            <button class="btn-text cancel" on:click={cancelDelete}>Cancel</button>
-                            <button class="btn-text delete" on:click={() => confirmDelete(path)}>Confirm</button>
-                          </div>
+              <div class="space-y-3">
+                <Label
+                  class="text-xs font-bold uppercase tracking-widest text-primary"
+                  >Active Sessions</Label
+                >
+                <div class="grid gap-2">
+                  {#each Object.entries(savedCookies) as [domain, path] (domain)}
+                    <div
+                      class="flex items-center justify-between p-3 rounded-xl border border-border/50 bg-muted/30"
+                    >
+                      <div class="flex items-center gap-3">
+                        <div class="p-2 rounded-lg bg-primary/10 text-primary">
+                          <FileKey size={16} />
                         </div>
-                      {:else}
-                        <div class="cookie-info">
-                          <span class="cookie-name">{name}</span>
-                          <!-- svelte-ignore a11y_click_events_have_key_events -->
-                          <span 
-                            class="cookie-details"
-                            on:click={async () => {
-                              await writeText(path);
-                              addNotification(`Copied cookie path to clipboard`, "success");
-                            }}>{path}</span>
-                        </div>
-                        <button
-                          class="cookie-delete"
-                          title="Delete cookie"
-                          aria-label="Click this button to delete the cookie"
-                          on:click={() => openDeleteConfirm(path)}
-                        >
-                          <i class="fas fa-trash"></i>
-                        </button>
-                      {/if}
+                        <span class="text-sm font-medium">{domain}</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        class="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onclick={() => handleDeleteCookie(path)}
+                      >
+                        <Trash2 size={16} />
+                      </Button>
                     </div>
                   {/each}
-                {/if}
+                  {#if Object.keys(savedCookies).length === 0}
+                    <p
+                      class="text-center py-8 text-sm text-muted-foreground italic"
+                    >
+                      No cookies stored
+                    </p>
+                  {/if}
+                </div>
               </div>
-
-                <div class="cookie-actions">
-                  <button
-                    class="action-button secondary"
-                    on:click={() => ($showCookieDialog = true)}
-                    title="Add Cookie"
-                    aria-label="Click to add cookie to the app"
-                  >
-                    <i class="fas fa-plus"></i>
-                    Add Cookie
-                  </button>
-
-                  <button
-                    class="action-button secondary"
-                    on:click={async() => {
-                      $cookies = await invoke("get_cookies");
-                      addNotification("Cookies refreshed!")}}
-                    title="Refresh list"
-                  >
-                    <i class="fas fa-sync-alt"></i>
-                    Refresh
-                  </button>
-
-                  <CookieDialog />
-
-                  <button 
-                    class="action-button warning"
-                    on:click={async () => {
-                      await invoke("clear_cookies");
-                      $cookies = await invoke("get_cookies");
-                    }}
-                  >
-                    <i class="fas fa-trash-alt"></i>
-                    Clear All Cookies
-                  </button>
+            </div>
+          {:else if activeTab === "privacy"}
+            <div
+              class="w-full space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-300"
+            >
+              <header class="space-y-2">
+                <h3
+                  class="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight"
+                >
+                  Privacy
+                </h3>
+              </header>
+              <div class="space-y-4">
+                <div class="flex items-center justify-between px-2">
+                  <div class="space-y-1">
+                    <Label for="notifications" class="text-[15px] font-medium"
+                      >Desktop Notifications</Label
+                    >
+                    <p class="text-xs text-muted-foreground">
+                      Alert when downloads finish or fail
+                    </p>
+                  </div>
+                  <Switch
+                    id="notifications"
+                    bind:checked={config.notifications}
+                    onCheckedChange={save}
+                    class={switchClass}
+                  />
+                </div>
+                <Separator class="opacity-20" />
+                <div class="flex items-center justify-between px-2">
+                  <div class="space-y-1">
+                    <Label for="clear-exit" class="text-[15px] font-medium"
+                      >Clear Cookies on Exit</Label
+                    >
+                    <p class="text-xs text-muted-foreground">
+                      Wipe cookies and cache when closing
+                    </p>
+                  </div>
+                  <Switch
+                    id="clear-exit"
+                    bind:checked={config.clear_on_exit}
+                    onCheckedChange={save}
+                    class={switchClass}
+                  />
                 </div>
               </div>
             </div>
           {/if}
         </div>
-      </div>
+      </main>
     </div>
-  {/if}
-</div>
-
-<style>
-  .settings-container {
-    position: relative;
-    user-select: none;
-    display: inline-block;
-  }
-
-  .toolbar-button {
-    cursor: pointer;
-    border-radius: 16px;
-    background: transparent;
-    border: none;
-    padding: 16px;
-    position: relative;
-    z-index: 102;
-    transition: background-color 0.2s ease;
-  }
-
-  .cookies-empty {
-    font-size: 18px;
-    color: white;
-    font-family: "ubuntu-regular", "noto-sans-semibold", sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 10vh; 
-    text-align: center;
-  }
-
-  .active {
-    background: rgba(255, 255, 255, 0.2);
-  }
-
-  .toolbar-button:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-  }
-
-  i {
-    pointer-events: none;
-  }
-
-  .toolbar-button i {
-    color: var(--text-color);
-  }
-
-  .settings-panel {
-    position: fixed;
-    top: 0;
-    left: 85px;
-    height: 100vh;
-    right: 0;
-    background: var(--main-bg);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-    overflow-y: hidden;
-    z-index: 10;
-    border-left: 1px solid rgba(255, 255, 255, 0.1);
-    display: flex;
-    flex-direction: column;
-  }
-
-  .panel-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px;
-    background: var(--sidebar-bg);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    flex-shrink: 0;
-  }
-
-  .header-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .reset-settings {
-    position: inherit;
-    top: 15px;
-    color: #ffa502;
-    background-color: var(--main-bg);
-    border: 1px solid #ffa502;
-    border-radius: 4px;
-    padding: 6px 10px;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-family: "noto-sans-semibold", sans-serif;
-  }
-
-  .reset-settings.titlebar {
-    position: fixed;
-    right: 122px;
-  }
-
-  .reset-settings:hover {
-    background: rgba(255, 165, 2, 0.3);
-  }
-
-  .panel-header h3 {
-    margin: 2px 8px 2px 0;
-    color: var(--text-color);
-    font-size: 16px;
-    font-family: "noto-sans-semibold", sans-serif;
-    user-select: none;
-  }
-
-  .settings-layout {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-  }
-
-  .settings-sidebar {
-    width: 200px;
-    background: var(--sidebar-bg);
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 20px 0;
-    flex-shrink: 0;
-  }
-
-  .sidebar-nav {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 0 12px;
-  }
-
-  .nav-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    background: transparent;
-    border: none;
-    border-radius: 8px;
-    color: var(--text-color);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-family: "noto-sans-semibold", sans-serif;
-    font-size: 14px;
-  }
-
-  .nav-item:hover {
-    background: rgba(255, 255, 255, 0.05);
-  }
-
-  .nav-item.active {
-    background: rgba(110, 142, 251, 0.2);
-    color: #6e8efb;
-  }
-
-  .nav-item i {
-    width: 16px;
-    text-align: center;
-  }
-
-  .settings-content {
-    flex: 1;
-    overflow-y: auto;
-    padding: 24px;
-  }
-
-  .settings-section {
-    max-width: 600px;
-  }
-
-  .section-title {
-    color: var(--text-color);
-    font-size: 20px;
-    margin: 0 0 24px 0;
-    font-family: "noto-sans-semibold", sans-serif;
-  }
-
-  .settings-group {
-    margin-bottom: 32px;
-    padding: 0 8px;
-    min-width: 0;
-  }
-
-  .settings-group h4 {
-    color: var(--text-color);
-    font-size: 14px;
-    margin: 0 0 16px 0;
-    font-family: "noto-sans-semibold", sans-serif;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  .setting-item {
-    margin-bottom: 16px;
-    padding: 12px 16px;
-    border-radius: 8px;
-    transition: all 0.2s ease;
-  }
-
-  .setting-item.checkbox {
-    padding: 8px 16px;
-    display: flex;
-    align-items: center;
-  }
-
-  .setting-item.text-input {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    min-width: 0;
-  }
-
-  .setting-item label {
-    color: var(--text-color);
-    font-size: 14px;
-    font-family: "noto-sans-semibold", sans-serif;
-    margin-bottom: 0;
-  }
-
-  .setting-item.checkbox label {
-    margin-left: 8px;
-    min-width: auto;
-    flex: 1;
-  }
-
-  .setting-item input[type="text"] {
-    width: 100%;
-    margin-right: 5px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 6px;
-    padding: 10px 12px;
-    color: var(--text-color);
-    font-family: "noto-sans-semibold", sans-serif;
-    font-size: 13px;
-    transition: all 0.2s ease;
-    box-sizing: border-box;
-    min-width: 0;
-  }
-
-  .setting-item input[type="text"]:focus {
-    outline: none;
-    border-color: #6e8efb;
-    background: rgba(255, 255, 255, 0.15);
-  }
-
-  .setting-item input[type="checkbox"] {
-    appearance: none;
-    width: 18px;
-    height: 18px;
-    border: 1px solid rgba(0, 0, 0, 0.3);
-    border-radius: 3px;
-    color: white;
-    background: rgba(255, 255, 255, 0.1);
-    position: relative;
-    cursor: pointer;
-    margin: 0;
-    flex-shrink: 0;
-  }
-
-  .setting-item input[type="checkbox"]:checked {
-    background: #6e8efb;
-    border-color: #6e8efb;
-  }
-
-  .setting-item input[type="checkbox"]:checked::after {
-    content: "✓";
-    position: absolute;
-    font-size: 12px;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-  }
-
-  :global(body:not(.dark)) .setting-item input[type="checkbox"] {
-    border: 1px solid rgba(0, 0, 0, 0.5);
-    background: rgba(255, 255, 255, 0.95);
-  }
-
-  :global(body:not(.dark)) .setting-item input[type="checkbox"]:checked {
-    background: #6e8efb;
-    border-color: #6e8efb;
-  }
-
-  :global(body:not(.dark)) .setting-item input[type="checkbox"]:checked::after {
-    color: white;
-  }
-
-  :global(body:not(.dark)) .setting-item input[type="checkbox"]:not(:checked) {
-    border: 1px solid rgba(0, 0, 0, 0.6);
-    background: rgba(255, 255, 255, 0.98);
-  }
-
-  .input-group {
-    display: flex;
-    width: 100%;
-  }
-
-  .input-group input {
-    flex: 1;
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
-    border-right: none;
-  }
-
-  .browse-button {
-    background: rgba(110, 142, 251, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 6px;
-    color: #6e8efb;
-    padding: 0 16px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    min-width: 50px;
-    flex-shrink: 0;
-  }
-
-  .browse-button:hover {
-    background: rgba(110, 142, 251, 0.5);
-  }
-
-  .cookies-list {
-    margin-bottom: 16px;
-  }
-
-  .cookie-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 6px;
-    margin-bottom: 8px;
-  }
-
-  .cookie-info {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .cookie-name {
-    font-family: "noto-sans-semibold", sans-serif;
-    color: var(--text-color);
-    font-size: 14px;
-    padding: 2px 5px 5px 0;
-  }
-
-  .cookie-details {
-    font-size: 12px;
-    font-family: 'ubuntu-regular', Arial, Helvetica, sans-serif;
-    color: var(--text-color);
-    user-select: all;
-    pointer-events: all;
-    cursor: pointer;
-  }
-
-  .cookie-details:hover {
-    text-decoration: underline;
-  }
-
-  .cookie-delete {
-    background: transparent;
-    border: none;
-    color: #ff6b6b;
-    cursor: pointer;
-    padding: 6px;
-    border-radius: 4px;
-    transition: background-color 0.2s ease;
-  }
-
-  .cookie-delete:hover {
-    background: rgba(255, 107, 107, 0.1);
-  }
-
-  .cookie-actions {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-
-  .cookie-item {
-    transition: all 0.2s ease;
-    min-height: 60px;
-    display: flex;
-    align-items: center;
-    overflow: hidden;
-  }
-
-  .cookie-item.confirming {
-    border-color: rgba(255, 107, 107, 0.3);
-  }
-
-  .inline-confirm {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-  }
-
-  .confirm-text {
-    font-size: 14px;
-    color: var(--text-color);
-  }
-
-  .confirm-text strong {
-    color: #ff6b6b;
-  }
-
-  .confirm-actions {
-    display: flex;
-    gap: 8px;
-  }
-
-  .btn-text {
-    background: transparent;
-    border: none;
-    font-family: "noto-sans-semibold", sans-serif;
-    font-size: 13px;
-    cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 4px;
-  }
-
-  .btn-text.cancel {
-    color: var(--text-color);
-    opacity: 0.7;
-  }
-
-  .btn-text.delete {
-    color: #ff6b6b;
-    background: rgba(255, 107, 107, 0.1);
-  }
-
-  .btn-text.delete:hover {
-    background: rgba(255, 107, 107, 0.2);
-  }
-
-  .action-button {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 16px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-family: "noto-sans-semibold", sans-serif;
-    font-size: 13px;
-    transition: all 0.2s ease;
-  }
-
-  .action-button.secondary {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--text-color);
-  }
-
-  .action-button.warning {
-    background: rgba(255, 107, 107, 0.2);
-    color: #ff6b6b;
-  }
-
-  .action-button:hover {
-    transform: translateY(-1px);
-  }
-
-  .action-button.secondary:hover {
-    background: rgba(255, 255, 255, 0.15);
-  }
-
-  .action-button.warning:hover {
-    background: rgba(255, 107, 107, 0.3);
-  }
-
-  .settings-content::-webkit-scrollbar {
-    width: 5px;
-  }
-
-  .settings-content::-webkit-scrollbar-thumb {
-    background: #672f7b;
-    border-radius: 10px;
-  }
-
-  .settings-content::-webkit-scrollbar-thumb:hover {
-    background: #b25de0;
-  }
-
-  .settings-content::-webkit-scrollbar:horizontal {
-    display: none;
-    height: 0;
-  }
-
-  @media (max-width: 768px) {
-    .settings-layout {
-      flex-direction: column;
-    }
-
-    .settings-sidebar {
-      width: 100%;
-      border-right: none;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 12px 0;
-    }
-
-    .sidebar-nav {
-      flex-direction: row;
-      overflow-x: auto;
-      padding: 0 16px;
-    }
-
-    .nav-item {
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-
-    .settings-content {
-      padding: 16px;
-    }
-  }
-
-  @media (max-width: 600px) {
-    .settings-panel {
-      left: 0;
-      top: 45px;
-      height: calc(100vh - 45px);
-      border-left: none;
-    }
-
-    .panel-header {
-      padding: 16px 20px 12px;
-    }
-
-    .reset-settings {
-      position: static;
-      right: auto;
-      top: auto;
-    }
-
-    .header-actions {
-      gap: 8px;
-    }
-
-    .settings-group {
-      margin-bottom: 24px;
-      padding: 0 4px;
-    }
-
-    .setting-item {
-      padding: 10px 12px;
-      margin-bottom: 12px;
-      align-items: center;
-    }
-
-    .setting-item.checkbox {
-      flex-direction: row;
-    }
-
-    .setting-item.text-input {
-      flex-direction: column;
-      gap: 6px;
-      min-width: 0;
-      overflow: visible;
-    }
-
-    .setting-item label {
-      margin-bottom: 0;
-      min-width: 120px;
-      flex-shrink: 0;
-      font-size: 13px;
-    }
-
-    .setting-item.checkbox label {
-      margin-left: 8px;
-      min-width: auto;
-      margin-right: 0;
-    }
-
-    .setting-item input[type="text"] {
-      width: 100%;
-      min-width: 0;
-      padding: 8px 10px;
-      font-size: 12px;
-      box-sizing: border-box;
-    }
-
-    .input-group {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .browse-button {
-      padding: 0 12px;
-      min-width: 44px;
-    }
-
-    .cookie-actions {
-      flex-direction: column;
-    }
-
-    .action-button {
-      justify-content: center;
-    }
-  }
-</style>
+  </Dialog.Content>
+</Dialog.Root>

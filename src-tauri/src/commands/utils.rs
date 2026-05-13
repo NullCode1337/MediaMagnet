@@ -1,33 +1,34 @@
+use serde_json::Value;
 use std::{
-    io::{
-        BufRead, 
-        BufReader, 
-        BufWriter, 
-        Write
-    },
+    io::{BufRead, BufReader, BufWriter, Write},
     path::Path,
 };
-use serde_json::Value;
 
 use super::settings::Settings;
 use tauri::{Emitter, Manager};
 
 pub fn is_netscape(file_path: &Path) -> Result<bool, String> {
-    let file = std::fs::File::open(file_path)
-        .map_err(|e| format!("[MediaMagnet][Utils] Failed to open cookie file '{}': {}", file_path.display(), e))?;
-    
+    let file = std::fs::File::open(file_path).map_err(|e| {
+        format!(
+            "[MediaMagnet][Utils] Failed to open cookie file '{}': {}",
+            file_path.display(),
+            e
+        )
+    })?;
+
     let reader = BufReader::new(file);
     let mut has_header = false;
     let mut has_valid_cookie = false;
 
     for (line_num, result) in reader.lines().enumerate() {
-        let line = result
-            .map_err(|e| format!("Failed to read line {}: {}", line_num + 1, e))?;
-        
+        let line = result.map_err(|e| format!("Failed to read line {}: {}", line_num + 1, e))?;
+
         let trimmed = line.trim();
 
-        if trimmed.is_empty() { continue; }
-        if trimmed.starts_with("# Netscape") || trimmed.starts_with("# HTTP Cookie File") {            
+        if trimmed.is_empty() {
+            continue;
+        }
+        if trimmed.starts_with("# Netscape") || trimmed.starts_with("# HTTP Cookie File") {
             has_header = true;
             continue;
         }
@@ -56,15 +57,21 @@ pub fn convert_json(source_path: &Path, dest_path: &Path) -> Result<(), String> 
     let json_data: Value = serde_json::from_str(&content)
         .map_err(|e| format!("[MediaMagnet][Utils] Invalid JSON format: {}", e))?;
 
-    let output_file = std::fs::File::create(dest_path)
-        .map_err(|e| format!("[MediaMagnet][Utils] Failed to create destination cookie file: {}", e))?;
+    let output_file = std::fs::File::create(dest_path).map_err(|e| {
+        format!(
+            "[MediaMagnet][Utils] Failed to create destination cookie file: {}",
+            e
+        )
+    })?;
 
     let mut output = BufWriter::new(output_file);
 
-    writeln!(output, "# Netscape HTTP Cookie File")
-        .map_err(|e| format!("Write error: {}", e))?;
-    writeln!(output, "# This file was generated from JSON by MediaMagnet\n")
-        .map_err(|e| format!("Write error: {}", e))?;
+    writeln!(output, "# Netscape HTTP Cookie File").map_err(|e| format!("Write error: {}", e))?;
+    writeln!(
+        output,
+        "# This file was generated from JSON by MediaMagnet\n"
+    )
+    .map_err(|e| format!("Write error: {}", e))?;
 
     let cookies = match json_data {
         Value::Array(arr) => arr,
@@ -81,17 +88,23 @@ pub fn convert_json(source_path: &Path, dest_path: &Path) -> Result<(), String> 
     for cookie in cookies {
         if let Value::Object(c) = cookie {
             let domain = c.get("domain").and_then(|v| v.as_str()).unwrap_or("");
-            
-            let flag = if domain.starts_with('.') { "TRUE" } else { "FALSE" };
+
+            let flag = if domain.starts_with('.') {
+                "TRUE"
+            } else {
+                "FALSE"
+            };
 
             let path = c.get("path").and_then(|v| v.as_str()).unwrap_or("/");
-            
-            let secure = c.get("secure")
+
+            let secure = c
+                .get("secure")
                 .and_then(|v| v.as_bool())
                 .map(|b| if b { "TRUE" } else { "FALSE" })
                 .unwrap_or("FALSE");
 
-            let expiration = c.get("expirationDate")
+            let expiration = c
+                .get("expirationDate")
                 .or_else(|| c.get("expires"))
                 .and_then(|v| v.as_f64().map(|f| f as i64))
                 .unwrap_or(0);
@@ -106,7 +119,8 @@ pub fn convert_json(source_path: &Path, dest_path: &Path) -> Result<(), String> 
                 output,
                 "{}{}\t{}\t{}\t{}\t{}\t{}\t{}",
                 prefix, domain, flag, path, secure, expiration, name, value
-            ).map_err(|e| format!("[MediaMagnet][Utils] Failed to write cookie: {}", e))?;
+            )
+            .map_err(|e| format!("[MediaMagnet][Utils] Failed to write cookie: {}", e))?;
         }
     }
 
@@ -170,4 +184,29 @@ pub async fn set_download_path(app: tauri::AppHandle) {
     };
 
     std::env::set_current_dir(&final_dir).unwrap();
+}
+
+#[tauri::command]
+pub async fn get_free_space(app: tauri::AppHandle) -> Result<f64, String> {
+    let settings = Settings::load(&app);
+    let download_path = if settings.download_path == "Default" {
+        app.path().download_dir().unwrap_or_default()
+    } else {
+        Path::new(&settings.download_path).to_path_buf()
+    };
+
+    let disks = sysinfo::Disks::new_with_refreshed_list();
+
+    let disk = disks.iter()
+        .filter(|d| download_path.starts_with(d.mount_point()))
+        .max_by_key(|d| d.mount_point().as_os_str().len());
+
+    if let Some(d) = disk {
+        let total = d.total_space() as f64;
+        let available = d.available_space() as f64;
+        let used_percent = ((total - available) / total) * 100.0;
+        Ok(used_percent)
+    } else {
+        Err("Could not determine disk usage".to_string())
+    }
 }
