@@ -3,6 +3,7 @@ mod commands;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_os::init())
         .setup(|app| {
             const LOGO: &str = r#"
                  _ _                                     _   
@@ -11,11 +12,11 @@ pub fn run() {
 / /\/\ \  __/ (_| | | (_| / /\/\ \ (_| | (_| | | | |  __/ |_ 
 \/    \/\___|\__,_|_|\__,_\/    \/\__,_|\__, |_| |_|\___|\__|
        Download any and all media       |___/                "#;
-            
+
             println!("{}\n", LOGO);
             println!("-> Version: {}", app.package_info().version.to_string());
             commands::init::init_config(app.handle().clone());
-            
+
             Ok(())
         })
         .plugin(tauri_plugin_notification::init())
@@ -34,6 +35,7 @@ pub fn run() {
             commands::init::check_links,
             commands::settings::settings,
             commands::settings::update_settings,
+            commands::utils::get_free_space,
             commands::utils::overwrite_json,
         ])
         .run(tauri::generate_context!())

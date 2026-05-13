@@ -51,19 +51,34 @@ pub fn init_config(app: tauri::AppHandle) {
 
     if !app_data_dir.exists() {
         std::fs::create_dir_all(&app_data_dir)
-            .map_err(|e| format!("[MediaMagnet][Init] Failed to create app data directory: {}", e))
+            .map_err(|e| {
+                format!(
+                    "[MediaMagnet][Init] Failed to create app data directory: {}",
+                    e
+                )
+            })
             .unwrap();
     }
 
     if !cookies_dir.exists() {
         std::fs::create_dir_all(&cookies_dir)
-            .map_err(|e| format!("[MediaMagnet][Init] Failed to create cookies directory: {}", e))
+            .map_err(|e| {
+                format!(
+                    "[MediaMagnet][Init] Failed to create cookies directory: {}",
+                    e
+                )
+            })
             .unwrap();
     }
 
     if !app_config_dir.exists() {
         std::fs::create_dir_all(&app_config_dir)
-            .map_err(|e| format!("[MediaMagnet][Init] Failed to create app config directory: {}", e))
+            .map_err(|e| {
+                format!(
+                    "[MediaMagnet][Init] Failed to create app config directory: {}",
+                    e
+                )
+            })
             .unwrap();
     }
 
@@ -73,7 +88,12 @@ pub fn init_config(app: tauri::AppHandle) {
             serde_json::to_string_pretty(&default_settings).unwrap();
 
         std::fs::write(&settings_json, settings_json_content)
-            .map_err(|e| format!("[MediaMagnet][Init] Failed to write default settings to file: {}", e))
+            .map_err(|e| {
+                format!(
+                    "[MediaMagnet][Init] Failed to write default settings to file: {}",
+                    e
+                )
+            })
             .unwrap();
     }
 

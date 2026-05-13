@@ -3,5 +3,5 @@
 
 fn main() {
     let _ = fix_path_env::fix();
-    gallery_gui_lib::run()
+    mediamagnet_lib::run()
 }

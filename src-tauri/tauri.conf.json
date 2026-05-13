@@ -1,31 +1,27 @@
 {
-  "$schema": "https://schema.tauri.app/config/2",
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "MediaMagnet",
   "mainBinaryName": "MediaMagnet",
   "version": "0.4.2",
   "identifier": "com.nullcode1337.mediamagnet",
   "build": {
-    "beforeDevCommand": "bun run dev",
+    "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "bun run build",
-    "frontendDist": "../build"
-  },
-  "plugins": {
-    "shell": {
-      "open": true
-    }
+    "beforeDevCommand": "bun run dev",
+    "beforeBuildCommand": "bun run build"
   },
   "app": {
-    "withGlobalTauri": true,
     "windows": [
       {
         "title": "MediaMagnet",
-        "width": 700,
-        "height": 495,
+        "width": 800,
+        "height": 600,
         "backgroundColor": "#2e2e32",
         "alwaysOnTop": true,
         "dragDropEnabled": true,
-        "decorations": false
+        "decorations": true,
+        "transparent": true,
+        "resizable": true
       }
     ],
     "security": {
@@ -41,12 +37,6 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ],
-    "externalBin": ["../prebuilts/gallery-dl"],
-    "resources": [
-      "../static/poppins-bold.ttf",
-      "../static/notosans-semibold.ttf",
-      "../static/ubuntu-regular.ttf"
     ]
   }
 }
