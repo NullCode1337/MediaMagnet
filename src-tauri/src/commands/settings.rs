@@ -7,7 +7,7 @@ pub struct Settings {
     pub user_agent: String,
     pub dark_mode: bool,
     pub always_on_top: bool,
-    pub show_decor: bool,
+    pub show_custom: bool,
     pub notifications: bool,
     pub clear_on_exit: bool,
 }
@@ -19,7 +19,7 @@ impl Default for Settings {
             user_agent: "None".to_string(),
             dark_mode: true,
             always_on_top: true,
-            show_decor: true,
+            show_custom: true,
             notifications: false,
             clear_on_exit: false,
         }
@@ -30,7 +30,7 @@ impl Settings {
     pub fn apply(&self, app: &tauri::AppHandle) {
         if let Some(window) = app.get_webview_window("main") {
             let _ = window.set_always_on_top(self.always_on_top);
-            let _ = window.set_decorations(!self.show_decor);
+            let _ = window.set_decorations(!self.show_custom);
         }
     }
 

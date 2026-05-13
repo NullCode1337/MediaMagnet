@@ -3,7 +3,8 @@ export const uiState = $state({
   innerWidth: 0,
   innerHeight: 0,
   isMaximized: false,
-  
+  showCustom: false,
+
   get headless() {
     return (
       !this.isMaximized && 
