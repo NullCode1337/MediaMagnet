@@ -16,72 +16,128 @@
   import Titlebar from "$lib/components/Titlebar.svelte";
   import { uiState } from "$lib/store.svelte";
 
+  interface Task {
+    id: string;
+    url: string;
+    status: string;
+    progress: number;
+    isDownloading: boolean;
+    error: string | null;
+  }
+
+  interface ProgressPayload {
+    id: string;
+    value: number;
+  }
+  interface StatusPayload {
+    id: string;
+    value: string;
+  }
+  interface IdPayload {
+    id: string;
+  }
+
   // eslint-disable-next-line svelte/prefer-writable-derived
   let isCollapsed = $state(false);
-  let innerWidth = $state(0);
   let urlInput = $state("");
   let diskUsage = $state(0);
 
-  let activeTask = $state({
-    status: "Idle",
-    progress: 0,
-    isDownloading: false,
-    error: null as string | null,
-  });
-
+  let tasks = $state<Task[]>([]);
   let history = $state<
-    { name: string; timestamp: string; status: "success" | "error" }[]
+    {
+      url: string;
+      name: string;
+      timestamp: string;
+      status: "success" | "error";
+    }[]
   >([]);
 
-  async function updateDiskSpace() {
-    try {
-      diskUsage = await invoke("get_free_space");
-    } catch (e) {
-      console.error("Disk fetch failed:", e);
-    }
+  let anyDownloading = $derived(tasks.some((t) => t.isDownloading));
+  let headlessProgress = $derived(
+    tasks.length === 0
+      ? 0
+      : tasks.reduce((sum, t) => sum + t.progress, 0) / tasks.length,
+  );
+
+  function updateTask(id: string, patch: Partial<Task>) {
+    tasks = tasks.map((t) => (t.id === id ? { ...t, ...patch } : t));
+  }
+
+  function removeTask(id: string) {
+    tasks = tasks.filter((t) => t.id !== id);
+  }
+
+  async function startDownload(url: string) {
+    const trimmed = url.trim();
+    if (!trimmed) return;
+
+    const id = crypto.randomUUID();
+
+    tasks = [
+      ...tasks,
+      {
+        id,
+        url: trimmed,
+        status: "Queued…",
+        progress: 0,
+        isDownloading: true,
+        error: null,
+      },
+    ];
+
+    invoke("downloader", { url: trimmed, downloadId: id }).catch(
+      (e: unknown) => {
+        updateTask(id, { error: String(e), isDownloading: false });
+      },
+    );
   }
 
   async function pasteOrDownload() {
     if (!urlInput) {
       try {
         const clipboardText = await readText();
-        if (clipboardText && clipboardText.startsWith("http")) {
+        if (clipboardText?.startsWith("http")) {
           urlInput = clipboardText;
-          await startDownload();
+          await startDownload(urlInput);
+          urlInput = "";
         }
       } catch (err) {
         console.error("Clipboard access denied", err);
       }
     } else {
-      await startDownload();
+      await startDownload(urlInput);
+      urlInput = "";
     }
   }
 
-  function addToHistory(name: string, status: "success" | "error") {
-    history = [
-      {
-        name: urlInput || name,
-        timestamp: new Date().toLocaleTimeString(),
-        status,
-      },
-      ...history,
-    ].slice(0, 10);
-  }
-
-  async function startDownload() {
-    if (!urlInput.trim()) return;
+  async function stopDownload(id: string) {
     try {
-      await invoke("downloader", { url: urlInput });
-    } catch (e) {
-      activeTask.error = String(e);
-    }
-  }
-
-  async function stopDownload() {
-    try {
-      await invoke("cancel_download");
+      await invoke("cancel_download", { downloadId: id });
     } catch (e) {
       console.error("Failed to cancel:", e);
+    }
+  }
+
+  async function stopAllDownloads() {
+    try {
+      await invoke("cancel_all_downloads");
+    } catch (e) {
+      console.error("Failed to cancel all:", e);
+    }
+  }
+
+  function addToHistory(url: string, status: "success" | "error") {
+    history = [
+      { url, name: url, timestamp: new Date().toLocaleTimeString(), status },
+      ...history,
+    ].slice(0, 20);
+  }
+
+  async function updateDiskSpace() {
+    try {
+      diskUsage = await invoke("get_free_space");
+    } catch (e) {
+      console.error("Disk fetch failed:", e);
     }
   }
 
@@ -92,31 +148,50 @@
   });
 
   $effect(() => {
-    isCollapsed = innerWidth < 1024;
+    isCollapsed = uiState.innerWidth < 1024;
   });
 
   $effect(() => {
     const unlistens = [
       listen<number>("disk-update", (e) => (diskUsage = e.payload)),
-      listen<number>(
-        "download-progress",
-        (e) => (activeTask.progress = e.payload),
-      ),
-      listen<string>("download-status", (e) => (activeTask.status = e.payload)),
-      listen<string>("download-error", (e) => {
-        activeTask.error = e.payload;
-        activeTask.isDownloading = false;
-        addToHistory("Download Failed", "error");
+
+      listen<ProgressPayload>("download-progress", (e) => {
+        updateTask(e.payload.id, { progress: e.payload.value });
       }),
-      listen("download-started", () => {
-        activeTask.isDownloading = true;
-        activeTask.error = null;
-        activeTask.progress = 0;
+
+      listen<StatusPayload>("download-status", (e) => {
+        updateTask(e.payload.id, { status: e.payload.value });
       }),
-      listen("download-finished", () => {
-        activeTask.isDownloading = false;
-        activeTask.status = "Complete";
-        addToHistory(activeTask.status, "success");
+
+      listen<StatusPayload>("download-error", (e) => {
+        const task = tasks.find((t) => t.id === e.payload.id);
+        updateTask(e.payload.id, {
+          error: e.payload.value,
+          isDownloading: false,
+          status: "Error",
+        });
+        addToHistory(task?.url ?? e.payload.id, "error");
+      }),
+
+      listen<IdPayload>("download-started", (e) => {
+        updateTask(e.payload.id, {
+          isDownloading: true,
+          error: null,
+          progress: 0,
+        });
+      }),
+
+      listen<IdPayload>("download-finished", (e) => {
+        const task = tasks.find((t) => t.id === e.payload.id);
+        if (task && !task.error) {
+          addToHistory(task.url, "success");
+        }
+        updateTask(e.payload.id, {
+          isDownloading: false,
+          status: "Complete",
+          progress: 100,
+        });
+        setTimeout(() => removeTask(e.payload.id), 4000);
       }),
     ];
 
@@ -127,9 +202,9 @@
 </script>
 
 <ModeWatcher />
-<svelte:window 
-  bind:innerWidth={uiState.innerWidth} 
-  bind:innerHeight={uiState.innerHeight} 
+<svelte:window
+  bind:innerWidth={uiState.innerWidth}
+  bind:innerHeight={uiState.innerHeight}
 />
 
 <div
@@ -159,7 +234,7 @@
           stroke="currentColor"
           stroke-width="4"
           stroke-dasharray="364.4"
-          stroke-dashoffset={364.4 - (364.4 * activeTask.progress) / 100}
+          stroke-dashoffset={364.4 - (364.4 * headlessProgress) / 100}
           class="text-primary transition-all duration-300 ease-out"
           stroke-linecap="round"
         />
@@ -167,13 +242,13 @@
 
       <Button
         onclick={pasteOrDownload}
-        disabled={activeTask.isDownloading}
+        disabled={anyDownloading}
         class="w-24 h-24 rounded-full shadow-2xl transition-all hover:scale-105 active:scale-95 z-10 cursor-pointer"
       >
-        {#if !activeTask.isDownloading}
-          <Clipboard class="size-8" />
+        {#if !anyDownloading}
+          <Clipboard size={32} />
         {:else}
-          <LoaderCircle class="size-8 animate-spin" />
+          <LoaderCircle size={32} class="animate-spin" />
         {/if}
       </Button>
     </div>
@@ -182,8 +257,7 @@
       <Sidebar bind:isCollapsed {diskUsage} />
 
       <main
-        class="flex flex-col h-screen w-full bg-background text-foreground overflow-hidden
-      {uiState.headless ? 'items-center justify-center' : ''}"
+        class="flex flex-col h-screen w-full bg-background text-foreground overflow-hidden"
       >
         <header
           class="h-20 flex items-center px-8 bg-background/50 sticky top-0 z-10 gap-4 shrink-0"
@@ -197,7 +271,7 @@
                 }}
               >
                 <Input
-                  placeholder="Paste your link here..."
+                  placeholder="Paste a link and press Enter…"
                   bind:value={urlInput}
                   class="pr-10 h-11 bg-muted/30 focus-visible:ring-1"
                 />
@@ -206,7 +280,6 @@
 
             <Button
               onclick={pasteOrDownload}
-              disabled={activeTask.isDownloading}
               class="h-11 px-6 gap-2 cursor-pointer hover:bg-primary/80"
             >
               {#if urlInput === ""}
@@ -214,7 +287,7 @@
                 Paste
               {:else}
                 <Play size={16} fill="currentColor" />
-                {activeTask.isDownloading ? "Working..." : "Download"}
+                Download
               {/if}
             </Button>
           </div>
@@ -222,7 +295,7 @@
 
         <div class="flex-1 p-8 overflow-y-auto space-y-8 scrollbar-thin">
           <div class="max-w-5xl mx-auto w-full space-y-8">
-            <Downloader {activeTask} {stopDownload} />
+            <Downloader {tasks} {stopDownload} {stopAllDownloads} />
             <History bind:history />
           </div>
         </div>
