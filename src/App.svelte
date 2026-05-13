@@ -132,14 +132,16 @@
   class="flex flex-col h-screen w-full bg-background text-foreground overflow-hidden"
 >
   <Titlebar showDecor={false} />
-  <div class="flex flex-1 w-full overflow-hidden">
+  <div class="flex flex-1 w-full min-h-0 overflow-hidden relative">
     <Sidebar bind:isCollapsed {diskUsage} />
 
-    <main class="flex-1 flex flex-col bg-muted/10 min-w-0 relative">
+    <main
+      class="flex-1 flex flex-col min-w-0 bg-background relative overflow-hidden"
+    >
       <header
-        class="h-20 border-b flex items-center px-8 bg-background/50 backdrop-blur-md align-middle justify-center sticky top-0 z-10 gap-4"
+        class="h-20 flex items-center px-8 bg-background/50 sticky top-0 z-10 gap-4 shrink-0"
       >
-        <div class="flex-1 max-w-2xl flex items-center gap-2">
+        <div class="flex-1 max-w-2xl mx-auto flex items-center gap-2">
           <div class="relative flex-1">
             <form
               onsubmit={(e) => {
@@ -171,9 +173,11 @@
         </div>
       </header>
 
-      <div class="flex-1 p-8 overflow-y-auto overflow-x-hidden space-y-8">
-        <Downloader {activeTask} {stopDownload} />
-        <History bind:history />
+      <div class="flex-1 p-8 overflow-y-auto space-y-8 scrollbar-thin">
+        <div class="max-w-5xl mx-auto w-full space-y-8">
+          <Downloader {activeTask} {stopDownload} />
+          <History bind:history />
+        </div>
       </div>
     </main>
   </div>
