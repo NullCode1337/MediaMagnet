@@ -372,7 +372,7 @@
                   >
                   <Input
                     bind:value={cookieDomain}
-                    placeholder="example.com"
+                    placeholder="google/facebook (not '.com')"
                     class="rounded-lg"
                   />
                 </div>
