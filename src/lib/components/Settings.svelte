@@ -20,6 +20,7 @@
     ShieldCheck,
   } from "@lucide/svelte";
   import { toggleMode, mode } from "mode-watcher";
+  import { uiState } from "$lib/store.svelte";
 
   let { isCollapsed } = $props();
   let activeTab = $state("general");
@@ -28,7 +29,7 @@
     user_agent: "",
     dark_mode: true,
     always_on_top: true,
-    show_decor: true,
+    show_custom: true,
     notifications: false,
     clear_on_exit: false,
   });
@@ -58,6 +59,7 @@
         action: "check",
       });
       config = { ...config, ...savedConfig };
+      uiState.showCustom = config.show_custom;
     } catch (err) {
       console.error("Failed to load settings:", err);
     }
@@ -66,6 +68,7 @@
 
   async function save() {
     config.dark_mode = mode.current === "dark";
+    uiState.showCustom = config.show_custom;
     await invoke("update_settings", { settings: $state.snapshot(config) });
   }
 
@@ -127,7 +130,8 @@
   </Dialog.Trigger>
 
   <Dialog.Content
-    class="sm:max-w-none w-[95vw] max-w-[850px] p-0 gap-0 overflow-hidden border-border bg-background shadow-2xl rounded-2xl flex flex-col top-[calc(50%+20px)]! h-[90vh] max-h-[min(600px,calc(90vh-40px))]!"
+    class="sm:max-w-none w-[95vw] max-w-[850px] p-0 gap-0 overflow-hidden border-border bg-background shadow-2xl rounded-2xl flex flex-col h-[90vh] max-h-[min(600px,calc(90vh-40px))]! 
+    {uiState.showCustom ? 'top-[calc(50%+20px)]!' : 'top-[50%]!'}"
   >
     <div
       class="flex flex-col sm:flex-row w-full h-full items-stretch overflow-hidden"
@@ -275,15 +279,15 @@
                       <Label
                         for="decor"
                         class="text-sm font-medium text-foreground"
-                        >Native Decorations</Label
+                        >Custom Decorations</Label
                       >
                       <p class="text-[11px] text-muted-foreground">
-                        Show standard title bars and window borders
+                        Show custom title with special features
                       </p>
                     </div>
                     <Switch
                       id="decor"
-                      bind:checked={config.show_decor}
+                      bind:checked={config.show_custom}
                       onCheckedChange={save}
                       class={switchClass}
                     />

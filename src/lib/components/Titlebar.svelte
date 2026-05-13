@@ -4,7 +4,6 @@
   import { uiState } from "$lib/store.svelte";
   import { onMount } from "svelte";
 
-  let { showDecor } = $props();
   const appWindow = getCurrentWindow();
 
   async function syncWindowState() {
@@ -18,7 +17,7 @@
       await appWindow.setSize(new LogicalSize(200, 200));
     } else {
       await appWindow.setAlwaysOnTop(false);
-      await appWindow.setSize(new LogicalSize(800, 600));
+      await appWindow.setSize(new LogicalSize(800, 650));
       await appWindow.center();
     }
   }
@@ -33,7 +32,7 @@
   });
 </script>
 
-{#if !showDecor}
+{#if uiState.showCustom}
   <div
     data-tauri-drag-region
     class="h-10 w-full bg-sidebar border-b flex justify-between items-center shrink-0 select-none z-50"
