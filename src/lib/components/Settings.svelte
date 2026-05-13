@@ -127,7 +127,7 @@
   </Dialog.Trigger>
 
   <Dialog.Content
-    class="sm:max-w-none w-[95vw] max-w-[850px] p-0 gap-0 overflow-hidden border-border bg-background shadow-2xl rounded-2xl flex flex-col !top-[calc(50%_+_20px)] h-[90vh] !max-h-[min(600px,calc(90vh_-_40px))]"
+    class="sm:max-w-none w-[95vw] max-w-[850px] p-0 gap-0 overflow-hidden border-border bg-background shadow-2xl rounded-2xl flex flex-col top-[calc(50%+20px)]! h-[90vh] max-h-[min(600px,calc(90vh-40px))]!"
   >
     <div
       class="flex flex-col sm:flex-row w-full h-full items-stretch overflow-hidden"
