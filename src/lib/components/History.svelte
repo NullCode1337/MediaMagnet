@@ -26,7 +26,7 @@
     <Button
       variant="link"
       size="sm"
-      class="text-[10px] h-auto p-0 text-primary hover:text-primary/80"
+      class="text-[10px] h-auto p-0 text-primary hover:text-primary/80 cursor-pointer"
       onclick={() => (history = [])}
     >
       Clear

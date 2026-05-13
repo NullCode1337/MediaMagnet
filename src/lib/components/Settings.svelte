@@ -106,7 +106,7 @@
   }
 
   const switchClass =
-    "data-[state=checked]:bg-primary data-[state=unchecked]:bg-input border-2 border-transparent transition-colors";
+    "data-[state=checked]:bg-primary data-[state=unchecked]:bg-input border-2 border-transparent transition-colors cursor-pointer";
 </script>
 
 <Dialog.Root>
