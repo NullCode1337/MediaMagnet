@@ -24,7 +24,7 @@
     class="h-10 w-full bg-sidebar border-b flex justify-between items-center shrink-0 select-none z-9999"
   >
     <div class="flex items-center px-4 gap-3 pointer-events-none">
-      <img src="/favicon.png" alt="logo" class="w-5 h-5 opacity-70" />
+      <img src="/static/favicon.png" alt="logo" class="w-5 h-5 opacity-70" />
       <span
         class="text-[11px] font-medium text-muted-foreground tracking-widest"
       >
