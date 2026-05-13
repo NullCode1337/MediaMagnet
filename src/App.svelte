@@ -67,29 +67,35 @@
     tasks = tasks.filter((t) => t.id !== id);
   }
 
-  async function startDownload(url: string) {
-    const trimmed = url.trim();
-    if (!trimmed) return;
+  async function startDownload(input: string) {
+    const urlRegex = /https?:\/\/[^\s,)]+/gi;
+    const matches = input.match(urlRegex);
 
-    const id = crypto.randomUUID();
+    if (!matches || matches.length === 0) {
+      console.warn("No valid URLs found in input"); // TODO: Toast feature (notification when headless mode / settings choice)
+      return;
+    }
 
-    tasks = [
-      ...tasks,
-      {
-        id,
-        url: trimmed,
-        status: "Queued…",
-        progress: 0,
-        isDownloading: true,
-        error: null,
-      },
-    ];
+    for (const url of matches) {
+      const id = crypto.randomUUID();
 
-    invoke("downloader", { url: trimmed, downloadId: id }).catch(
-      (e: unknown) => {
+      tasks = [
+        ...tasks,
+        {
+          id,
+          url: url,
+          status: "Queued…",
+          progress: 0,
+          isDownloading: true,
+          error: null,
+        },
+      ];
+
+      invoke("downloader", { url: url, downloadId: id }).catch(
+        (e: unknown) => {
         updateTask(id, { error: String(e), isDownloading: false });
-      },
-    );
+      });
+    }
   }
 
   async function pasteOrDownload() {
