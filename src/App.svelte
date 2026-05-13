@@ -168,7 +168,7 @@
       <Button
         onclick={pasteOrDownload}
         disabled={activeTask.isDownloading}
-        class="w-24 h-24 rounded-full shadow-2xl transition-all hover:scale-105 active:scale-95 z-10"
+        class="w-24 h-24 rounded-full shadow-2xl transition-all hover:scale-105 active:scale-95 z-10 cursor-pointer"
       >
         {#if !activeTask.isDownloading}
           <Clipboard size={32} />
@@ -207,7 +207,7 @@
             <Button
               onclick={pasteOrDownload}
               disabled={activeTask.isDownloading}
-              class="h-11 px-6 gap-2"
+              class="h-11 px-6 gap-2 cursor-pointer hover:bg-primary/80"
             >
               {#if urlInput === ""}
                 <Clipboard size={16} fill="currentColor" />

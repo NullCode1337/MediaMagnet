@@ -29,7 +29,7 @@
       variant="ghost"
       size="icon"
       onclick={() => (isCollapsed = !isCollapsed)}
-      class="shrink-0 ml-auto hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+      class="shrink-0 ml-auto hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors cursor-pointer"
     >
       <Menu size={18} />
     </Button>
