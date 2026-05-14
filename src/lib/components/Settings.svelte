@@ -6,7 +6,6 @@
   import { Switch } from "$lib/components/ui/switch";
   import { Separator } from "$lib/components/ui/separator";
   import { invoke } from "@tauri-apps/api/core";
-  import { onMount } from "svelte";
   import {
     Settings as SettingsIcon,
     RotateCcw,
@@ -21,18 +20,10 @@
   } from "@lucide/svelte";
   import { toggleMode, mode } from "mode-watcher";
   import { uiState } from "$lib/store.svelte";
+  import { settingsStore, type Config } from "$lib/settings.svelte";
 
   let { isCollapsed } = $props();
   let activeTab = $state("general");
-  let config = $state({
-    download_path: "",
-    user_agent: "",
-    dark_mode: true,
-    always_on_top: true,
-    show_custom: true,
-    notifications: false,
-    clear_on_exit: false,
-  });
 
   const TABS = [
     { id: "general", label: "Appearance", icon: Monitor },
@@ -41,6 +32,24 @@
     { id: "privacy", label: "Privacy", icon: ShieldCheck },
   ];
 
+  // settings
+  async function save() {
+    await invoke("update_settings", { settings: $state.snapshot(settingsStore.config) });
+  }
+
+  function toggleTheme() {
+    toggleMode();
+    setTimeout(() => {
+      settingsStore.update({ dark_mode: mode.current === "dark" });
+    }, 50);
+  }
+
+  async function resetSettings() {
+    const defaultSettings = await invoke("settings", { action: "reset" });
+    settingsStore.config = defaultSettings as Config;
+  }
+
+  // cookies
   let cookieDomain = $state("");
   let cookieRawContent = $state("");
   let savedCookies = $state<Record<string, string>>({});
@@ -53,26 +62,7 @@
     }
   }
 
-  onMount(async () => {
-    try {
-      const savedConfig = await invoke<Partial<typeof config>>("settings", {
-        action: "check",
-      });
-      config = { ...config, ...savedConfig };
-      uiState.showCustom = config.show_custom;
-    } catch (err) {
-      console.error("Failed to load settings:", err);
-    }
-    loadCookies();
-  });
-
-  async function save() {
-    config.dark_mode = mode.current === "dark";
-    uiState.showCustom = config.show_custom;
-    await invoke("update_settings", { settings: $state.snapshot(config) });
-  }
-
-  async function handleSaveCookie() {
+  async function saveCookies() {
     try {
       await invoke("save_cookie", {
         domain: cookieDomain,
@@ -86,23 +76,14 @@
     }
   }
 
-  async function handleDeleteCookie(path: string) {
+  async function deleteCookie(path: string) {
     await invoke("delete_cookie", { path });
     await loadCookies();
   }
 
-  async function handleClearAllCookies() {
+  async function clearAllCookies() {
     await invoke("clear_cookies");
     await loadCookies();
-  }
-
-  function handleThemeToggle() {
-    toggleMode();
-    setTimeout(save, 50);
-  }
-
-  async function handleReset() {
-    config = await invoke("settings", { action: "reset" });
   }
 
   const switchClass =
@@ -161,7 +142,7 @@
           </button>
         {/each}
         <button
-          onclick={handleReset}
+          onclick={resetSettings}
           class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs whitespace-nowrap shrink-0 ml-auto text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all"
         >
           <RotateCcw size={13} />
@@ -203,7 +184,7 @@
         <Button
           variant="ghost"
           class="justify-start gap-3 rounded-xl text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent text-sm"
-          onclick={handleReset}
+          onclick={resetSettings}
         >
           <RotateCcw size={15} /> Reset to Defaults
         </Button>
@@ -248,7 +229,7 @@
                     {/if}
                     <Switch
                       checked={mode.current === "dark"}
-                      onCheckedChange={handleThemeToggle}
+                      onCheckedChange={toggleTheme}
                       class={switchClass}
                     />
                   </div>
@@ -268,7 +249,7 @@
                     </div>
                     <Switch
                       id="always-on-top"
-                      bind:checked={config.always_on_top}
+                      bind:checked={settingsStore.config.always_on_top}
                       onCheckedChange={save}
                       class={switchClass}
                     />
@@ -287,7 +268,7 @@
                     </div>
                     <Switch
                       id="decor"
-                      bind:checked={config.show_custom}
+                      bind:checked={settingsStore.config.show_custom}
                       onCheckedChange={save}
                       class={switchClass}
                     />
@@ -315,7 +296,7 @@
                   >
                   <div class="flex gap-2">
                     <Input
-                      bind:value={config.download_path}
+                      bind:value={settingsStore.config.download_path}
                       placeholder="/downloads"
                       class="rounded-xl bg-muted text-foreground border-border focus:ring-primary"
                     />
@@ -331,7 +312,7 @@
                     >Custom User Agent</Label
                   >
                   <Input
-                    bind:value={config.user_agent}
+                    bind:value={settingsStore.config.user_agent}
                     placeholder="Mozilla/5.0..."
                     class="rounded-xl bg-muted/20 font-mono text-xs border-border/40 focus:ring-primary"
                   />
@@ -357,7 +338,7 @@
                   variant="destructive"
                   size="sm"
                   class="rounded-xl gap-2"
-                  onclick={handleClearAllCookies}
+                  onclick={clearAllCookies}
                 >
                   <Trash2 size={14} /> Clear All
                 </Button>
@@ -389,7 +370,7 @@
                 <Button
                   class="w-full rounded-xl"
                   disabled={!cookieDomain || !cookieRawContent}
-                  onclick={handleSaveCookie}
+                  onclick={saveCookies}
                 >
                   Import Cookie
                 </Button>
@@ -415,7 +396,7 @@
                         variant="ghost"
                         size="icon"
                         class="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onclick={() => handleDeleteCookie(path)}
+                        onclick={() => deleteCookie(path)}
                       >
                         <Trash2 size={16} />
                       </Button>
@@ -454,7 +435,7 @@
                   </div>
                   <Switch
                     id="notifications"
-                    bind:checked={config.notifications}
+                    bind:checked={settingsStore.config.notifications}
                     onCheckedChange={save}
                     class={switchClass}
                   />
@@ -471,7 +452,7 @@
                   </div>
                   <Switch
                     id="clear-exit"
-                    bind:checked={config.clear_on_exit}
+                    bind:checked={settingsStore.config.clear_on_exit}
                     onCheckedChange={save}
                     class={switchClass}
                   />
