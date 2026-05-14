@@ -1,5 +1,6 @@
 use serde::Serialize;
 use std::collections::HashMap;
+use std::process::Stdio;
 use std::sync::{Arc, Mutex, OnceLock};
 use tauri::{Emitter, Manager};
 use tauri_plugin_shell::ShellExt;
@@ -82,8 +83,8 @@ async fn base_command(app: &tauri::AppHandle, command: &str) -> Result<Command> 
 
     let check_cmd = Command::new(command)
         .arg("--version")
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
         .output()
         .await;
 
@@ -146,8 +147,8 @@ async fn run_downloader(
     set_download_path(app.clone()).await;
 
     let mut child = cmd
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
         .spawn()?;
 
     let stdout = child.stdout.take().unwrap();
@@ -383,18 +384,18 @@ pub async fn downloader(app: tauri::AppHandle, url: String, download_id: String)
         return;
     }
 
-    let is_youtube = lc.contains("youtube")
-        || lc.contains("youtu.be")
-        || lc.contains("music.youtube")
-        || lc.contains("twitch")
-        || lc.contains("vimeo")
-        || lc.contains("soundcloud")
-        || lc.contains("bandcamp")
-        || lc.contains("twitter")
-        || lc.contains("x.com")
-        || lc.contains("instagram")
-        || lc.contains("facebook");
+    let mut check_cmd = base_command(&app, "yt-dlp").await.unwrap();
+    
+    check_cmd.args([ "--simulate", "--skip-download", &url ])
+        .stderr(Stdio::piped());
 
+    let is_youtube = if let Ok(output) = check_cmd.output().await {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        output.status.success() && !stderr.contains("Falling back on generic")
+    } else {
+        false
+    };
+    
     let _ = app.emit(
         "download-started",
         IdPayload {
