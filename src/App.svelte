@@ -91,8 +91,7 @@
         },
       ];
 
-      invoke("downloader", { url: url, downloadId: id }).catch(
-        (e: unknown) => {
+      invoke("downloader", { url: url, downloadId: id }).catch((e: unknown) => {
         updateTask(id, { error: String(e), isDownloading: false });
       });
     }
