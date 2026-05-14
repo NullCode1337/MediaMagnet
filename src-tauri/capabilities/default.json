@@ -19,11 +19,20 @@
     "shell:default",
     "process:default",
     "opener:default",
+    "opener:allow-open-path",
     "notification:default",
     "dialog:default",
     "clipboard-manager:default",
     "clipboard-manager:allow-read-text",
     "clipboard-manager:allow-write-text",
-    "os:default"
+    "os:default",
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [
+        {
+          "path": "$APPDATA/cookies/*"
+        }
+      ]
+    }
   ]
 }
