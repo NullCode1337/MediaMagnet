@@ -8,7 +8,8 @@
   import * as Icons from "@lucide/svelte";
 
   import { invoke } from "@tauri-apps/api/core";
-  import { open } from "@tauri-apps/plugin-dialog";
+  import { openPath } from "@tauri-apps/plugin-opener";
+  import { open, ask } from "@tauri-apps/plugin-dialog";
   import { toggleMode, mode } from "mode-watcher";
   import { onMount } from "svelte";
 
@@ -112,21 +113,45 @@
 
   async function saveCookies() {
     await invoke("save_cookie", {
-      domain: cookieDomain,
+      domain: cookieDomain.toLowerCase(),
       input: { type: "Content", value: cookieRawContent },
     });
     cookieDomain = cookieRawContent = "";
     await loadCookies();
   }
 
-  async function deleteCookie(path: string) {
-    await invoke("delete_cookie", { path });
-    await loadCookies();
+  async function deleteCookie(domain: string, path: string) {
+    const confirmed = await ask(
+      `Are you sure you want to delete cookies for ${domain}?`,
+      {
+        title: "MediaMagnet",
+        kind: "warning",
+        okLabel: "Delete",
+        cancelLabel: "Cancel",
+      },
+    );
+
+    if (confirmed) {
+      await invoke("delete_cookie", { path });
+      await loadCookies();
+    }
   }
 
   async function clearAllCookies() {
-    await invoke("clear_cookies");
-    await loadCookies();
+    const confirmed = await ask(
+      `Are you sure you want to delete all cookies?`,
+      {
+        title: "MediaMagnet",
+        kind: "warning",
+        okLabel: "Delete",
+        cancelLabel: "Cancel",
+      },
+    );
+
+    if (confirmed) {
+      await invoke("clear_cookies");
+      await loadCookies();
+    }
   }
 
   onMount(() => {
@@ -312,15 +337,22 @@
                 >Active Sessions</Label
               >
               {#each Object.entries(savedCookies) as [domain, path] (domain)}
+                <!-- svelte-ignore a11y_click_events_have_key_events -->
+                <!-- svelte-ignore a11y_no_static_element_interactions -->
                 <div
-                  class="flex items-center justify-between p-3 rounded-xl border bg-muted/30"
+                  class="flex items-center justify-between p-3 rounded-xl border bg-muted/30 transition-all cursor-pointer hover:bg-muted/50 hover:border-primary/30 hover:shadow-sm active:scale-[0.98]"
+                  onclick={() => openPath(path)}
                 >
                   <Icons.Cookie size={16} />
                   <span class="text-sm font-medium uppercase">{domain}</span>
                   <Button
                     variant="ghost"
                     size="icon"
-                    onclick={() => deleteCookie(path)}
+                    onclick={(e) => {
+                      e.stopPropagation();
+                      deleteCookie(domain, path);
+                    }}
+                    class="cursor-pointer bg-red-500/50"
                   >
                     <Icons.Trash2 size={16} />
                   </Button>
