@@ -3,6 +3,7 @@
   import { X, Minus, Square, Copy, Maximize2 } from "@lucide/svelte";
   import { uiState } from "$lib/store.svelte";
   import { onMount } from "svelte";
+  import logo from "$lib/assets/favicon.png";
 
   const appWindow = getCurrentWindow();
 
@@ -38,7 +39,7 @@
     class="h-10 w-full bg-sidebar border-b flex justify-between items-center shrink-0 select-none z-50"
   >
     <div class="flex items-center px-4 gap-3 pointer-events-none">
-      <img src="/static/favicon.png" alt="logo" class="w-5 h-5 opacity-70" />
+      <img src={logo} alt="logo" class="w-5 h-5 opacity-70" />
       {#if !uiState.headless}
         <span
           class="text-[11px] font-medium text-muted-foreground tracking-widest uppercase"
