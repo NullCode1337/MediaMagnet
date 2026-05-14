@@ -53,7 +53,8 @@
     },
   ];
 
-  const nextTick = () => new Promise(res => setTimeout(res, 0));
+  let saveStatus = $state<"idle" | "saved">("idle");
+  const nextTick = () => new Promise((res) => setTimeout(res, 0));
 
   // settings
   async function saveSettings() {
@@ -61,6 +62,11 @@
     await invoke("update_settings", {
       settings: $state.snapshot(settingsStore.config),
     });
+    saveStatus = "saved";
+
+    setTimeout(() => {
+      saveStatus = "idle";
+    }, 2000);
   }
 
   const resetSettings = async () =>
@@ -126,7 +132,9 @@
       >
         <Icons.Settings size={20} class="text-sidebar-foreground/70" />
         {#if !isCollapsed}
-          <span class="font-medium text-[15px] text-sidebar-foreground">Settings</span>
+          <span class="font-medium text-[15px] text-sidebar-foreground"
+            >Settings</span
+          >
         {/if}
       </Button>
     {/snippet}
@@ -169,6 +177,16 @@
       <main
         class="flex-1 overflow-y-auto p-6 sm:p-10 bg-background scrollbar-thin"
       >
+        <div class="fixed top-6 p-4 right-6 z-50 pointer-events-none">
+          {#if saveStatus === "saved"}
+            <div
+              class="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full border border-primary/20 text-xs shadow-sm"
+            >
+              <Icons.Check size={12} />
+              Changes saved
+            </div>
+          {/if}
+        </div>
         {#snippet switchRows(items: typeof GENERAL_SWITCHES)}
           {#each items as item (item.id)}
             <div class="flex items-center justify-between px-2">
@@ -245,11 +263,7 @@
           {:else if activeTab === "cookies"}
             <header class="flex justify-between items-center">
               <h3 class="text-2xl font-extrabold">Cookies</h3>
-              <Button
-                variant="destructive"
-                size="sm"
-                onclick={clearAllCookies}
-              >
+              <Button variant="destructive" size="sm" onclick={clearAllCookies}>
                 <Icons.Trash2 size={14} /> Clear
               </Button>
             </header>
