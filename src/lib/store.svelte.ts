@@ -1,9 +1,13 @@
-// store.svelte.ts
+import { settingsStore } from "$lib/settings.svelte";
+
 export const uiState = $state({
   innerWidth: 0,
   innerHeight: 0,
   isMaximized: false,
-  showCustom: false,
+  
+  get showCustom() {
+    return settingsStore.config.show_custom;
+  },
 
   get headless() {
     return (
