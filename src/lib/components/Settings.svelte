@@ -4,20 +4,10 @@
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
   import { Switch } from "$lib/components/ui/switch";
-  import { Separator } from "$lib/components/ui/separator";
+
+  import * as Icons from "@lucide/svelte";
+
   import { invoke } from "@tauri-apps/api/core";
-  import {
-    Settings as SettingsIcon,
-    RotateCcw,
-    Monitor,
-    Download,
-    Sun,
-    Moon,
-    Cookie,
-    FileKey,
-    Trash2,
-    ShieldCheck,
-  } from "@lucide/svelte";
   import { toggleMode, mode } from "mode-watcher";
   import { uiState } from "$lib/store.svelte";
   import { settingsStore, type Config } from "$lib/settings.svelte";
@@ -26,55 +16,82 @@
   let { isCollapsed } = $props();
   let activeTab = $state("general");
 
+  let cookieDomain = $state(""),
+    cookieRawContent = $state(""),
+    savedCookies = $state<Record<string, string>>({});
+
   const TABS = [
-    { id: "general", label: "Appearance", icon: Monitor },
-    { id: "downloads", label: "Downloads", icon: Download },
-    { id: "cookies", label: "Cookies", icon: Cookie },
-    { id: "privacy", label: "Privacy", icon: ShieldCheck },
+    { id: "general", label: "Appearance", icon: Icons.Monitor },
+    { id: "downloads", label: "Downloads", icon: Icons.Download },
+    { id: "cookies", label: "Cookies", icon: Icons.Cookie },
+    { id: "privacy", label: "Privacy", icon: Icons.ShieldCheck },
   ];
 
+  const GENERAL_SWITCHES = [
+    {
+      id: "always_on_top",
+      label: "Keep Always on Top",
+      desc: "Prevent other windows from covering the app",
+    },
+    {
+      id: "show_custom",
+      label: "Custom Decorations",
+      desc: "Show custom title bar with special features",
+    },
+  ];
+
+  const PRIVACY_SWITCHES = [
+    {
+      id: "notifications",
+      label: "Desktop Notifications",
+      desc: "Alert when downloads finish or fail",
+    },
+    {
+      id: "clear_on_exit",
+      label: "Clear Cookies on Exit",
+      desc: "Wipe cookies and cache when closing",
+    },
+  ];
+
+  const nextTick = () => new Promise(res => setTimeout(res, 0));
+
   // settings
-  async function save() {
-    await invoke("update_settings", { settings: $state.snapshot(settingsStore.config) });
+  async function saveSettings() {
+    await nextTick(); // wait for settings to be updated first
+    await invoke("update_settings", {
+      settings: $state.snapshot(settingsStore.config),
+    });
   }
+
+  const resetSettings = async () =>
+    (settingsStore.config = (await invoke("settings", {
+      action: "reset",
+    })) as Config);
 
   function toggleTheme() {
     toggleMode();
-    setTimeout(() => {
-      settingsStore.update({ dark_mode: mode.current === "dark" });
-    }, 50);
-  }
-
-  async function resetSettings() {
-    const defaultSettings = await invoke("settings", { action: "reset" });
-    settingsStore.config = defaultSettings as Config;
+    setTimeout(
+      () => settingsStore.update({ dark_mode: mode.current === "dark" }),
+      50,
+    );
   }
 
   // cookies
-  let cookieDomain = $state("");
-  let cookieRawContent = $state("");
-  let savedCookies = $state<Record<string, string>>({});
-
   async function loadCookies() {
     try {
       savedCookies = await invoke("get_cookies");
-    } catch (err) {
-      console.error("Failed to load cookies:", err);
+    } catch (e) {
+      console.error(e);
     }
   }
 
   async function saveCookies() {
-    try {
-      await invoke("save_cookie", {
-        domain: cookieDomain,
-        input: { type: "Content", value: cookieRawContent },
-      });
-      cookieDomain = "";
-      cookieRawContent = "";
-      await loadCookies();
-    } catch (err) {
-      console.error("Save error:", err);
-    }
+    await invoke("save_cookie", {
+      domain: cookieDomain,
+      input: { type: "Content", value: cookieRawContent },
+    });
+    cookieDomain = cookieRawContent = "";
+    await loadCookies();
   }
 
   async function deleteCookie(path: string) {
@@ -89,10 +106,12 @@
 
   onMount(() => {
     loadCookies();
-  })
+  });
 
+  const btnClass =
+    "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all relative";
   const switchClass =
-    "data-[state=checked]:bg-primary data-[state=unchecked]:bg-input border-2 border-transparent transition-colors cursor-pointer";
+    "data-[state=checked]:bg-primary data-[state=unchecked]:bg-input border-2 border-transparent cursor-pointer";
 </script>
 
 <Dialog.Root>
@@ -105,365 +124,177 @@
           ? 'justify-center'
           : 'justify-start gap-4 px-4'} hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
       >
-        <SettingsIcon size={20} class="text-sidebar-foreground/70" />
+        <Icons.Settings size={20} class="text-sidebar-foreground/70" />
         {#if !isCollapsed}
-          <span class="font-medium text-[15px] text-sidebar-foreground"
-            >Settings</span
-          >
+          <span class="font-medium text-[15px] text-sidebar-foreground">Settings</span>
         {/if}
       </Button>
     {/snippet}
   </Dialog.Trigger>
 
   <Dialog.Content
-    class="sm:max-w-none w-[95vw] max-w-[850px] p-0 gap-0 overflow-hidden border-border bg-background shadow-2xl rounded-2xl flex flex-col h-[90vh] max-h-[min(600px,calc(90vh-40px))]! 
-    {uiState.showCustom ? 'top-[calc(50%+20px)]!' : 'top-[50%]!'}"
+    class="sm:max-w-[850px] w-[95vw] p-0 flex flex-col h-[90vh] max-h-[600px]! {uiState.showCustom
+      ? 'top-[calc(50%+20px)]!'
+      : 'top-[50%]!'}"
   >
-    <div
-      class="flex flex-col sm:flex-row w-full h-full items-stretch overflow-hidden"
-    >
-      <div
-        class="sm:hidden flex items-center gap-1 border-b border-sidebar-border bg-sidebar px-3 py-2 shrink-0 overflow-x-auto scrollbar-none"
+    <div class="flex flex-col sm:flex-row h-full overflow-hidden">
+      <aside
+        class="flex sm:flex-col overflow-x-auto sm:w-[240px] bg-sidebar border-r border-sidebar-border p-2 sm:p-6 gap-1"
       >
-        <span
-          class="text-[10px] font-bold uppercase tracking-widest text-sidebar-foreground/40 mr-2 shrink-0"
-          >Settings</span
+        <h2
+          class="hidden sm:block text-[11px] font-bold uppercase tracking-[0.2em] text-sidebar-foreground/50 mb-4 px-2"
         >
+          Configuration
+        </h2>
         {#each TABS as tab (tab.id)}
           <button
             onclick={() => (activeTab = tab.id)}
-            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs whitespace-nowrap transition-all shrink-0 relative
-              {activeTab === tab.id
+            class="{btnClass} {activeTab === tab.id
               ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
-              : 'text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'}"
+              : 'text-sidebar-foreground/70'}"
           >
-            {#if activeTab === tab.id}
-              <div
-                class="absolute bottom-0 left-2 right-2 h-0.5 bg-sidebar-primary rounded-full"
-              ></div>
-            {/if}
-            <tab.icon size={14} />
-            {tab.label}
+            <tab.icon size={17} />
+            <span class="whitespace-nowrap">{tab.label}</span>
           </button>
         {/each}
-        <button
-          onclick={resetSettings}
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs whitespace-nowrap shrink-0 ml-auto text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all"
-        >
-          <RotateCcw size={13} />
-          Reset
-        </button>
-      </div>
-
-      <aside
-        class="hidden sm:flex w-[200px] lg:w-[240px] border-r border-sidebar-border bg-sidebar p-5 lg:p-8 flex-col shrink-0"
-      >
-        <div class="px-2 mb-6">
-          <h2
-            class="text-[11px] font-bold uppercase tracking-[0.2em] text-sidebar-foreground/50"
-          >
-            Configuration
-          </h2>
-        </div>
-
-        <nav class="flex-1 space-y-1">
-          {#each TABS as tab (tab.id)}
-            <button
-              onclick={() => (activeTab = tab.id)}
-              class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all relative
-                {activeTab === tab.id
-                ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
-                : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'}"
-            >
-              {#if activeTab === tab.id}
-                <div
-                  class="absolute left-0 w-1 h-5 bg-sidebar-primary rounded-full"
-                ></div>
-              {/if}
-              <tab.icon size={17} />
-              {tab.label}
-            </button>
-          {/each}
-        </nav>
-
         <Button
           variant="ghost"
-          class="justify-start gap-3 rounded-xl text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent text-sm"
+          class="sm:mt-auto gap-3 text-xs opacity-60"
           onclick={resetSettings}
         >
-          <RotateCcw size={15} /> Reset to Defaults
+          <Icons.RotateCcw size={14} /> Reset
         </Button>
       </aside>
 
       <main
-        class="flex-1 min-w-0 flex flex-col bg-background min-h-0 overflow-hidden"
+        class="flex-1 overflow-y-auto p-6 sm:p-10 bg-background scrollbar-thin"
       >
-        <div class="flex-1 overflow-y-auto p-5 sm:p-7 lg:p-10 scrollbar-thin">
+        {#snippet switchRows(items: typeof GENERAL_SWITCHES)}
+          {#each items as item (item.id)}
+            <div class="flex items-center justify-between px-2">
+              <div>
+                <Label for={item.id} class="text-sm font-medium"
+                  >{item.label}</Label
+                >
+                <p class="text-xs text-muted-foreground">{item.desc}</p>
+              </div>
+              <Switch
+                id={item.id}
+                bind:checked={settingsStore.config[item.id]}
+                onCheckedChange={saveSettings}
+                class={switchClass}
+              />
+            </div>
+          {/each}
+        {/snippet}
+
+        <div class="space-y-8 animate-in fade-in slide-in-from-bottom-2">
           {#if activeTab === "general"}
+            <div>
+              <h3 class="text-2xl font-extrabold">Appearance</h3>
+              <p class="text-sm text-muted-foreground">
+                Customize application behavior
+              </p>
+            </div>
+
             <div
-              class="w-full space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300"
+              class="flex items-center justify-between p-5 rounded-2xl border bg-card"
             >
-              <header class="space-y-1.5">
-                <h3
-                  class="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-foreground"
-                >
-                  Appearance
-                </h3>
-                <p class="text-xs sm:text-sm text-muted-foreground">
-                  Customize how the application looks and behaves
-                </p>
-              </header>
-
-              <div class="space-y-6">
-                <div
-                  class="flex items-center justify-between p-5 rounded-2xl border border-border bg-card"
-                >
-                  <div class="space-y-1">
-                    <Label class="text-base font-semibold text-card-foreground"
-                      >Dark Mode</Label
-                    >
-                    <p class="text-xs text-muted-foreground">
-                      Apply a high-contrast dark theme
-                    </p>
-                  </div>
-                  <div class="flex items-center gap-4">
-                    {#if mode.current === "dark"}
-                      <Moon size={18} class="text-primary" />
-                    {:else}
-                      <Sun size={18} class="text-primary" />
-                    {/if}
-                    <Switch
-                      checked={mode.current === "dark"}
-                      onCheckedChange={toggleTheme}
-                      class={switchClass}
-                    />
-                  </div>
-                </div>
-
-                <div class="space-y-4 pt-2">
-                  <div class="flex items-center justify-between px-2">
-                    <div class="space-y-1">
-                      <Label
-                        for="always-on-top"
-                        class="text-sm font-medium text-foreground"
-                        >Keep Always on Top</Label
-                      >
-                      <p class="text-[11px] text-muted-foreground">
-                        Prevent other windows from covering the app
-                      </p>
-                    </div>
-                    <Switch
-                      id="always-on-top"
-                      bind:checked={settingsStore.config.always_on_top}
-                      onCheckedChange={save}
-                      class={switchClass}
-                    />
-                  </div>
-                  <Separator class="bg-border" />
-                  <div class="flex items-center justify-between px-2">
-                    <div class="space-y-1">
-                      <Label
-                        for="decor"
-                        class="text-sm font-medium text-foreground"
-                        >Custom Decorations</Label
-                      >
-                      <p class="text-[11px] text-muted-foreground">
-                        Show custom title with special features
-                      </p>
-                    </div>
-                    <Switch
-                      id="decor"
-                      bind:checked={settingsStore.config.show_custom}
-                      onCheckedChange={save}
-                      class={switchClass}
-                    />
-                  </div>
-                </div>
+              <Label class="text-base font-semibold">Dark Mode</Label>
+              <div class="flex items-center gap-3">
+                {#if mode.current === "dark"}<Icons.Moon
+                    size={18}
+                    class="text-primary"
+                  />{:else}<Icons.Sun size={18} class="text-primary" />{/if}
+                <Switch
+                  checked={mode.current === "dark"}
+                  onCheckedChange={toggleTheme}
+                  class={switchClass}
+                />
               </div>
             </div>
+
+            {@render switchRows(GENERAL_SWITCHES)}
           {:else if activeTab === "downloads"}
-            <div
-              class="w-full space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-300"
-            >
-              <header class="space-y-2">
-                <h3
-                  class="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-foreground"
+            <h3 class="text-2xl font-extrabold">Downloads</h3>
+            <div class="grid gap-6">
+              <div class="space-y-2">
+                <Label class="text-xs font-bold uppercase text-primary"
+                  >Location</Label
                 >
-                  Downloads
-                </h3>
-              </header>
-
-              <div class="space-y-8">
-                <div class="space-y-3">
-                  <Label
-                    class="text-sm font-bold uppercase tracking-widest text-primary"
-                    >Download Location</Label
-                  >
-                  <div class="flex gap-2">
-                    <Input
-                      bind:value={settingsStore.config.download_path}
-                      placeholder="/downloads"
-                      class="rounded-xl bg-muted text-foreground border-border focus:ring-primary"
-                    />
-                    <Button variant="secondary" class="rounded-xl px-4"
-                      >Browse</Button
-                    >
-                  </div>
-                </div>
-
-                <div class="space-y-3">
-                  <Label
-                    class="text-sm font-bold uppercase tracking-widest text-primary/80"
-                    >Custom User Agent</Label
-                  >
+                <div class="flex gap-2">
                   <Input
-                    bind:value={settingsStore.config.user_agent}
-                    placeholder="Mozilla/5.0..."
-                    class="rounded-xl bg-muted/20 font-mono text-xs border-border/40 focus:ring-primary"
+                    bind:value={settingsStore.config.download_path}
+                    onchange={saveSettings}
+                    class="bg-muted"
                   />
+                  <Button variant="secondary">Browse</Button>
                 </div>
+              </div>
+              <div class="space-y-2">
+                <Label class="text-xs font-bold uppercase text-primary/80"
+                  >User Agent</Label
+                >
+                <Input
+                  bind:value={settingsStore.config.user_agent}
+                  onchange={saveSettings}
+                  class="font-mono text-xs bg-muted/20"
+                />
               </div>
             </div>
           {:else if activeTab === "cookies"}
-            <div
-              class="w-full space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-10"
-            >
-              <header class="flex flex-wrap justify-between items-end gap-3">
-                <div class="space-y-1">
-                  <h3
-                    class="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-foreground"
-                  >
-                    Cookies
-                  </h3>
-                  <p class="text-xs sm:text-sm text-muted-foreground">
-                    Import Netscape or JSON cookies by domain
-                  </p>
-                </div>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  class="rounded-xl gap-2"
-                  onclick={clearAllCookies}
-                >
-                  <Trash2 size={14} /> Clear All
-                </Button>
-              </header>
-
-              <div
-                class="p-6 rounded-2xl border border-border bg-card space-y-4"
+            <header class="flex justify-between items-center">
+              <h3 class="text-2xl font-extrabold">Cookies</h3>
+              <Button
+                variant="destructive"
+                size="sm"
+                onclick={clearAllCookies}
               >
-                <div class="space-y-2">
-                  <Label class="text-xs font-bold uppercase tracking-wider"
-                    >Domain Name</Label
-                  >
-                  <Input
-                    bind:value={cookieDomain}
-                    placeholder="google/facebook (not '.com')"
-                    class="rounded-lg"
-                  />
-                </div>
-                <div class="space-y-2">
-                  <Label class="text-xs font-bold uppercase tracking-wider"
-                    >Raw Content (JSON or Netscape)</Label
-                  >
-                  <textarea
-                    bind:value={cookieRawContent}
-                    class="w-full min-h-[120px] max-h-[200px] p-3 rounded-lg bg-muted text-xs font-mono border-none focus:ring-1 focus:ring-primary resize-none"
-                    placeholder={"[ { 'domain': '.google.com', ... } ] or # Netscape format..."}
-                  ></textarea>
-                </div>
-                <Button
-                  class="w-full rounded-xl"
-                  disabled={!cookieDomain || !cookieRawContent}
-                  onclick={saveCookies}
-                >
-                  Import Cookie
-                </Button>
-              </div>
+                <Icons.Trash2 size={14} /> Clear
+              </Button>
+            </header>
 
-              <div class="space-y-3">
-                <Label
-                  class="text-xs font-bold uppercase tracking-widest text-primary"
-                  >Active Sessions</Label
+            <div class="p-6 rounded-2xl border bg-card space-y-4">
+              <Input
+                bind:value={cookieDomain}
+                placeholder="Domain (e.g. google)"
+              />
+              <textarea
+                bind:value={cookieRawContent}
+                class="w-full min-h-[100px] p-3 rounded-lg bg-muted text-xs font-mono"
+                placeholder={"[ { 'domain': '.google.com', ... } ] or # Netscape format..."}
+              ></textarea>
+              <Button
+                class="w-full"
+                disabled={!cookieDomain || !cookieRawContent}
+                onclick={saveCookies}>Import</Button
+              >
+            </div>
+
+            <div class="grid gap-2">
+              <Label
+                class="text-xs font-bold uppercase tracking-widest p-1 text-primary"
+                >Active Sessions</Label
+              >
+              {#each Object.entries(savedCookies) as [domain, path] (domain)}
+                <div
+                  class="flex items-center justify-between p-3 rounded-xl border bg-muted/30"
                 >
-                <div class="grid gap-2">
-                  {#each Object.entries(savedCookies) as [domain, path] (domain)}
-                    <div
-                      class="flex items-center justify-between p-3 rounded-xl border border-border/50 bg-muted/30"
-                    >
-                      <div class="flex items-center gap-3">
-                        <div class="p-2 rounded-lg bg-primary/10 text-primary">
-                          <FileKey size={16} />
-                        </div>
-                        <span class="text-sm font-medium">{domain}</span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        class="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onclick={() => deleteCookie(path)}
-                      >
-                        <Trash2 size={16} />
-                      </Button>
-                    </div>
-                  {/each}
-                  {#if Object.keys(savedCookies).length === 0}
-                    <p
-                      class="text-center py-8 text-sm text-muted-foreground italic"
-                    >
-                      No cookies stored
-                    </p>
-                  {/if}
+                  <Icons.Cookie size={16} />
+                  <span class="text-sm font-medium uppercase">{domain}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onclick={() => deleteCookie(path)}
+                  >
+                    <Icons.Trash2 size={16} />
+                  </Button>
                 </div>
-              </div>
+              {/each}
             </div>
           {:else if activeTab === "privacy"}
-            <div
-              class="w-full space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-300"
-            >
-              <header class="space-y-2">
-                <h3
-                  class="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight"
-                >
-                  Privacy
-                </h3>
-              </header>
-              <div class="space-y-4">
-                <div class="flex items-center justify-between px-2">
-                  <div class="space-y-1">
-                    <Label for="notifications" class="text-[15px] font-medium"
-                      >Desktop Notifications</Label
-                    >
-                    <p class="text-xs text-muted-foreground">
-                      Alert when downloads finish or fail
-                    </p>
-                  </div>
-                  <Switch
-                    id="notifications"
-                    bind:checked={settingsStore.config.notifications}
-                    onCheckedChange={save}
-                    class={switchClass}
-                  />
-                </div>
-                <Separator class="opacity-20" />
-                <div class="flex items-center justify-between px-2">
-                  <div class="space-y-1">
-                    <Label for="clear-exit" class="text-[15px] font-medium"
-                      >Clear Cookies on Exit</Label
-                    >
-                    <p class="text-xs text-muted-foreground">
-                      Wipe cookies and cache when closing
-                    </p>
-                  </div>
-                  <Switch
-                    id="clear-exit"
-                    bind:checked={settingsStore.config.clear_on_exit}
-                    onCheckedChange={save}
-                    class={switchClass}
-                  />
-                </div>
-              </div>
-            </div>
+            <h3 class="text-2xl font-extrabold">Privacy</h3>
+            {@render switchRows(PRIVACY_SWITCHES)}
           {/if}
         </div>
       </main>
