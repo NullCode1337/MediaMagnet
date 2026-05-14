@@ -33,6 +33,7 @@
           "path": "$APPDATA/cookies/*"
         }
       ]
-    }
+    },
+    "fs:default"
   ]
 }
