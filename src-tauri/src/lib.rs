@@ -44,6 +44,7 @@ pub fn run() {
             commands::settings::settings,
             commands::settings::update_settings,
             commands::utils::get_free_space,
+            commands::utils::notify,
             commands::utils::overwrite_json,
         ])
         .run(tauri::generate_context!())
