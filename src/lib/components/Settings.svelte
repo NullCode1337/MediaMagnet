@@ -21,6 +21,7 @@
   import { toggleMode, mode } from "mode-watcher";
   import { uiState } from "$lib/store.svelte";
   import { settingsStore, type Config } from "$lib/settings.svelte";
+  import { onMount } from "svelte";
 
   let { isCollapsed } = $props();
   let activeTab = $state("general");
@@ -85,6 +86,10 @@
     await invoke("clear_cookies");
     await loadCookies();
   }
+
+  onMount(() => {
+    loadCookies();
+  })
 
   const switchClass =
     "data-[state=checked]:bg-primary data-[state=unchecked]:bg-input border-2 border-transparent transition-colors cursor-pointer";
