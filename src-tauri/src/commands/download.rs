@@ -367,8 +367,8 @@ pub async fn downloader(app: tauri::AppHandle, url: String, download_id: String)
             );
 
             let _ = app.emit("download-finished", IdPayload { id: download_id });
-            
-            return; 
+
+            return;
         }
     }
 
