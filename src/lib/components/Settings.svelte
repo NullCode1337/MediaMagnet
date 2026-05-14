@@ -8,10 +8,12 @@
   import * as Icons from "@lucide/svelte";
 
   import { invoke } from "@tauri-apps/api/core";
+  import { open } from "@tauri-apps/plugin-dialog";
   import { toggleMode, mode } from "mode-watcher";
+  import { onMount } from "svelte";
+
   import { uiState } from "$lib/store.svelte";
   import { settingsStore, type Config } from "$lib/settings.svelte";
-  import { onMount } from "svelte";
 
   let { isCollapsed } = $props();
   let activeTab = $state("general");
@@ -80,6 +82,23 @@
       () => settingsStore.update({ dark_mode: mode.current === "dark" }),
       50,
     );
+  }
+
+  async function selectDirectory() {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        defaultPath: settingsStore.config.download_path,
+      });
+
+      if (selected) {
+        settingsStore.config.download_path = selected;
+        await saveSettings();
+      }
+    } catch (e) {
+      console.error("Failed to open directory picker:", e);
+    }
   }
 
   // cookies
@@ -246,7 +265,9 @@
                     onchange={saveSettings}
                     class="bg-muted"
                   />
-                  <Button variant="secondary">Browse</Button>
+                  <Button variant="secondary" onclick={selectDirectory}
+                    >Browse</Button
+                  >
                 </div>
               </div>
               <div class="space-y-2">
