@@ -272,12 +272,12 @@
       <Button
         onclick={pasteOrDownload}
         disabled={anyDownloading}
-        class="w-24 h-24 rounded-full shadow-2xl transition-all hover:scale-105 active:scale-95 z-10 cursor-pointer"
+        class="w-30 h-30 rounded-full shadow-2xl transition-all hover:scale-105 active:scale-95 z-10 cursor-pointer"
       >
         {#if !anyDownloading}
-          <Clipboard size={32} />
+          <Clipboard class="size-8" />
         {:else}
-          <LoaderCircle size={32} class="animate-spin" />
+          <LoaderCircle class="size-8 animate-spin" />
         {/if}
       </Button>
     </div>
