@@ -10,6 +10,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import { openPath } from "@tauri-apps/plugin-opener";
   import { open, ask } from "@tauri-apps/plugin-dialog";
+  import { readTextFile } from "@tauri-apps/plugin-fs";
   import { toggleMode, mode } from "mode-watcher";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
@@ -112,9 +113,36 @@
     }
   }
 
+  async function importCookie() {
+    try {
+      const selected = await open({
+        multiple: false,
+        filters: [
+          {
+            name: "Cookie Files",
+            extensions: ["txt", "json", "cookies"],
+          },
+        ],
+      });
+
+      if (selected && typeof selected === "string") {
+        const content = await readTextFile(selected);
+        const fileName = selected.split(/[\\/]/).pop()?.split(".")[0] || "";
+
+        cookieRawContent = content;
+        cookieDomain = fileName.toLowerCase();
+
+        toast("Added cookie information to editor");
+      }
+    } catch (e) {
+      toast(("Failed to import cookie:" + e) as string);
+    }
+  }
+
   function isCookie(content: string): { valid: boolean; error?: string } {
     const trimmed = content.trim();
-    if (!trimmed) return { valid: false, error: "Cookie content cannot be empty" };
+    if (!trimmed)
+      return { valid: false, error: "Cookie content cannot be empty" };
 
     if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
       try {
@@ -125,27 +153,34 @@
       }
     }
 
-    const lines = trimmed.split('\n');
-    if ( lines.some(line => line.includes('# Netscape') || line.split('\t').length >= 7) ) {
+    const lines = trimmed.split("\n");
+    if (
+      lines.some(
+        (line) => line.includes("# Netscape") || line.split("\t").length >= 7,
+      )
+    ) {
       return { valid: true };
     }
 
-    return { valid: false, error: "Content must be valid JSON or Netscape format" };
+    return {
+      valid: false,
+      error: "Content must be valid JSON or Netscape format",
+    };
   }
 
   async function saveCookies() {
     const validation = isCookie(cookieRawContent);
     if (!validation.valid) {
-      toast("Failed to save cookie: " + validation.error as string); 
+      toast(("Failed to save cookie: " + validation.error) as string);
       return;
     }
 
     try {
       await invoke("save_cookie", {
-        domain: cookieDomain.toLowerCase(),
+        domain: cookieDomain.toLowerCase().replace(".", "").replace("/", ""),
         input: { type: "Content", value: cookieRawContent },
       });
-      
+
       cookieDomain = "";
       cookieRawContent = "";
       await loadCookies();
@@ -341,29 +376,43 @@
               </div>
             </div>
           {:else if activeTab === "cookies"}
-            <header class="flex justify-between items-center">
+            <header class="flex items-center justify-between">
               <h3 class="text-2xl font-extrabold">Cookies</h3>
-              <Button variant="destructive" size="sm" onclick={clearAllCookies}>
-                <Icons.Trash2 size={14} /> Clear
-              </Button>
+              <div class="flex items-center gap-2">
+                <Button variant="outline" size="sm" onclick={importCookie}>
+                  <Icons.FileUp size={14} class="mr-1" /> Import
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onclick={clearAllCookies}
+                >
+                  <Icons.Trash2 size={14} class="mr-1" /> Clear
+                </Button>
+              </div>
             </header>
 
-            <div class="p-6 rounded-2xl border bg-card space-y-4">
-              <p>Add Cookie</p>
-              <Input
-                bind:value={cookieDomain}
-                placeholder="Domain (e.g. google)"
-              />
-              <textarea
-                bind:value={cookieRawContent}
-                class="w-full min-h-[100px] p-3 rounded-lg bg-muted text-xs font-mono"
-                placeholder={"[ { 'domain': '.google.com', ... } ] or # Netscape format..."}
-              ></textarea>
-              <Button
-                class="w-full"
-                disabled={!cookieDomain || !cookieRawContent}
-                onclick={saveCookies}>Save</Button
+            <div>
+              <Label
+                class="text-xs font-bold uppercase p-1 mb-2 tracking-widest text-primary"
+                >Add Cookie</Label
               >
+              <div class="p-6 rounded-2xl border bg-card space-y-4">
+                <Input
+                  bind:value={cookieDomain}
+                  placeholder="Domain (e.g. google)"
+                />
+                <textarea
+                  bind:value={cookieRawContent}
+                  class="w-full min-h-[100px] p-3 rounded-lg overscroll-contain bg-muted text-xs font-mono"
+                  placeholder={"[ { 'domain': '.google.com', ... } ] or # Netscape format..."}
+                ></textarea>
+                <Button
+                  class="w-full"
+                  disabled={!cookieDomain || !cookieRawContent}
+                  onclick={saveCookies}>Save</Button
+                >
+              </div>
             </div>
 
             <div class="grid gap-2">
@@ -381,13 +430,13 @@
                   <Icons.Cookie size={16} />
                   <span class="text-sm font-medium uppercase">{domain}</span>
                   <Button
-                    variant="ghost"
+                    variant="destructive"
                     size="icon"
                     onclick={(e) => {
                       e.stopPropagation();
                       deleteCookie(domain, path);
                     }}
-                    class="cursor-pointer bg-red-500/50"
+                    class="cursor-pointer"
                   >
                     <Icons.Trash2 size={16} />
                   </Button>
