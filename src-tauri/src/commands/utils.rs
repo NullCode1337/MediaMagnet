@@ -213,30 +213,35 @@ pub async fn get_free_space(app: tauri::AppHandle) -> Result<f64, String> {
 }
 
 #[tauri::command]
-pub async fn notify(_app: tauri::AppHandle, body: String) -> Result<(), String> {
-    let title = "MediaMagnet";
+pub async fn notify(app: tauri::AppHandle, body: String) -> Result<(), String> {
+    let config_path = app.path().app_config_dir().unwrap().join("settings.json");
+    let settings: Settings =
+        serde_json::from_str(&std::fs::read_to_string(&config_path).unwrap()).unwrap();
 
-    #[cfg(target_os = "linux")]
-    {
-        use std::process::Command;
-        Command::new("notify-send")
-            .arg("--app-name=MediaMagnet")
-            .arg(title)
-            .arg(&body)
-            .spawn()
-            .map_err(|e| format!("Notification error: {e}"))?;
+    if settings.notifications {
+        #[cfg(target_os = "linux")]
+        {
+            use std::process::Command;
+            Command::new("notify-send")
+                //.arg("--app-name=MediaMagnet") // For some reason this causes
+                //.arg(title)                    // notifications to not send
+                .arg(&body)
+                .spawn()
+                .map_err(|e| format!("Notification error: {e}"))?;
+        }
+
+        #[cfg(not(target_os = "linux"))]
+        {
+            use tauri_plugin_notification::NotificationExt;
+            app.notification()
+                .builder()
+                .title("MediaMagnet")
+                .body(&body)
+                .show()
+                .map_err(|e| format!("Notification error: {e}"))?;
+        }
+    } else {
+        let _ = app.emit("notification", body.to_string());
     }
-
-    #[cfg(not(target_os = "linux"))]
-    {
-        use tauri_plugin_notification::NotificationExt;
-        _app.notification()
-            .builder()
-            .title(title)
-            .body(&body)
-            .show()
-            .map_err(|e| format!("Notification error: {e}"))?;
-    }
-
     Ok(())
 }

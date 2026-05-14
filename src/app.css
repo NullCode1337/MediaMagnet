@@ -105,8 +105,14 @@
   * {
     @apply border-border outline-ring/50;
     @apply select-none;
+    --toast-bg: var(--background);
+    --toast-border: var(--border);
+    --toast-text: var(--foreground);
   }
   body {
     @apply bg-background text-foreground;
+    --toast-bg: var(--card);
+    --toast-border: var(--border);
+    --toast-text: var(--foreground);
   }
 }

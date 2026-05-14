@@ -3,7 +3,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import { readText } from "@tauri-apps/plugin-clipboard-manager";
   import { onMount } from "svelte";
-  import { ModeWatcher } from "mode-watcher";
+  import { ModeWatcher, mode } from "mode-watcher";
 
   import { Button } from "$lib/components/ui/button";
   import Input from "$lib/components/ui/input/input.svelte";
@@ -15,6 +15,19 @@
   import History from "$lib/components/History.svelte";
   import Titlebar from "$lib/components/Titlebar.svelte";
   import { uiState } from "$lib/store.svelte";
+
+  import { toast, Toaster } from "svelte-sonner";
+
+  $effect(() => {
+    const unlisten = listen<{ message: string }>("notification", (event) => {
+      let message = event.payload as unknown as string;
+      toast(message);
+    });
+
+    return () => {
+      unlisten.then((f) => f());
+    };
+  });
 
   interface Task {
     id: string;
@@ -72,7 +85,7 @@
     const matches = input.match(urlRegex);
 
     if (!matches || matches.length === 0) {
-      console.warn("No valid URLs found in input"); // TODO: Toast feature (notification when headless mode / settings choice)
+      await invoke("notify", { body: "No valid URLs found in input" });
       return;
     }
 
@@ -207,9 +220,20 @@
 </script>
 
 <ModeWatcher />
+
 <svelte:window
   bind:innerWidth={uiState.innerWidth}
   bind:innerHeight={uiState.innerHeight}
+/>
+
+<Toaster
+  theme={mode.current === "dark" ? "dark" : "light"}
+  expand={false}
+  position="bottom-right"
+  toastOptions={{
+    style:
+      "background: var(--toast-bg); color: var(--toast-text); border: 1px solid var(--toast-border);",
+  }}
 />
 
 <div
