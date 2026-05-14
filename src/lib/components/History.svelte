@@ -2,6 +2,7 @@
   import { Button } from "$lib/components/ui/button";
   import { CheckCircle2, AlertCircle } from "@lucide/svelte";
   import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+  import { toast } from "svelte-sonner";
 
   interface HistoryItem {
     url: string;
@@ -16,20 +17,9 @@
     if (!url) return;
     try {
       await writeText(url);
-      console.log("Copied to clipboard:", url);
+      toast("Copied to clipboard: " + url);
     } catch (err) {
-      console.error("Failed to copy:", err);
-    }
-  }
-
-  function label(item: HistoryItem): string {
-    try {
-      return (
-        new URL(item.url).hostname +
-        new URL(item.url).pathname.replace(/\/$/, "")
-      );
-    } catch {
-      return item.name || item.url;
+      toast("Failed to copy: " + err);
     }
   }
 </script>
@@ -58,7 +48,7 @@
       <button
         type="button"
         class="flex items-center justify-between p-3 bg-card border border-border rounded-lg
-          min-w-full transition-colors hover:bg-accent/50 group"
+          min-w-full transition-colors cursor-pointer hover:bg-accent/50 group"
         onclick={() => copy(item.url)}
         title="Click to copy URL"
       >
@@ -69,7 +59,7 @@
             <AlertCircle size={14} class="text-destructive shrink-0" />
           {/if}
           <span class="text-xs truncate font-medium text-foreground flex-1">
-            {label(item)}
+            {item.url}
           </span>
         </div>
         <span class="text-[10px] text-muted-foreground shrink-0 font-mono ml-3">
