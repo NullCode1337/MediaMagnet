@@ -12,6 +12,7 @@
   import { open, ask } from "@tauri-apps/plugin-dialog";
   import { toggleMode, mode } from "mode-watcher";
   import { onMount } from "svelte";
+  import { toast } from "svelte-sonner";
 
   import { uiState } from "$lib/store.svelte";
   import { settingsStore, type Config } from "$lib/settings.svelte";
@@ -111,13 +112,46 @@
     }
   }
 
+  function isCookie(content: string): { valid: boolean; error?: string } {
+    const trimmed = content.trim();
+    if (!trimmed) return { valid: false, error: "Cookie content cannot be empty" };
+
+    if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+      try {
+        JSON.parse(trimmed);
+        return { valid: true };
+      } catch (e) {
+        return { valid: false, error: e as string };
+      }
+    }
+
+    const lines = trimmed.split('\n');
+    if ( lines.some(line => line.includes('# Netscape') || line.split('\t').length >= 7) ) {
+      return { valid: true };
+    }
+
+    return { valid: false, error: "Content must be valid JSON or Netscape format" };
+  }
+
   async function saveCookies() {
-    await invoke("save_cookie", {
-      domain: cookieDomain.toLowerCase(),
-      input: { type: "Content", value: cookieRawContent },
-    });
-    cookieDomain = cookieRawContent = "";
-    await loadCookies();
+    const validation = isCookie(cookieRawContent);
+    if (!validation.valid) {
+      toast("Failed to save cookie: " + validation.error as string); 
+      return;
+    }
+
+    try {
+      await invoke("save_cookie", {
+        domain: cookieDomain.toLowerCase(),
+        input: { type: "Content", value: cookieRawContent },
+      });
+      
+      cookieDomain = "";
+      cookieRawContent = "";
+      await loadCookies();
+    } catch (e) {
+      toast("Failed to save cookie: " + e);
+    }
   }
 
   async function deleteCookie(domain: string, path: string) {
@@ -315,6 +349,7 @@
             </header>
 
             <div class="p-6 rounded-2xl border bg-card space-y-4">
+              <p>Add Cookie</p>
               <Input
                 bind:value={cookieDomain}
                 placeholder="Domain (e.g. google)"
@@ -327,7 +362,7 @@
               <Button
                 class="w-full"
                 disabled={!cookieDomain || !cookieRawContent}
-                onclick={saveCookies}>Import</Button
+                onclick={saveCookies}>Save</Button
               >
             </div>
 
