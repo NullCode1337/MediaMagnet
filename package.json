@@ -1,7 +1,7 @@
 {
   "name": "mediamagnet",
   "private": true,
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "Cross-platform GUI for gallery-dl, an image/media downloader",
   "author": {
     "name": "NullCode1337",

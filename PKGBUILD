@@ -2,7 +2,7 @@
 # Contributor: NullCode1337 
 
 pkgname=mediamagnet-git
-pkgver=0.4.2.r15.g7a2b3c4
+pkgver=0.5.0
 pkgrel=1
 pkgdesc="Download any and all media" 
 arch=('x86_64')
