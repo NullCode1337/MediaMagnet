@@ -22,18 +22,24 @@ jobs:
         include:
           - platform: 'macos-latest'   # Apple Silicon (M1+)
             args: '--target aarch64-apple-darwin'
+            target: 'aarch64-apple-darwin'
           - platform: 'macos-latest'   # Intel Mac
             args: '--target x86_64-apple-darwin'
+            target: 'x86_64-apple-darwin'
           - platform: 'ubuntu-22.04'
             args: ''
+            target: 'x86_64-unknown-linux-gnu'
           - platform: 'windows-latest'
             args: ''
+            target: 'x86_64-pc-windows-msvc'
 
     runs-on: ${{ matrix.platform }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          lfs: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -60,6 +66,22 @@ jobs:
 
       - name: Install frontend dependencies
         run: bun install
+
+      - name: Prepare sidecar binaries
+        if: matrix.platform != 'macos-latest'
+        shell: bash
+        run: |
+          TRIPLE="${{ matrix.target }}"
+          DEST="src-tauri/binaries"
+          mkdir -p "$DEST"
+
+          for src in prebuilts/*-"${TRIPLE}"*; do
+            [ -f "$src" ] || { echo "No prebuilts found for $TRIPLE — aborting"; exit 1; }
+            cp "$src" "$DEST/$(basename "$src")"
+            echo "Copied $src → $DEST/$(basename "$src")"
+          done
+
+          chmod +x "$DEST"/*-"${TRIPLE}" || true
 
       - name: Build and publish to GitHub Releases
         uses: tauri-apps/tauri-action@v0
