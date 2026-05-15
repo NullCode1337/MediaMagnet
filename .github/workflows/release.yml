@@ -55,6 +55,9 @@ jobs:
             librsvg2-dev \
             patchelf
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
       - name: Install frontend dependencies
         run: bun install
 
