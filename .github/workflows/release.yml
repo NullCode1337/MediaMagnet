@@ -12,6 +12,10 @@ on:
           - 'true'
           - 'false'
 
+env:
+  GALLERY_DL_VERSION: '1.32.1'
+  YTDLP_VERSION: '2026.03.17'
+
 jobs:
   publish-tauri:
     permissions:
@@ -20,9 +24,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: 'macos-latest'   # Apple Silicon (M1+)
-            args: '--target aarch64-apple-darwin'
-            target: 'aarch64-apple-darwin'
           - platform: 'macos-latest'   # Intel Mac
             args: '--target x86_64-apple-darwin'
             target: 'x86_64-apple-darwin'
@@ -38,8 +39,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          lfs: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -67,21 +66,51 @@ jobs:
       - name: Install frontend dependencies
         run: bun install
 
-      - name: Prepare sidecar binaries
-        if: matrix.platform != 'macos-latest'
+      - name: Download sidecar binaries (macOS)
+        if: matrix.platform == 'macos-latest'
         shell: bash
         run: |
           TRIPLE="${{ matrix.target }}"
           DEST="src-tauri/binaries"
           mkdir -p "$DEST"
 
-          for src in prebuilts/*-"${TRIPLE}"*; do
-            [ -f "$src" ] || { echo "No prebuilts found for $TRIPLE — aborting"; exit 1; }
-            cp "$src" "$DEST/$(basename "$src")"
-            echo "Copied $src → $DEST/$(basename "$src")"
-          done
+          curl -fsSL "https://codeberg.org/mikf/gallery-dl/releases/download/v${GALLERY_DL_VERSION}/gallery-dl.bin" \
+            -o "$DEST/gallery-dl-${TRIPLE}"
 
-          chmod +x "$DEST"/*-"${TRIPLE}" || true
+          curl -fsSL "https://github.com/yt-dlp/yt-dlp/releases/download/${YTDLP_VERSION}/yt-dlp_macos" \
+            -o "$DEST/yt-dlp-${TRIPLE}"
+
+          chmod +x "$DEST/gallery-dl-${TRIPLE}" "$DEST/yt-dlp-${TRIPLE}"
+
+      - name: Download sidecar binaries (Linux)
+        if: matrix.platform == 'ubuntu-22.04'
+        shell: bash
+        run: |
+          TRIPLE="${{ matrix.target }}"
+          DEST="src-tauri/binaries"
+          mkdir -p "$DEST"
+
+          curl -fsSL "https://codeberg.org/mikf/gallery-dl/releases/download/v${GALLERY_DL_VERSION}/gallery-dl.bin" \
+            -o "$DEST/gallery-dl-${TRIPLE}"
+
+          curl -fsSL "https://github.com/yt-dlp/yt-dlp/releases/download/${YTDLP_VERSION}/yt-dlp_linux" \
+            -o "$DEST/yt-dlp-${TRIPLE}"
+
+          chmod +x "$DEST/gallery-dl-${TRIPLE}" "$DEST/yt-dlp-${TRIPLE}"
+
+      - name: Download sidecar binaries (Windows)
+        if: matrix.platform == 'windows-latest'
+        shell: bash
+        run: |
+          TRIPLE="${{ matrix.target }}"
+          DEST="src-tauri/binaries"
+          mkdir -p "$DEST"
+
+          curl -fsSL "https://codeberg.org/mikf/gallery-dl/releases/download/v${GALLERY_DL_VERSION}/gallery-dl.exe" \
+            -o "$DEST/gallery-dl-${TRIPLE}.exe"
+
+          curl -fsSL "https://github.com/yt-dlp/yt-dlp/releases/download/${YTDLP_VERSION}/yt-dlp.exe" \
+            -o "$DEST/yt-dlp-${TRIPLE}.exe"
 
       - name: Build and publish to GitHub Releases
         uses: tauri-apps/tauri-action@v0
