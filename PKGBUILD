@@ -25,6 +25,10 @@ pkgver() {
 
 prepare() {
   cd "${pkgname}"
+  mkdir -p src-tauri/binaries
+  touch src-tauri/binaries/yt-dlp-x86_64-unknown-linux-gnu
+  touch src-tauri/binaries/gallery-dl-x86_64-unknown-linux-gnu
+  chmod +x src-tauri/binaries/*
   pnpm install
   cd "src-tauri"
   cargo update
