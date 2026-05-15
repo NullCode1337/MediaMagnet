@@ -42,4 +42,8 @@ package() {
   if [ -f "${pkgdir}/usr/bin/gallery-dl" ]; then
     rm "${pkgdir}/usr/bin/gallery-dl" 
   fi
+
+  if [ -f "${pkgdir}/usr/bin/yt-dlp" ]; then
+    rm "${pkgdir}/usr/bin/yt-dlp" 
+  fi
 }
