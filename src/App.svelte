@@ -124,6 +124,8 @@
           urlInput = clipboardText;
           await startDownload(urlInput);
           urlInput = "";
+        } else {
+          await invoke("notify", { body: "No valid URLs found in input" });
         }
       } catch (err) {
         console.error("Clipboard access denied", err);
