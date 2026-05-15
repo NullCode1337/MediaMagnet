@@ -90,6 +90,12 @@
     }
 
     for (const url of matches) {
+      const isDuplicate = tasks.some((t) => t.url === url && t.isDownloading);
+      if (isDuplicate) {
+        await invoke("notify", { body: `Already downloading: ${url}` });
+        continue;
+      }
+
       const id = crypto.randomUUID();
 
       tasks = [
