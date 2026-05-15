@@ -128,7 +128,7 @@
           await invoke("notify", { body: "No valid URLs found in input" });
         }
       } catch (err) {
-        console.error("Clipboard access denied", err);
+        await invoke("notify", { body: err });
       }
     } else {
       await startDownload(urlInput);
@@ -139,16 +139,16 @@
   async function stopDownload(id: string) {
     try {
       await invoke("cancel_download", { downloadId: id });
-    } catch (e) {
-      console.error("Failed to cancel:", e);
+    } catch (err) {
+      await invoke("notify", { body: "Failed to cancel: " + err });
     }
   }
 
   async function stopAllDownloads() {
     try {
       await invoke("cancel_all_downloads");
-    } catch (e) {
-      console.error("Failed to cancel all:", e);
+    } catch (err) {
+      await invoke("notify", { body: "Failed to cancel all: " + err });
     }
   }
 
@@ -162,8 +162,8 @@
   async function updateDiskSpace() {
     try {
       diskUsage = await invoke("get_free_space");
-    } catch (e) {
-      console.error("Disk fetch failed:", e);
+    } catch (err) {
+      toast("Disk fetch failed: " + err );
     }
   }
 
