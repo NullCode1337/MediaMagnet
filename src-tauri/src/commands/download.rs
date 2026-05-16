@@ -104,7 +104,9 @@ async fn base_command(app: &tauri::AppHandle, command: &str) -> Result<Command> 
             #[allow(unused_mut)]
             let mut cmd = Command::new(command);
             #[cfg(target_os = "windows")]
-            cmd.creation_flags(winapi::um::winbase::CREATE_NO_WINDOW);
+            use std::os::windows::process::CommandExt;
+            #[cfg(target_os = "windows")]
+            cmd.creation_flags(0x08000000);
             return Ok(cmd);
         }
         Ok(_) | Err(_) => match app.shell().sidecar(command) {
