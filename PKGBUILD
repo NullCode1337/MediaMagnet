@@ -9,6 +9,7 @@ arch=('x86_64')
 url="https://github.com/NullCode1337/MediaMagnet" 
 license=('MIT') 
 depends=('cairo' 'desktop-file-utils' 'gdk-pixbuf2' 'glib2' 'gtk3' 'hicolor-icon-theme' 'pango' 'webkit2gtk-4.1' 'gallery-dl' 'yt-dlp' 'python-curl_cffi')
+optdepends=('spotdl: Spotify music downloading support')
 makedepends=('git' 'openssl' 'appmenu-gtk-module' 'libappindicator-gtk3' 'librsvg' 'cargo' 'pnpm' 'nodejs')
 provides=('mediamagnet')
 conflicts=('mediamagnet' 'mediamagnet-bin')
