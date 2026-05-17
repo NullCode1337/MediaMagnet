@@ -466,7 +466,7 @@ pub async fn downloader(app: tauri::AppHandle, url: String, download_id: String)
 }
 
 #[tauri::command]
-pub async fn cancel_download(download_id: String) -> std::result::Result<(), String> {
+pub async fn cancel_download(app: tauri::AppHandle, download_id: String) -> std::result::Result<(), String> {
     let child = get_downloads()
         .lock()
         .map_err(|_| "Lock failed")?
@@ -481,6 +481,14 @@ pub async fn cancel_download(download_id: String) -> std::result::Result<(), Str
             .wait()
             .await
             .map_err(|e| format!("Wait failed: {}", e))?;
+
+        let _ = app.emit(
+            "download-error",
+            StatusPayload {
+                id: download_id,
+                value: "Download cancelled".into(),
+            },
+        );
         Ok(())
     } else {
         Err(format!("No download with id: {}", download_id))
@@ -488,7 +496,7 @@ pub async fn cancel_download(download_id: String) -> std::result::Result<(), Str
 }
 
 #[tauri::command]
-pub async fn cancel_all_downloads() -> std::result::Result<(), String> {
+pub async fn cancel_all_downloads(app: tauri::AppHandle) -> std::result::Result<(), String> {
     let children: Vec<(String, tokio::process::Child)> = get_downloads()
         .lock()
         .map_err(|_| "Lock failed")?
@@ -500,6 +508,14 @@ pub async fn cancel_all_downloads() -> std::result::Result<(), String> {
             eprintln!("[MediaMagnet] Failed to kill {}: {}", id, e);
         }
         let _ = child.wait().await;
+
+        let _ = app.emit(
+            "download-error",
+            StatusPayload {
+                id: id,
+                value: "Download cancelled".into(),
+            },
+        );
     }
     Ok(())
 }
