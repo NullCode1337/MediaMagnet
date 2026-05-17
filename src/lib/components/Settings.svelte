@@ -11,7 +11,7 @@
 
   import GeneralTab from "$lib/components/Settings/General.svelte";
   import DownloadsTab from "$lib/components/Settings/Download.svelte";
-  import BackendTab from "$lib/components/Settings/Backend.svelte";
+  import YouTubeTab from "$lib/components/Settings/YouTube.svelte";
   import CookiesTab from "$lib/components/Settings/Cookies.svelte";
   import PrivacyTab from "$lib/components/Settings/Privacy.svelte";
 
@@ -19,13 +19,14 @@
   let activeTab = $state("general");
   let saveStatus = $state<"idle" | "saved">("idle");
 
-  const TABS = [
+  const CONFIG_TABS = [
     { id: "general", label: "Appearance", icon: Icons.Monitor },
     { id: "downloads", label: "Downloads", icon: Icons.Download },
-    { id: "backend", label: "Backend", icon: Icons.Cpu },
     { id: "cookies", label: "Cookies", icon: Icons.Cookie },
     { id: "privacy", label: "Privacy", icon: Icons.ShieldCheck },
   ];
+
+  const BACKEND_TABS = [{ id: "youtube", label: "YouTube", icon: Icons.Video }];
 
   const switchClass =
     "data-[state=checked]:bg-primary data-[state=unchecked]:bg-input border-2 border-transparent cursor-pointer";
@@ -108,7 +109,7 @@
         >
           Configuration
         </h2>
-        {#each TABS as tab (tab.id)}
+        {#each CONFIG_TABS as tab (tab.id)}
           <button
             onclick={() => (activeTab = tab.id)}
             class="{btnClass} {activeTab === tab.id
@@ -119,6 +120,24 @@
             <span class="whitespace-nowrap">{tab.label}</span>
           </button>
         {/each}
+
+        <h2
+          class="hidden sm:block text-[11px] font-bold uppercase tracking-[0.2em] text-sidebar-foreground/50 mt-6 mb-4 px-2"
+        >
+          Backend
+        </h2>
+        {#each BACKEND_TABS as tab (tab.id)}
+          <button
+            onclick={() => (activeTab = tab.id)}
+            class="{btnClass} {activeTab === tab.id
+              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
+              : 'text-sidebar-foreground/70'}"
+          >
+            <tab.icon size={17} />
+            <span class="whitespace-nowrap">{tab.label}</span>
+          </button>
+        {/each}
+
         <Button
           variant="ghost"
           class="sm:mt-auto gap-3 text-xs opacity-60"
@@ -148,8 +167,8 @@
               <GeneralTab {saveSettings} {toggleTheme} {switchClass} />
             {:else if activeTab === "downloads"}
               <DownloadsTab {saveSettings} {selectDirectory} />
-            {:else if activeTab === "backend"}
-              <BackendTab {saveSettings} {switchClass} />
+            {:else if activeTab === "youtube"}
+              <YouTubeTab {saveSettings} {switchClass} />
             {:else if activeTab === "cookies"}
               <CookiesTab />
             {:else if activeTab === "privacy"}
