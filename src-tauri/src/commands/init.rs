@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::io::{Read, Write};
+use std::io::Write;
 use tauri::{Emitter, Manager};
 
 use super::settings::Settings;
@@ -14,30 +14,29 @@ struct LinkEvent {
 pub fn check_links(app: tauri::AppHandle) {
     let path = app.path().app_data_dir().unwrap().join("links.json");
 
-    let mut file = std::fs::File::open(path).unwrap();
-    let mut contents = String::new();
-    let _ = file.read_to_string(&mut contents);
-
-    let links: Vec<String> = serde_json::from_str(&contents).unwrap();
+    let contents = std::fs::read_to_string(&path).unwrap_or_default();
+    let links: Vec<String> = serde_json::from_str(&contents).unwrap_or_default();
 
     if links.is_empty() {
         println!("[MediaMagnet][Init] No pending downloads from last startup!");
-
-        let event = LinkEvent {
-            links: vec![],
-            message: "Nothing".to_string(),
-        };
-
-        app.emit("link-event", event).unwrap();
+        app.emit(
+            "link-event",
+            LinkEvent {
+                links: vec![],
+                message: "Nothing".to_string(),
+            },
+        )
+        .unwrap();
     } else {
         println!("[MediaMagnet][Init] {} downloads pending!", links.len());
-
-        let event = LinkEvent {
-            links: links.clone(),
-            message: format!("Found {} links", links.len()),
-        };
-
-        app.emit("link-event", event).unwrap();
+        app.emit(
+            "link-event",
+            LinkEvent {
+                message: format!("Found {} links", links.len()),
+                links,
+            },
+        )
+        .unwrap();
     }
 }
 
@@ -49,52 +48,20 @@ pub fn init_config(app: tauri::AppHandle) {
     let links_json = app_data_dir.join("links.json");
     let settings_json = app_config_dir.join("settings.json");
 
-    if !app_data_dir.exists() {
-        std::fs::create_dir_all(&app_data_dir)
-            .map_err(|e| {
-                format!(
-                    "[MediaMagnet][Init] Failed to create app data directory: {}",
-                    e
-                )
-            })
-            .unwrap();
+    for dir in [&app_data_dir, &cookies_dir, &app_config_dir] {
+        if !dir.exists() {
+            std::fs::create_dir_all(dir)
+                .unwrap_or_else(|e| panic!("[MediaMagnet][Init] Failed to create {dir:?}: {e}"));
+        }
     }
 
-    if !cookies_dir.exists() {
-        std::fs::create_dir_all(&cookies_dir)
-            .map_err(|e| {
-                format!(
-                    "[MediaMagnet][Init] Failed to create cookies directory: {}",
-                    e
-                )
-            })
-            .unwrap();
-    }
+    let settings = Settings::load(&app);
+    settings.save(&app);
 
-    if !app_config_dir.exists() {
-        std::fs::create_dir_all(&app_config_dir)
-            .map_err(|e| {
-                format!(
-                    "[MediaMagnet][Init] Failed to create app config directory: {}",
-                    e
-                )
-            })
-            .unwrap();
-    }
-
-    if !settings_json.exists() {
-        let default_settings = Settings::default();
-        let settings_json_content: String =
-            serde_json::to_string_pretty(&default_settings).unwrap();
-
-        std::fs::write(&settings_json, settings_json_content)
-            .map_err(|e| {
-                format!(
-                    "[MediaMagnet][Init] Failed to write default settings to file: {}",
-                    e
-                )
-            })
-            .unwrap();
+    if settings_json.exists() {
+        println!("[MediaMagnet][Init] Settings verified OK");
+    } else {
+        println!("[MediaMagnet][Init] Default settings written");
     }
 
     if links_json.exists() {
@@ -108,8 +75,6 @@ pub fn init_config(app: tauri::AppHandle) {
     }
 
     let mut file = std::fs::File::create(&links_json).unwrap();
-
     file.write_all(b"[]")
-        .map_err(|e| format!("Failed to write to data file: {}", e))
-        .unwrap();
+        .unwrap_or_else(|e| panic!("Failed to write to data file: {e}"));
 }
