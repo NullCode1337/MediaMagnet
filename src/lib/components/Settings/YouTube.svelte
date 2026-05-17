@@ -35,6 +35,33 @@
     { label: "Worst (smallest)", value: "worst" },
   ];
 
+  const YT_OUTPUT_PRESETS = [
+    {
+      label: "Default",
+      value: "%(title)s.%(ext)s",
+    },
+    {
+      label: "Title + ID",
+      value: "%(title)s [%(id)s].%(ext)s",
+    },
+    {
+      label: "Channel + Title",
+      value: "%(uploader)s - %(title)s.%(ext)s",
+    },
+    {
+      label: "Date + Title",
+      value: "%(upload_date)s - %(title)s.%(ext)s",
+    },
+    {
+      label: "Playlist + Title",
+      value: "%(playlist_title)s/%(playlist_index)s - %(title)s.%(ext)s",
+    },
+    {
+      label: "Video ID Only",
+      value: "%(id)s.%(ext)s",
+    },
+  ];
+
   const YT_BACKEND_SWITCHES = [
     {
       id: "yt_embed_thumbnail",
@@ -69,7 +96,7 @@
           >Format / Quality</Label
         >
         <p class="text-xs text-muted-foreground">
-          yt-dlp format selector. Pick a preset or type a custom value.
+          yt-dlp format selector. Pick a preset or type a custom value
         </p>
         <div class="flex gap-2">
           <Input
@@ -102,18 +129,34 @@
         >
         <p class="text-xs text-muted-foreground">
           yt-dlp <code class="bg-muted px-1 rounded">-o</code> filename
-          template. Use
+          template. <br /> Use
           <code class="bg-muted px-1 rounded">%(title)s</code>,
           <code class="bg-muted px-1 rounded">%(uploader)s</code>,
-          <code class="bg-muted px-1 rounded">%(upload_date)s</code>, etc.
+          <code class="bg-muted px-1 rounded">%(upload_date)s</code>, etc
         </p>
-        <Input
-          id="yt_output_template"
-          bind:value={settingsStore.config!.yt_output_template}
-          onchange={saveSettings}
-          placeholder="%(title)s.%(ext)s"
-          class="font-mono text-xs bg-muted/20"
-        />
+        <div class="flex gap-2">
+          <Input
+            id="yt_output_template"
+            bind:value={settingsStore.config!.yt_output_template}
+            onchange={saveSettings}
+            placeholder="%(title)s.%(ext)s"
+            class="font-mono text-xs bg-muted/20 flex-1"
+          />
+          <select
+            class="h-9 rounded-md border border-input bg-muted/20 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary"
+            onchange={(e) => {
+              settingsStore.config!.yt_output_template = (
+                e.target as HTMLSelectElement
+              ).value;
+              saveSettings();
+            }}
+          >
+            <option value="" disabled selected>Presets</option>
+            {#each YT_OUTPUT_PRESETS as preset (preset.label)}
+              <option value={preset.value}>{preset.label}</option>
+            {/each}
+          </select>
+        </div>
       </div>
 
       <div class="space-y-4 pt-1">
