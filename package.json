@@ -1,8 +1,8 @@
 {
   "name": "mediamagnet",
   "private": true,
-  "version": "0.5.0",
-  "description": "Cross-platform GUI for gallery-dl, an image/media downloader",
+  "version": "0.5.1",
+  "description": "Download any and all media",
   "author": {
     "name": "NullCode1337",
     "email": "contact.nullcode@proton.me"
