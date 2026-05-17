@@ -1,27 +1,84 @@
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
+fn default_download_path() -> String {
+    "Default".to_string()
+}
+fn default_user_agent() -> String {
+    "None".to_string()
+}
+fn default_dark_mode() -> bool {
+    true
+}
+fn default_always_on_top() -> bool {
+    true
+}
+fn default_show_custom() -> bool {
+    true
+}
+fn default_yt_format() -> String {
+    "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best".to_string()
+}
+fn default_yt_output_template() -> String {
+    "%(title)s.%(ext)s".to_string()
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Settings {
+    #[serde(default = "default_download_path")]
     pub download_path: String,
+
+    #[serde(default = "default_user_agent")]
     pub user_agent: String,
+
+    #[serde(default = "default_dark_mode")]
     pub dark_mode: bool,
+
+    #[serde(default = "default_always_on_top")]
     pub always_on_top: bool,
+
+    #[serde(default = "default_show_custom")]
     pub show_custom: bool,
+
+    #[serde(default)]
     pub notifications: bool,
+
+    #[serde(default)]
     pub clear_on_exit: bool,
+
+    // YouTube / yt-dlp backend options
+    #[serde(default = "default_yt_format")]
+    pub yt_format: String,
+
+    #[serde(default = "default_yt_output_template")]
+    pub yt_output_template: String,
+
+    #[serde(default)]
+    pub yt_embed_thumbnail: bool,
+
+    #[serde(default)]
+    pub yt_embed_subs: bool,
+
+    #[serde(default)]
+    pub yt_restrict_filenames: bool,
 }
 
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            download_path: "Default".to_string(),
-            user_agent: "None".to_string(),
-            dark_mode: true,
-            always_on_top: true,
-            show_custom: true,
+            download_path: default_download_path(),
+            user_agent: default_user_agent(),
+            dark_mode: default_dark_mode(),
+            always_on_top: default_always_on_top(),
+            show_custom: default_show_custom(),
             notifications: false,
             clear_on_exit: false,
+
+            yt_format: default_yt_format(),
+            yt_output_template: default_yt_output_template(),
+            yt_embed_thumbnail: false,
+            yt_embed_subs: false,
+            yt_restrict_filenames: false,
         }
     }
 }
@@ -48,11 +105,23 @@ impl Settings {
 
     pub fn load(app: &tauri::AppHandle) -> Self {
         let config_path = app.path().app_config_dir().unwrap().join("settings.json");
-        let configs = std::fs::read_to_string(&config_path).unwrap();
-        if let Ok(settings) = serde_json::from_str(&configs) {
-            return settings;
+
+        match std::fs::read_to_string(&config_path) {
+            Ok(contents) => serde_json::from_str(&contents).unwrap_or_else(|e| {
+                eprintln!(
+                    "[MediaMagnet][Settings] Failed to parse settings, resetting to defaults: {}",
+                    e
+                );
+                Self::default()
+            }),
+            Err(e) => {
+                eprintln!(
+                    "[MediaMagnet][Settings] Could not read settings file, resetting to defaults: {}",
+                    e
+                );
+                Self::default()
+            }
         }
-        Settings::default()
     }
 }
 

@@ -387,8 +387,9 @@ pub async fn downloader(app: tauri::AppHandle, url: String, download_id: String)
     }
 
     let mut check_cmd = base_command(&app, "yt-dlp").await.unwrap();
-    
-    check_cmd.args([ "--simulate", "--skip-download", &url ])
+
+    check_cmd
+        .args(["--simulate", "--skip-download", &url])
         .stderr(Stdio::piped());
 
     let is_youtube = if let Ok(output) = check_cmd.output().await {
@@ -397,7 +398,7 @@ pub async fn downloader(app: tauri::AppHandle, url: String, download_id: String)
     } else {
         false
     };
-    
+
     let _ = app.emit(
         "download-started",
         IdPayload {
@@ -411,17 +412,30 @@ pub async fn downloader(app: tauri::AppHandle, url: String, download_id: String)
         .unwrap();
 
     if is_youtube {
-        // TODO: make this customizable
         cmd.args([
             "-o",
-            "%(title)s.%(ext)s",
+            &settings.yt_output_template,
             "--progress-template",
             "%(progress)j",
             "--newline",
         ]);
-        if lc.contains("youtu") {
-            cmd.args(["-f", "244"]);
+
+        if !settings.yt_format.is_empty() {
+            cmd.args(["-f", &settings.yt_format]);
         }
+
+        if settings.yt_embed_thumbnail {
+            cmd.arg("--embed-thumbnail");
+        }
+
+        if settings.yt_embed_subs {
+            cmd.args(["--write-subs", "--embed-subs"]);
+        }
+
+        if settings.yt_restrict_filenames {
+            cmd.arg("--restrict-filenames");
+        }
+
         if settings.user_agent != "None" {
             cmd.args(["--user-agent", &settings.user_agent]);
         }

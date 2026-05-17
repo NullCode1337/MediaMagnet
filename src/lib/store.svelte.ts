@@ -6,7 +6,7 @@ export const uiState = $state({
   isMaximized: false,
   
   get showCustom() {
-    return settingsStore.config.show_custom;
+    return settingsStore.config?.show_custom ?? true; 
   },
 
   get headless() {
