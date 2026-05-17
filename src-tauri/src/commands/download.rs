@@ -277,7 +277,7 @@ async fn run_downloader(
     let err_handle = tokio::spawn(async move {
         while let Ok(Some(line)) = err_reader.next_line().await {
             println!("{:#}", line);
-            let event = if line.contains("[error") || line.to_lowercase().contains("error") {
+            let event = if line.contains("[error") {
                 "download-error"
             } else if !ytdlp
                 || line.to_lowercase().contains("downloaded")
@@ -429,7 +429,7 @@ pub async fn downloader(app: tauri::AppHandle, url: String, download_id: String)
         }
 
         if settings.yt_embed_subs {
-            cmd.args(["--write-subs", "--embed-subs"]);
+            cmd.args(["--write-subs", "--write-auto-sub",  "--embed-subs"]);
         }
 
         if settings.yt_restrict_filenames {
