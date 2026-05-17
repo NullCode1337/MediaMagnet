@@ -28,6 +28,7 @@
   const TABS = [
     { id: "general", label: "Appearance", icon: Icons.Monitor },
     { id: "downloads", label: "Downloads", icon: Icons.Download },
+    { id: "backend", label: "Backend", icon: Icons.Cpu },
     { id: "cookies", label: "Cookies", icon: Icons.Cookie },
     { id: "privacy", label: "Privacy", icon: Icons.ShieldCheck },
   ];
@@ -58,11 +59,53 @@
     },
   ];
 
+  const YT_FORMAT_PRESETS = [
+    {
+      label: "Best (MP4)",
+      value: "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+    },
+    { label: "Best (any)", value: "bestvideo+bestaudio/best" },
+    {
+      label: "1080p",
+      value: "bestvideo[height<=1080]+bestaudio/best[height<=1080]",
+    },
+    {
+      label: "720p",
+      value: "bestvideo[height<=720]+bestaudio/best[height<=720]",
+    },
+    {
+      label: "480p",
+      value: "bestvideo[height<=480]+bestaudio/best[height<=480]",
+    },
+    { label: "Audio only (m4a)", value: "bestaudio[ext=m4a]/bestaudio" },
+    { label: "Audio only (mp3)", value: "bestaudio/best" },
+    { label: "Worst (smallest)", value: "worst" },
+  ];
+
+  const YT_BACKEND_SWITCHES = [
+    {
+      id: "yt_embed_thumbnail",
+      label: "Embed Thumbnail",
+      desc: "Write the video thumbnail into the file metadata",
+    },
+    {
+      id: "yt_embed_subs",
+      label: "Embed Subtitles",
+      desc: "Download and embed available subtitles into the file",
+    },
+    {
+      id: "yt_restrict_filenames",
+      label: "Restrict Filenames",
+      desc: "Limit filenames to ASCII characters, avoiding special chars",
+    },
+  ];
+
   let saveStatus = $state<"idle" | "saved">("idle");
   const nextTick = () => new Promise((res) => setTimeout(res, 0));
 
   // settings
   async function saveSettings() {
+    if (!settingsStore.config) return;
     await nextTick(); // wait for settings to be updated first
     await invoke("update_settings", {
       settings: $state.snapshot(settingsStore.config),
@@ -92,10 +135,10 @@
       const selected = await open({
         directory: true,
         multiple: false,
-        defaultPath: settingsStore.config.download_path,
+        defaultPath: settingsStore.config?.download_path,
       });
 
-      if (selected) {
+      if (selected && settingsStore.config) {
         settingsStore.config.download_path = selected;
         await saveSettings();
       }
@@ -311,7 +354,11 @@
               </div>
               <Switch
                 id={item.id}
-                bind:checked={settingsStore.config[item.id]}
+                bind:checked={
+                  settingsStore.config![
+                    item.id as keyof typeof settingsStore.config
+                  ]
+                }
                 onCheckedChange={saveSettings}
                 class={switchClass}
               />
@@ -319,135 +366,225 @@
           {/each}
         {/snippet}
 
-        <div class="space-y-8 animate-in fade-in slide-in-from-bottom-2">
-          {#if activeTab === "general"}
-            <div>
-              <h3 class="text-2xl font-extrabold">Appearance</h3>
-              <p class="text-sm text-muted-foreground">
-                Customize application behavior
-              </p>
-            </div>
-
-            <div
-              class="flex items-center justify-between p-5 rounded-2xl border bg-card"
-            >
-              <Label class="text-base font-semibold">Dark Mode</Label>
-              <div class="flex items-center gap-3">
-                {#if mode.current === "dark"}<Icons.Moon
-                    size={18}
-                    class="text-primary"
-                  />{:else}<Icons.Sun size={18} class="text-primary" />{/if}
-                <Switch
-                  checked={mode.current === "dark"}
-                  onCheckedChange={toggleTheme}
-                  class={switchClass}
-                />
+        {#if settingsStore.config}
+          <div class="space-y-8 animate-in fade-in slide-in-from-bottom-2">
+            {#if activeTab === "general"}
+              <div>
+                <h3 class="text-2xl font-extrabold">Appearance</h3>
+                <p class="text-sm text-muted-foreground">
+                  Customize application behavior
+                </p>
               </div>
-            </div>
 
-            {@render switchRows(GENERAL_SWITCHES)}
-          {:else if activeTab === "downloads"}
-            <h3 class="text-2xl font-extrabold">Downloads</h3>
-            <div class="grid gap-6">
-              <div class="space-y-2">
-                <Label class="text-xs font-bold uppercase text-primary"
-                  >Location</Label
-                >
-                <div class="flex gap-2">
-                  <Input
-                    bind:value={settingsStore.config.download_path}
-                    onchange={saveSettings}
-                    class="bg-muted"
+              <div
+                class="flex items-center justify-between p-5 rounded-2xl border bg-card"
+              >
+                <Label class="text-base font-semibold">Dark Mode</Label>
+                <div class="flex items-center gap-3">
+                  {#if mode.current === "dark"}<Icons.Moon
+                      size={18}
+                      class="text-primary"
+                    />{:else}<Icons.Sun size={18} class="text-primary" />{/if}
+                  <Switch
+                    checked={mode.current === "dark"}
+                    onCheckedChange={toggleTheme}
+                    class={switchClass}
                   />
-                  <Button variant="secondary" onclick={selectDirectory}
-                    >Browse</Button
-                  >
                 </div>
               </div>
-              <div class="space-y-2">
-                <Label class="text-xs font-bold uppercase text-primary/80"
-                  >User Agent</Label
-                >
-                <Input
-                  bind:value={settingsStore.config.user_agent}
-                  onchange={saveSettings}
-                  class="font-mono text-xs bg-muted/20"
-                />
-              </div>
-            </div>
-          {:else if activeTab === "cookies"}
-            <header class="flex items-center justify-between">
-              <h3 class="text-2xl font-extrabold">Cookies</h3>
-              <div class="flex items-center gap-2">
-                <Button variant="outline" size="sm" onclick={importCookie}>
-                  <Icons.FileUp size={14} class="mr-1" /> Import
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onclick={clearAllCookies}
-                >
-                  <Icons.Trash2 size={14} class="mr-1" /> Clear
-                </Button>
-              </div>
-            </header>
 
-            <div>
-              <Label
-                class="text-xs font-bold uppercase p-1 mb-2 tracking-widest text-primary"
-                >Add Cookie</Label
-              >
-              <div class="p-6 rounded-2xl border bg-card space-y-4">
-                <Input
-                  bind:value={cookieDomain}
-                  placeholder="Domain (e.g. google)"
-                />
-                <textarea
-                  bind:value={cookieRawContent}
-                  class="w-full min-h-[100px] p-3 rounded-lg overscroll-contain bg-muted text-xs font-mono"
-                  placeholder={"[ { 'domain': '.google.com', ... } ] or # Netscape format..."}
-                ></textarea>
-                <Button
-                  class="w-full"
-                  disabled={!cookieDomain || !cookieRawContent}
-                  onclick={saveCookies}>Save</Button
-                >
+              {@render switchRows(GENERAL_SWITCHES)}
+            {:else if activeTab === "downloads"}
+              <h3 class="text-2xl font-extrabold">Downloads</h3>
+              <div class="grid gap-6">
+                <div class="space-y-2">
+                  <Label class="text-xs font-bold uppercase text-primary"
+                    >Location</Label
+                  >
+                  <div class="flex gap-2">
+                    <Input
+                      bind:value={settingsStore.config.download_path}
+                      onchange={saveSettings}
+                      class="bg-muted"
+                    />
+                    <Button variant="secondary" onclick={selectDirectory}
+                      >Browse</Button
+                    >
+                  </div>
+                </div>
+                <div class="space-y-2">
+                  <Label class="text-xs font-bold uppercase text-primary/80"
+                    >User Agent</Label
+                  >
+                  <Input
+                    bind:value={settingsStore.config.user_agent}
+                    onchange={saveSettings}
+                    class="font-mono text-xs bg-muted/20"
+                  />
+                </div>
               </div>
-            </div>
+            {:else if activeTab === "backend"}
+              <div>
+                <h3 class="text-2xl font-extrabold">Backend</h3>
+                <p class="text-sm text-muted-foreground">
+                  Configure download engine behaviour
+                </p>
+              </div>
 
-            <div class="grid gap-2">
-              <Label
-                class="text-xs font-bold uppercase tracking-widest p-1 text-primary"
-                >Active Sessions</Label
-              >
-              {#each Object.entries(savedCookies) as [domain, path] (domain)}
-                <!-- svelte-ignore a11y_click_events_have_key_events -->
-                <!-- svelte-ignore a11y_no_static_element_interactions -->
-                <div
-                  class="flex items-center justify-between p-3 rounded-xl border bg-muted/30 transition-all cursor-pointer hover:bg-muted/50 hover:border-primary/30 hover:shadow-sm active:scale-[0.98]"
-                  onclick={() => openPath(path)}
-                >
-                  <Icons.Cookie size={16} />
-                  <span class="text-sm font-medium uppercase">{domain}</span>
+              <!-- YouTube / yt-dlp section -->
+              <div class="space-y-5">
+                <div class="flex items-center gap-2">
+                  <Icons.Video size={18} class="text-primary" />
+                  <Label
+                    class="text-xs font-bold uppercase tracking-widest text-primary"
+                  >
+                    YouTube (yt-dlp)
+                  </Label>
+                </div>
+
+                <div class="p-5 rounded-2xl border bg-card space-y-5">
+                  <!-- Format preset picker + freeform input -->
+                  <div class="space-y-2">
+                    <Label for="yt_format" class="text-sm font-medium">
+                      Format / Quality
+                    </Label>
+                    <p class="text-xs text-muted-foreground">
+                      yt-dlp format selector. Pick a preset or type a custom
+                      value.
+                    </p>
+                    <div class="flex gap-2">
+                      <Input
+                        id="yt_format"
+                        bind:value={settingsStore.config.yt_format}
+                        onchange={saveSettings}
+                        placeholder="bestvideo+bestaudio/best"
+                        class="font-mono text-xs bg-muted/20 flex-1"
+                      />
+                      <select
+                        class="h-9 rounded-md border border-input bg-muted/20 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary"
+                        onchange={(e) => {
+                          settingsStore.config!.yt_format = (
+                            e.target as HTMLSelectElement
+                          ).value;
+                          saveSettings();
+                        }}
+                      >
+                        <option value="" disabled selected>Presets</option>
+                        {#each YT_FORMAT_PRESETS as preset (preset.label)}
+                          <option value={preset.value}>{preset.label}</option>
+                        {/each}
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- Output template -->
+                  <div class="space-y-2">
+                    <Label for="yt_output_template" class="text-sm font-medium">
+                      Output Template
+                    </Label>
+                    <p class="text-xs text-muted-foreground">
+                      yt-dlp <code class="bg-muted px-1 rounded">-o</code>
+                      filename template. Use
+                      <code class="bg-muted px-1 rounded">%(title)s</code>,
+                      <code class="bg-muted px-1 rounded">%(uploader)s</code>,
+                      <code class="bg-muted px-1 rounded">%(upload_date)s</code
+                      >, etc.
+                    </p>
+                    <Input
+                      id="yt_output_template"
+                      bind:value={settingsStore.config.yt_output_template}
+                      onchange={saveSettings}
+                      placeholder="%(title)s.%(ext)s"
+                      class="font-mono text-xs bg-muted/20"
+                    />
+                  </div>
+
+                  <!-- Boolean toggles -->
+                  <div class="space-y-4 pt-1">
+                    {@render switchRows(YT_BACKEND_SWITCHES)}
+                  </div>
+                </div>
+              </div>
+            {:else if activeTab === "cookies"}
+              <header class="flex items-center justify-between">
+                <h3 class="text-2xl font-extrabold">Cookies</h3>
+                <div class="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onclick={importCookie}>
+                    <Icons.FileUp size={14} class="mr-1" /> Import
+                  </Button>
                   <Button
                     variant="destructive"
-                    size="icon"
-                    onclick={(e) => {
-                      e.stopPropagation();
-                      deleteCookie(domain, path);
-                    }}
-                    class="cursor-pointer"
+                    size="sm"
+                    onclick={clearAllCookies}
                   >
-                    <Icons.Trash2 size={16} />
+                    <Icons.Trash2 size={14} class="mr-1" /> Clear
                   </Button>
                 </div>
-              {/each}
-            </div>
-          {:else if activeTab === "privacy"}
-            <h3 class="text-2xl font-extrabold">Privacy</h3>
-            {@render switchRows(PRIVACY_SWITCHES)}
-          {/if}
-        </div>
+              </header>
+
+              <div>
+                <Label
+                  class="text-xs font-bold uppercase p-1 mb-2 tracking-widest text-primary"
+                  >Add Cookie</Label
+                >
+                <div class="p-6 rounded-2xl border bg-card space-y-4">
+                  <Input
+                    bind:value={cookieDomain}
+                    placeholder="Domain (e.g. google)"
+                  />
+                  <textarea
+                    bind:value={cookieRawContent}
+                    class="w-full min-h-[100px] p-3 rounded-lg overscroll-contain bg-muted text-xs font-mono"
+                    placeholder={"[ { 'domain': '.google.com', ... } ] or # Netscape format..."}
+                  ></textarea>
+                  <Button
+                    class="w-full"
+                    disabled={!cookieDomain || !cookieRawContent}
+                    onclick={saveCookies}>Save</Button
+                  >
+                </div>
+              </div>
+
+              <div class="grid gap-2">
+                <Label
+                  class="text-xs font-bold uppercase tracking-widest p-1 text-primary"
+                  >Active Sessions</Label
+                >
+                {#each Object.entries(savedCookies) as [domain, path] (domain)}
+                  <!-- svelte-ignore a11y_click_events_have_key_events -->
+                  <!-- svelte-ignore a11y_no_static_element_interactions -->
+                  <div
+                    class="flex items-center justify-between p-3 rounded-xl border bg-muted/30 transition-all cursor-pointer hover:bg-muted/50 hover:border-primary/30 hover:shadow-sm active:scale-[0.98]"
+                    onclick={() => openPath(path)}
+                  >
+                    <Icons.Cookie size={16} />
+                    <span class="text-sm font-medium uppercase">{domain}</span>
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      onclick={(e) => {
+                        e.stopPropagation();
+                        deleteCookie(domain, path);
+                      }}
+                      class="cursor-pointer"
+                    >
+                      <Icons.Trash2 size={16} />
+                    </Button>
+                  </div>
+                {/each}
+              </div>
+            {:else if activeTab === "privacy"}
+              <h3 class="text-2xl font-extrabold">Privacy</h3>
+              {@render switchRows(PRIVACY_SWITCHES)}
+            {/if}
+          </div>
+        {:else}
+          <div
+            class="flex items-center justify-center h-full text-muted-foreground text-sm"
+          >
+            Loading settings…
+          </div>
+        {/if}
       </main>
     </div>
   </Dialog.Content>
