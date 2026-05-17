@@ -389,7 +389,7 @@ pub async fn downloader(app: tauri::AppHandle, url: String, download_id: String)
     let mut check_cmd = base_command(&app, "yt-dlp").await.unwrap();
 
     check_cmd
-        .args(["--simulate", "--skip-download", &url])
+        .args(["--print", "title", "--no-download", &url])
         .stderr(Stdio::piped());
 
     let is_youtube = if let Ok(output) = check_cmd.output().await {
