@@ -1,7 +1,8 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button";
   import { Progress } from "$lib/components/ui/progress";
-  import { Download, Menu, HardDrive } from "@lucide/svelte";
+  import { Download, Menu, HardDrive, FolderOpen } from "@lucide/svelte";
+  import { settingsStore } from "$lib/settings.svelte";
 
   import SettingsDialog from "./Settings.svelte";
 
@@ -37,6 +38,21 @@
 
   <div class="px-4 flex-1 space-y-6">
     <nav class="space-y-1">
+      <Button
+        variant="ghost"
+        onclick={() => settingsStore.openDownloadDir()}
+        class="w-full h-11 transition-all duration-200 {isCollapsed
+          ? 'justify-center'
+          : 'justify-start gap-4 px-4'} hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+      >
+        <FolderOpen size={20} class="text-sidebar-foreground/70" />
+        {#if !isCollapsed}
+          <span class="font-medium text-[15px] text-sidebar-foreground">
+            Open Downloads
+          </span>
+        {/if}
+      </Button>
+
       <SettingsDialog {isCollapsed} />
     </nav>
   </div>
