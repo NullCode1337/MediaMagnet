@@ -1,6 +1,6 @@
 pkgbase = MediaMagnet
 	pkgdesc = Download any and all media
-	pkgver = 0.5.0
+	pkgver = 0.5.1
 	pkgrel = 1
 	url = https://github.com/NullCode1337/MediaMagnet
 	install = MediaMagnet.install
@@ -19,7 +19,7 @@ pkgbase = MediaMagnet
 	depends = python-curl_cffi
 	options = !strip
 	options = !emptydirs
-	source_x86_64 = https://github.com/NullCode1337/MediaMagnet/releases/download/v0.5.0-alpha/MediaMagnet_0.5.0_amd64.deb
+	source_x86_64 = https://github.com/NullCode1337/MediaMagnet/releases/download/v0.5.1-alpha/MediaMagnet_0.5.1_amd64.deb
 	sha256sums_x86_64 = c6a567947da30f23bdc16bfe3dc4a6b296ea618be9a4f7c1f999c075abe886d3
 
 pkgname = MediaMagnet
