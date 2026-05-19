@@ -339,10 +339,13 @@ async fn run_downloader(
 }
 
 fn strip_ansi_codes(s: &str) -> String {
-    regex::Regex::new(r"\x1b\[[0-9;]*m")
-        .unwrap()
-        .replace_all(s, "")
-        .to_string()
+    static RE: std::sync::LazyLock<regex::Regex> =
+        std::sync::LazyLock::new(|| regex::Regex::new(r"\x1b\[[0-9;]*m").unwrap());
+    RE.replace_all(s, "").to_string()
+}
+
+fn split_args(args_str: &str) -> std::result::Result<Vec<String>, String> {
+    shell_words::split(args_str).map_err(|_| "Unable to split the arguments!".to_string())
 }
 
 #[tauri::command]
@@ -425,6 +428,57 @@ pub async fn downloader(app: tauri::AppHandle, url: String, download_id: String)
         if settings.yt_restrict_filenames {
             cmd.arg("--restrict-filenames");
         }
+
+        if !settings.yt_global_args.trim().is_empty() {
+            match split_args(&settings.yt_global_args) {
+                Ok(global_tokens) => {
+                    cmd.args(global_tokens);
+                }
+                Err(err_msg) => {
+                    let _ = app.emit(
+                        "download-error",
+                        StatusPayload {
+                            id: download_id.clone(),
+                            value: format!("Configuration Error (global arguments): {}", err_msg),
+                        },
+                    );
+                    let _ = app.emit("download-finished", IdPayload { id: download_id });
+                    return;
+                }
+            }
+        }
+
+        for item in &settings.yt_site_args {
+            if !item.domain.trim().is_empty() && lc.contains(&item.domain.to_lowercase()) {
+                if !item.args.trim().is_empty() {
+                    match split_args(&item.args) {
+                        Ok(site_tokens) => {
+                            cmd.args(site_tokens);
+                            println!(
+                                "[MediaMagnet] Applied custom arguments for domain [{}]: {}",
+                                item.domain, item.args
+                            );
+                        }
+                        Err(err_msg) => {
+                            let _ = app.emit(
+                                "download-error",
+                                StatusPayload {
+                                    id: download_id.clone(),
+                                    value: format!(
+                                        "Configuration Error (site [{}] arguments): {}",
+                                        item.domain, err_msg
+                                    ),
+                                },
+                            );
+                            let _ = app.emit("download-finished", IdPayload { id: download_id });
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
+        println!("{:#?}", cmd.as_std());
 
         if settings.user_agent != "None" {
             cmd.args(["--user-agent", &settings.user_agent]);
