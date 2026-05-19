@@ -36,16 +36,6 @@ fn get_downloads() -> &'static Arc<Mutex<HashMap<String, tokio::process::Child>>
 }
 
 // Helper download functions
-async fn load_settings(app: &tauri::AppHandle) -> Result<Settings> {
-    let settings_path = app.path().app_config_dir().unwrap().join("settings.json");
-    let settings: Settings =
-        serde_json::from_str(&std::fs::read_to_string(&settings_path).unwrap()).unwrap();
-    println!(
-        "\n[MediaMagnet][Download] Settings loaded from: {}",
-        settings_path.to_str().unwrap()
-    );
-    Ok(settings)
-}
 
 fn apply_cookies(cmd: &mut Command, app: &tauri::AppHandle, link: &str) -> Result<()> {
     let cookies_dir = app.path().app_data_dir().unwrap().join("cookies");
@@ -406,7 +396,7 @@ pub async fn downloader(app: tauri::AppHandle, url: String, download_id: String)
         },
     );
 
-    let settings = load_settings(&app).await.unwrap();
+    let settings = Settings::load(&app);
     let mut cmd = base_command(&app, if is_youtube { "yt-dlp" } else { "gallery-dl" })
         .await
         .unwrap();
@@ -429,7 +419,7 @@ pub async fn downloader(app: tauri::AppHandle, url: String, download_id: String)
         }
 
         if settings.yt_embed_subs {
-            cmd.args(["--write-subs", "--write-auto-sub",  "--embed-subs"]);
+            cmd.args(["--write-subs", "--write-auto-sub", "--embed-subs"]);
         }
 
         if settings.yt_restrict_filenames {
@@ -466,7 +456,10 @@ pub async fn downloader(app: tauri::AppHandle, url: String, download_id: String)
 }
 
 #[tauri::command]
-pub async fn cancel_download(app: tauri::AppHandle, download_id: String) -> std::result::Result<(), String> {
+pub async fn cancel_download(
+    app: tauri::AppHandle,
+    download_id: String,
+) -> std::result::Result<(), String> {
     let child = get_downloads()
         .lock()
         .map_err(|_| "Lock failed")?
