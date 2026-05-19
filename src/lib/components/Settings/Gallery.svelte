@@ -80,13 +80,13 @@
               <Input
                 bind:value={item.domain}
                 onchange={saveSettings}
-                placeholder="e.g., pixiv.net"
+                placeholder="danbooru.donmai.us"
                 class="text-xs bg-muted/20 w-1/3 font-mono"
               />
               <Input
                 bind:value={item.args}
                 onchange={saveSettings}
-                placeholder="-o 'extractor.pixiv.refresh-token=...'"
+                placeholder="-o 'api-key=...'"
                 class="text-xs bg-muted/20 flex-1 font-mono"
               />
               <button
