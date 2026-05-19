@@ -11,6 +11,7 @@
 
   import GeneralTab from "$lib/components/Settings/General.svelte";
   import DownloadsTab from "$lib/components/Settings/Download.svelte";
+  import ImportExportTab from "$lib/components/Settings/ImportExport.svelte";
   import YouTubeTab from "$lib/components/Settings/YouTube.svelte";
   import GalleryTab from "$lib/components/Settings/Gallery.svelte";
   import CookiesTab from "$lib/components/Settings/Cookies.svelte";
@@ -25,6 +26,7 @@
     { id: "downloads", label: "Downloads", icon: Icons.Download },
     { id: "cookies", label: "Cookies", icon: Icons.Cookie },
     { id: "privacy", label: "Privacy", icon: Icons.ShieldCheck },
+    { id: "import_export", label: "Import/Export", icon: Icons.RefreshCw },
   ];
 
   const BACKEND_TABS = [
@@ -100,13 +102,15 @@
   </Dialog.Trigger>
 
   <Dialog.Content
-    class="sm:max-w-[850px] w-[95vw] p-0 flex flex-col h-[90vh] max-h-[600px]! {uiState.showCustom
+    class="sm:max-w-[1000px] w-[95vw] sm:w-[92vw] p-0 flex flex-col h-[89vh] rounded-2xl transition-all {uiState.showCustom
       ? 'top-[calc(50%+20px)]!'
       : 'top-[50%]!'}"
   >
-    <div class="flex flex-col sm:flex-row h-full overflow-hidden">
+    <div
+      class="flex flex-col sm:flex-row h-full w-full overflow-hidden! rounded-xl!"
+    >
       <aside
-        class="flex sm:flex-col overflow-x-auto sm:w-[240px] bg-sidebar border-r border-sidebar-border p-2 sm:p-6 gap-1"
+        class="flex sm:flex-col overflow-x-auto sm:w-[240px] bg-sidebar border-r border-sidebar-border p-2 sm:p-6 gap-1 shrink-0"
       >
         <h2
           class="hidden sm:block text-[11px] font-bold uppercase tracking-[0.2em] text-sidebar-foreground/50 mb-4 px-2"
@@ -154,7 +158,7 @@
       <main
         class="flex-1 overflow-y-auto p-6 sm:p-10 bg-background scrollbar-thin"
       >
-        <div class="fixed top-6 p-4 right-6 z-50 pointer-events-none">
+        <div class="absolute top-6 right-6 z-50 pointer-events-none">
           {#if saveStatus === "saved"}
             <div
               class="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full border border-primary/20 text-xs shadow-sm"
@@ -179,6 +183,8 @@
               <CookiesTab />
             {:else if activeTab === "privacy"}
               <PrivacyTab {saveSettings} {switchClass} />
+            {:else if activeTab === "import_export"}
+              <ImportExportTab />
             {/if}
           </div>
         {:else}
