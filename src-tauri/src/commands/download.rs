@@ -71,7 +71,13 @@ async fn base_command(app: &tauri::AppHandle, command: &str) -> Result<Command> 
     static VERSION: OnceLock<Arc<Mutex<std::collections::HashSet<String>>>> = OnceLock::new();
     let version = VERSION.get_or_init(|| Arc::new(Mutex::new(std::collections::HashSet::new())));
 
-    let check_cmd = Command::new(command)
+    let mut check_cmd = Command::new(command);
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        check_cmd.creation_flags(0x08000000);
+    }
+    let check_cmd = check_cmd
         .arg("--version")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -93,10 +99,6 @@ async fn base_command(app: &tauri::AppHandle, command: &str) -> Result<Command> 
 
             #[allow(unused_mut)]
             let mut cmd = Command::new(command);
-            #[cfg(target_os = "windows")]
-            use std::os::windows::process::CommandExt;
-            #[cfg(target_os = "windows")]
-            cmd.creation_flags(0x08000000);
             return Ok(cmd);
         }
         Ok(_) | Err(_) => match app.shell().sidecar(command) {
@@ -111,7 +113,13 @@ async fn base_command(app: &tauri::AppHandle, command: &str) -> Result<Command> 
                 }
 
                 let std_cmd: std::process::Command = sidecar.into();
-                return Ok(std_cmd.into());
+
+                #[allow(unused_mut)]
+                let mut cmd: Command = std_cmd.into();
+                #[cfg(target_os = "windows")]
+                cmd.creation_flags(0x08000000);
+
+                return Ok(cmd);
             }
             Err(e) => {
                 return Err(format!(
@@ -138,10 +146,7 @@ async fn run_downloader(
 
     set_download_path(app.clone()).await;
 
-    let mut child = cmd
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()?;
+    let mut child = cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).spawn()?;
 
     let stdout = child.stdout.take().unwrap();
     let stderr = child.stderr.take().unwrap();
