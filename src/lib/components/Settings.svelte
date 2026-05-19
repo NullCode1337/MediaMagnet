@@ -12,6 +12,7 @@
   import GeneralTab from "$lib/components/Settings/General.svelte";
   import DownloadsTab from "$lib/components/Settings/Download.svelte";
   import YouTubeTab from "$lib/components/Settings/YouTube.svelte";
+  import GalleryTab from "$lib/components/Settings/Gallery.svelte";
   import CookiesTab from "$lib/components/Settings/Cookies.svelte";
   import PrivacyTab from "$lib/components/Settings/Privacy.svelte";
 
@@ -26,7 +27,10 @@
     { id: "privacy", label: "Privacy", icon: Icons.ShieldCheck },
   ];
 
-  const BACKEND_TABS = [{ id: "youtube", label: "YouTube", icon: Icons.Video }];
+  const BACKEND_TABS = [
+    { id: "youtube", label: "yt-dlp", icon: Icons.Video },
+    { id: "gallery", label: "gallery-dl", icon: Icons.GalleryThumbnailsIcon },
+  ];
 
   const switchClass =
     "data-[state=checked]:bg-primary data-[state=unchecked]:bg-input border-2 border-transparent cursor-pointer";
@@ -169,6 +173,8 @@
               <DownloadsTab {saveSettings} {selectDirectory} />
             {:else if activeTab === "youtube"}
               <YouTubeTab {saveSettings} {switchClass} />
+            {:else if activeTab === "gallery"}
+              <GalleryTab {saveSettings} />
             {:else if activeTab === "cookies"}
               <CookiesTab />
             {:else if activeTab === "privacy"}
