@@ -74,6 +74,13 @@ pub struct Settings {
 
     #[serde(default)]
     pub yt_site_args: Vec<SiteArguments>,
+
+    // gallery-dl backend options
+    #[serde(default)]
+    pub gdl_global_args: String,
+
+    #[serde(default)]
+    pub gdl_site_args: Vec<SiteArguments>,
 }
 
 impl Default for Settings {
@@ -95,6 +102,9 @@ impl Default for Settings {
 
             yt_global_args: "".to_string(),
             yt_site_args: Vec::new(),
+
+            gdl_global_args: "".to_string(),
+            gdl_site_args: Vec::new(),
         }
     }
 }

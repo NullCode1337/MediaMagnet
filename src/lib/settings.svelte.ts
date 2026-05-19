@@ -21,7 +21,11 @@ export interface Config {
   yt_embed_subs: boolean;
   yt_restrict_filenames: boolean;
   yt_global_args: string;
-  yt_site_args: Array<{ id: string, domain: string; args: string }>;
+  yt_site_args: Array<{ id: string; domain: string; args: string }>;
+
+  // gallery-dl
+  gdl_global_args: string;
+  gdl_site_args: Array<{ id: string; domain: string; args: string }>;
 }
 
 class SettingsStore {

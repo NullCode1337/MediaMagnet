@@ -348,6 +348,47 @@ fn split_args(args_str: &str) -> std::result::Result<Vec<String>, String> {
     shell_words::split(args_str).map_err(|_| "Unable to split the arguments!".to_string())
 }
 
+fn apply_args(
+    cmd: &mut Command,
+    url: &str,
+    global_args: &str,
+    site_args: &[super::settings::SiteArguments],
+) -> std::result::Result<(), String> {
+    if !global_args.trim().is_empty() {
+        match split_args(global_args) {
+            Ok(tokens) => {
+                cmd.args(tokens);
+            }
+            Err(e) => return Err(format!("Configuration Error (global arguments): {}", e)),
+        }
+    }
+
+    let lc = url.to_lowercase();
+    for item in site_args {
+        if !item.domain.trim().is_empty() && lc.contains(&item.domain.to_lowercase()) {
+            if !item.args.trim().is_empty() {
+                match split_args(&item.args) {
+                    Ok(tokens) => {
+                        cmd.args(tokens);
+                        println!(
+                            "[MediaMagnet] Applied custom arguments for domain [{}]: {}",
+                            item.domain, item.args
+                        );
+                    }
+                    Err(e) => {
+                        return Err(format!(
+                            "Configuration Error (site [{}] arguments): {}",
+                            item.domain, e
+                        ))
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn downloader(app: tauri::AppHandle, url: String, download_id: String) {
     let lc = url.to_lowercase();
@@ -429,53 +470,21 @@ pub async fn downloader(app: tauri::AppHandle, url: String, download_id: String)
             cmd.arg("--restrict-filenames");
         }
 
-        if !settings.yt_global_args.trim().is_empty() {
-            match split_args(&settings.yt_global_args) {
-                Ok(global_tokens) => {
-                    cmd.args(global_tokens);
-                }
-                Err(err_msg) => {
-                    let _ = app.emit(
-                        "download-error",
-                        StatusPayload {
-                            id: download_id.clone(),
-                            value: format!("Configuration Error (global arguments): {}", err_msg),
-                        },
-                    );
-                    let _ = app.emit("download-finished", IdPayload { id: download_id });
-                    return;
-                }
-            }
-        }
-
-        for item in &settings.yt_site_args {
-            if !item.domain.trim().is_empty() && lc.contains(&item.domain.to_lowercase()) {
-                if !item.args.trim().is_empty() {
-                    match split_args(&item.args) {
-                        Ok(site_tokens) => {
-                            cmd.args(site_tokens);
-                            println!(
-                                "[MediaMagnet] Applied custom arguments for domain [{}]: {}",
-                                item.domain, item.args
-                            );
-                        }
-                        Err(err_msg) => {
-                            let _ = app.emit(
-                                "download-error",
-                                StatusPayload {
-                                    id: download_id.clone(),
-                                    value: format!(
-                                        "Configuration Error (site [{}] arguments): {}",
-                                        item.domain, err_msg
-                                    ),
-                                },
-                            );
-                            let _ = app.emit("download-finished", IdPayload { id: download_id });
-                            return;
-                        }
-                    }
-                }
-            }
+        if let Err(e) = apply_args(
+            &mut cmd,
+            &url,
+            &settings.yt_global_args,
+            &settings.yt_site_args,
+        ) {
+            let _ = app.emit(
+                "download-error",
+                StatusPayload {
+                    id: download_id.clone(),
+                    value: e,
+                },
+            );
+            let _ = app.emit("download-finished", IdPayload { id: download_id });
+            return;
         }
 
         println!("{:#?}", cmd.as_std());
@@ -485,6 +494,24 @@ pub async fn downloader(app: tauri::AppHandle, url: String, download_id: String)
         }
     } else {
         cmd.args(["-d", "."]);
+
+        if let Err(e) = apply_args(
+            &mut cmd,
+            &url,
+            &settings.gdl_global_args,
+            &settings.gdl_site_args,
+        ) {
+            let _ = app.emit(
+                "download-error",
+                StatusPayload {
+                    id: download_id.clone(),
+                    value: e,
+                },
+            );
+            let _ = app.emit("download-finished", IdPayload { id: download_id });
+            return;
+        }
+
         if settings.user_agent != "None" {
             cmd.args(["-a", &settings.user_agent]);
         }
