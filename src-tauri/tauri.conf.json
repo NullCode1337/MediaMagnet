@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "MediaMagnet",
   "mainBinaryName": "MediaMagnet",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "identifier": "com.nullcode1337.mediamagnet",
   "build": {
     "frontendDist": "../dist",
