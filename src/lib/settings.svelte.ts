@@ -20,6 +20,8 @@ export interface Config {
   yt_embed_thumbnail: boolean;
   yt_embed_subs: boolean;
   yt_restrict_filenames: boolean;
+  yt_global_args: string;
+  yt_site_args: Array<{ id: string, domain: string; args: string }>;
 }
 
 class SettingsStore {

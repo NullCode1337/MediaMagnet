@@ -1,6 +1,13 @@
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SiteArguments {
+    pub id: String,
+    pub domain: String,
+    pub args: String,
+}
+
 fn default_download_path() -> String {
     "Default".to_string()
 }
@@ -61,6 +68,12 @@ pub struct Settings {
 
     #[serde(default)]
     pub yt_restrict_filenames: bool,
+
+    #[serde(default)]
+    pub yt_global_args: String,
+
+    #[serde(default)]
+    pub yt_site_args: Vec<SiteArguments>,
 }
 
 impl Default for Settings {
@@ -79,6 +92,9 @@ impl Default for Settings {
             yt_embed_thumbnail: false,
             yt_embed_subs: false,
             yt_restrict_filenames: false,
+
+            yt_global_args: "".to_string(),
+            yt_site_args: Vec::new(),
         }
     }
 }
