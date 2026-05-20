@@ -17,12 +17,6 @@ fn default_user_agent() -> String {
 fn default_dark_mode() -> bool {
     true
 }
-fn default_always_on_top() -> bool {
-    true
-}
-fn default_show_custom() -> bool {
-    true
-}
 fn default_yt_format() -> String {
     "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best".to_string()
 }
@@ -41,10 +35,10 @@ pub struct Settings {
     #[serde(default = "default_dark_mode")]
     pub dark_mode: bool,
 
-    #[serde(default = "default_always_on_top")]
+    #[serde(default)]
     pub always_on_top: bool,
 
-    #[serde(default = "default_show_custom")]
+    #[serde(default)]
     pub show_custom: bool,
 
     #[serde(default)]
@@ -89,8 +83,8 @@ impl Default for Settings {
             download_path: default_download_path(),
             user_agent: default_user_agent(),
             dark_mode: default_dark_mode(),
-            always_on_top: default_always_on_top(),
-            show_custom: default_show_custom(),
+            always_on_top: false,
+            show_custom: false,
             notifications: false,
             clear_on_exit: false,
 
