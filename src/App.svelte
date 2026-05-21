@@ -8,7 +8,7 @@
   import { Button } from "$lib/components/ui/button";
   import Input from "$lib/components/ui/input/input.svelte";
 
-  import { Clipboard, Play, LoaderCircle } from "@lucide/svelte";
+  import { Clipboard, Play, Plus } from "@lucide/svelte";
 
   import Sidebar from "$lib/components/Sidebar.svelte";
   import Downloader from "$lib/components/Downloader.svelte";
@@ -163,7 +163,7 @@
     try {
       diskUsage = await invoke("get_free_space");
     } catch (err) {
-      toast("Disk fetch failed: " + err );
+      toast("Disk fetch failed: " + err);
     }
   }
 
@@ -253,7 +253,11 @@
 
   {#if uiState.headless}
     <div class="relative flex items-center justify-center h-full w-full">
-      <svg class="absolute w-32 h-32 -rotate-90">
+      <svg
+        class="absolute w-32 h-32 -rotate-90 transition-transform duration-500 {anyDownloading
+          ? 'animate-[spin_4s_linear_infinite]'
+          : ''}"
+      >
         <circle
           cx="64"
           cy="64"
@@ -279,13 +283,14 @@
 
       <Button
         onclick={pasteOrDownload}
-        disabled={anyDownloading}
-        class="w-30 h-30 rounded-full shadow-2xl transition-all hover:scale-105 active:scale-95 z-10 cursor-pointer"
+        class="w-30 h-30 rounded-full shadow-2xl transition-all z-10 cursor-pointer {anyDownloading
+          ? 'scale-90'
+          : 'hover:scale-105'}"
       >
-        {#if !anyDownloading}
-          <Clipboard class="size-8" />
+        {#if anyDownloading}
+          <Plus class="size-8" />
         {:else}
-          <LoaderCircle class="size-8 animate-spin" />
+          <Clipboard class="size-8" />
         {/if}
       </Button>
     </div>
