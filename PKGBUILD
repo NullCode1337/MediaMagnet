@@ -8,7 +8,7 @@ pkgdesc="Download any and all media"
 arch=('x86_64')
 url="https://github.com/NullCode1337/MediaMagnet" 
 license=('MIT') 
-depends=('cairo' 'desktop-file-utils' 'gdk-pixbuf2' 'glib2' 'gtk3' 'hicolor-icon-theme' 'pango' 'webkit2gtk-4.1' 'yt-dlp' 'python-curl_cffi')
+depends=('cairo' 'desktop-file-utils' 'gdk-pixbuf2' 'glib2' 'gtk3' 'hicolor-icon-theme' 'pango' 'webkit2gtk-4.1' 'yt-dlp' 'python-curl_cffi' 'bun')
 optdepends=('gallery-dl: Required for gallery-dl media downloading support'
             'spotdl: Required for spotify music downloading support')
 makedepends=('git' 'openssl' 'appmenu-gtk-module' 'libappindicator-gtk3' 'librsvg' 'cargo' 'pnpm' 'nodejs')
