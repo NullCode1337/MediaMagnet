@@ -2,6 +2,7 @@
   import { listen } from "@tauri-apps/api/event";
   import { invoke } from "@tauri-apps/api/core";
   import { readText } from "@tauri-apps/plugin-clipboard-manager";
+  import { platform } from "@tauri-apps/plugin-os";
   import { onMount } from "svelte";
   import { ModeWatcher, mode } from "mode-watcher";
 
@@ -54,6 +55,7 @@
   let isCollapsed = $state(false);
   let urlInput = $state("");
   let diskUsage = $state(0);
+  let currentPlatform = $state("");
 
   let tasks = $state<Task[]>([]);
   let history = $state<
@@ -169,6 +171,7 @@
 
   onMount(() => {
     updateDiskSpace();
+    currentPlatform = platform();
     const interval = setInterval(updateDiskSpace, 60000);
     return () => clearInterval(interval);
   });
@@ -248,7 +251,7 @@
   class="flex flex-col h-screen w-full bg-background text-foreground overflow-hidden"
 >
   <div class="relative z-100">
-    <Titlebar />
+    <Titlebar {currentPlatform} />
   </div>
 
   {#if uiState.headless}
