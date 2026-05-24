@@ -73,10 +73,8 @@ async fn base_command(app: &tauri::AppHandle, command: &str) -> Result<Command> 
 
     let mut check_cmd = Command::new(command);
     #[cfg(target_os = "windows")]
-    {
-        use std::os::windows::process::CommandExt;
-        check_cmd.creation_flags(0x08000000);
-    }
+    check_cmd.creation_flags(0x08000000);
+
     let check_cmd = check_cmd
         .arg("--version")
         .stdout(Stdio::piped())
