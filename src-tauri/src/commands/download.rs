@@ -97,6 +97,8 @@ async fn base_command(app: &tauri::AppHandle, command: &str) -> Result<Command> 
 
             #[allow(unused_mut)]
             let mut cmd = Command::new(command);
+            #[cfg(target_os = "windows")]
+            cmd.creation_flags(0x08000000);
             return Ok(cmd);
         }
         Ok(_) | Err(_) => match app.shell().sidecar(command) {
@@ -489,8 +491,6 @@ pub async fn downloader(app: tauri::AppHandle, url: String, download_id: String)
             let _ = app.emit("download-finished", IdPayload { id: download_id });
             return;
         }
-
-        println!("{:#?}", cmd.as_std());
 
         if settings.user_agent != "None" {
             cmd.args(["--user-agent", &settings.user_agent]);
