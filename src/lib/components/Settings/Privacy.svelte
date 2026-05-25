@@ -2,10 +2,8 @@
   import SwitchRows from "./SwitchRows.svelte";
 
   let {
-    saveSettings,
     switchClass,
   }: {
-    saveSettings: () => Promise<void>;
     switchClass: string;
   } = $props();
 
@@ -24,4 +22,4 @@
 </script>
 
 <h3 class="text-2xl font-extrabold">Privacy</h3>
-<SwitchRows items={PRIVACY_SWITCHES} {saveSettings} {switchClass} />
+<SwitchRows items={PRIVACY_SWITCHES} {switchClass} />

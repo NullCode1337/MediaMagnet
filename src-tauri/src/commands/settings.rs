@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_json::Number;
 use tauri::Manager;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -10,6 +11,9 @@ pub struct SiteArguments {
 
 fn default_download_path() -> String {
     "Default".to_string()
+}
+fn default_hue() -> Number {
+    Number::from(260)
 }
 fn default_user_agent() -> String {
     "None".to_string()
@@ -34,6 +38,9 @@ pub struct Settings {
 
     #[serde(default = "default_dark_mode")]
     pub dark_mode: bool,
+
+    #[serde(default = "default_hue")]
+    pub accent_hue: serde_json::Number,
 
     #[serde(default)]
     pub always_on_top: bool,
@@ -83,6 +90,7 @@ impl Default for Settings {
             download_path: default_download_path(),
             user_agent: default_user_agent(),
             dark_mode: default_dark_mode(),
+            accent_hue: default_hue(),
             always_on_top: false,
             show_custom: false,
             notifications: false,

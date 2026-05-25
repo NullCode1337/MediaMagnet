@@ -79,7 +79,7 @@
       desc: "Limit filenames to ASCII characters, avoiding special chars",
     },
   ];
-  
+
   function addSiteArg() {
     if (!settingsStore.config) return;
     settingsStore.config.yt_site_args = [
@@ -106,7 +106,7 @@
   </div>
 
   <div class="space-y-4">
-    <SwitchRows items={YT_BACKEND_SWITCHES} {saveSettings} {switchClass} />
+    <SwitchRows items={YT_BACKEND_SWITCHES} {switchClass} />
   </div>
   <div class="space-y-5">
     <div class="space-y-5">

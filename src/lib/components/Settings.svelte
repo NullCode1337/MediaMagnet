@@ -4,7 +4,6 @@
   import * as Icons from "@lucide/svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { open } from "@tauri-apps/plugin-dialog";
-  import { toggleMode, mode } from "mode-watcher";
 
   import { uiState } from "$lib/store.svelte";
   import { settingsStore, type Config } from "$lib/settings.svelte";
@@ -55,14 +54,6 @@
     (settingsStore.config = (await invoke("settings", {
       action: "reset",
     })) as Config);
-
-  function toggleTheme() {
-    toggleMode();
-    setTimeout(
-      () => settingsStore.update({ dark_mode: mode.current === "dark" }),
-      50,
-    );
-  }
 
   async function selectDirectory() {
     try {
@@ -172,7 +163,7 @@
         {#if settingsStore.config}
           <div class="space-y-8 animate-in fade-in slide-in-from-bottom-2">
             {#if activeTab === "general"}
-              <GeneralTab {saveSettings} {toggleTheme} {switchClass} />
+              <GeneralTab {switchClass} />
             {:else if activeTab === "downloads"}
               <DownloadsTab {saveSettings} {selectDirectory} />
             {:else if activeTab === "youtube"}
@@ -182,7 +173,7 @@
             {:else if activeTab === "cookies"}
               <CookiesTab />
             {:else if activeTab === "privacy"}
-              <PrivacyTab {saveSettings} {switchClass} />
+              <PrivacyTab {switchClass} />
             {:else if activeTab === "import_export"}
               <ImportExportTab />
             {/if}
