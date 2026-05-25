@@ -19,6 +19,15 @@
   let { isCollapsed } = $props();
   let activeTab = $state("general");
   let saveStatus = $state<"idle" | "saved">("idle");
+  let windowWidth = $state(typeof window !== "undefined" ? window.innerWidth : 1200);
+
+  $effect(() => {
+    const onResize = () => (windowWidth = window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  });
+
+  const isFullscreen = $derived(windowWidth < 1000);
 
   const CONFIG_TABS = [
     { id: "general", label: "Appearance", icon: Icons.Monitor },
@@ -93,12 +102,16 @@
   </Dialog.Trigger>
 
   <Dialog.Content
-    class="sm:max-w-[1000px] w-[95vw] sm:w-[92vw] p-0 flex flex-col h-[89vh] rounded-2xl transition-all {uiState.showCustom
-      ? 'top-[calc(50%+20px)]!'
-      : 'top-[50%]!'}"
+    onInteractOutside={(e) => { if (isFullscreen) e.preventDefault(); }}
+    class="p-0 flex flex-col transition-all
+      {isFullscreen
+        ? `w-screen! max-w-none! max-h-none! rounded-none! left-0! translate-x-0! translate-y-0!
+           ${uiState.showCustom ? 'top-10! h-[calc(100vh-2.5rem)]!' : 'top-0! h-screen!'}`
+        : `max-w-[1000px]! w-full! h-[89vh] rounded-2xl
+           ${uiState.showCustom ? 'top-[calc(50%+20px)]!' : 'top-[50%]!'}`}"
   >
     <div
-      class="flex flex-col sm:flex-row h-full w-full overflow-hidden! rounded-xl!"
+      class="flex flex-col sm:flex-row h-full w-full overflow-hidden! {isFullscreen ? 'rounded-none!' : 'rounded-xl!'}"
     >
       <aside
         class="flex sm:flex-col overflow-x-auto sm:w-[240px] bg-sidebar border-r border-sidebar-border p-2 sm:p-6 gap-1 shrink-0"
@@ -147,7 +160,7 @@
       </aside>
 
       <main
-        class="flex-1 overflow-y-auto p-6 sm:p-10 bg-background scrollbar-thin"
+        class="flex-1 w-full min-w-0 overflow-y-auto p-6 sm:p-10 bg-background scrollbar-thin relative"
       >
         <div class="absolute top-6 right-6 z-50 pointer-events-none">
           {#if saveStatus === "saved"}
@@ -161,7 +174,7 @@
         </div>
 
         {#if settingsStore.config}
-          <div class="space-y-8 animate-in fade-in slide-in-from-bottom-2">
+          <div class="w-full space-y-8 animate-in fade-in slide-in-from-bottom-2">
             {#if activeTab === "general"}
               <GeneralTab {switchClass} />
             {:else if activeTab === "downloads"}
