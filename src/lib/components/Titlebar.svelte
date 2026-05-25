@@ -41,7 +41,8 @@
     class:border-b={!isMac}
   >
     <div
-      class="flex items-center gap-3 pointer-events-none"
+      class="flex items-center gap-3 px-4 pointer-events-none"
+      class:px-4={!isMac}
       class:ml-auto={isMac}
     >
       <img src={logo} alt="logo" class="w-5 h-5" />
