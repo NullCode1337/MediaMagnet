@@ -1,6 +1,6 @@
 // settings.svelte.ts
 import { invoke } from "@tauri-apps/api/core";
-import { mode } from "mode-watcher";
+import { mode, setMode } from "mode-watcher";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { toast } from "svelte-sonner";
 import { sep, downloadDir } from "@tauri-apps/api/path";
@@ -12,6 +12,7 @@ export interface Config {
   download_path: string;
   user_agent: string;
   dark_mode: boolean;
+  accent_hue: number;
   always_on_top: boolean;
   show_custom: boolean;
   notifications: boolean;
@@ -31,6 +32,11 @@ export interface Config {
   gdl_site_args: Array<{ id: string; domain: string; args: string }>;
 }
 
+function applyAccentHue(hue: number) {
+  if (typeof document === "undefined") return;
+  document.documentElement.style.setProperty("--hue", String(hue));
+}
+
 class SettingsStore {
   config = $state<Config | null>(null);
   isLoading = $state(true);
@@ -42,6 +48,7 @@ class SettingsStore {
   async init() {
     try {
       this.config = await invoke<Config>("settings", { action: "check" });
+      applyAccentHue(this.config?.accent_hue ?? 260);
     } catch (err) {
       toast.error("Failed to load settings: " + err);
     } finally {
@@ -52,6 +59,10 @@ class SettingsStore {
   async update(patch: Partial<Config>) {
     if (!this.config) return;
     Object.assign(this.config, patch);
+
+    if (patch.accent_hue !== undefined) {
+      applyAccentHue(patch.accent_hue);
+    }
 
     try {
       await invoke("update_settings", {
@@ -135,6 +146,7 @@ class SettingsStore {
 
   toggleTheme() {
     const newMode = mode.current === "dark" ? "light" : "dark";
+    setMode(newMode);
     void this.update({ dark_mode: newMode === "dark" });
   }
 }

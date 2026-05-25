@@ -2,14 +2,13 @@
   import { Label } from "$lib/components/ui/label";
   import { Switch } from "$lib/components/ui/switch";
   import { settingsStore } from "$lib/settings.svelte";
+  import { mode } from "mode-watcher";
 
   let {
     items,
-    saveSettings,
     switchClass,
   }: {
     items: Array<{ id: string; label: string; desc: string }>;
-    saveSettings: () => Promise<void>;
     switchClass: string;
   } = $props();
 </script>
@@ -22,10 +21,18 @@
     </div>
     <Switch
       id={item.id}
-      bind:checked={
-        settingsStore.config![item.id as keyof typeof settingsStore.config]
-      }
-      onCheckedChange={saveSettings}
+      checked={item.id === "dark_mode"
+        ? mode.current === "dark"
+        : (settingsStore.config![
+            item.id as keyof typeof settingsStore.config
+          ] as boolean)}
+      onCheckedChange={(val) => {
+        if (item.id === "dark_mode") {
+          settingsStore.toggleTheme();
+        } else {
+          settingsStore.update({ [item.id]: val });
+        }
+      }}
       class={switchClass}
     />
   </div>
