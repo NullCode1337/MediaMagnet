@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button";
   import { Progress } from "$lib/components/ui/progress";
-  import { Download, Menu, HardDrive, FolderOpen } from "@lucide/svelte";
+  import { Menu, HardDrive, FolderOpen } from "@lucide/svelte";
   import { settingsStore } from "$lib/settings.svelte";
 
   import SettingsDialog from "./Settings.svelte";
@@ -18,11 +18,6 @@
   <div class="p-6 flex items-center justify-between">
     {#if !isCollapsed}
       <div class="flex items-center gap-2">
-        <div
-          class="h-6 w-6 bg-sidebar-primary rounded-md flex items-center justify-center shadow-sm"
-        >
-          <Download size={14} class="text-sidebar-primary-foreground" />
-        </div>
         <span class="font-bold text-lg tracking-tight">MediaMagnet</span>
       </div>
     {/if}
