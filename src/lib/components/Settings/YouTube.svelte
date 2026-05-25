@@ -105,9 +105,7 @@
     </p>
   </div>
 
-  <div class="space-y-4">
-    <SwitchRows items={YT_BACKEND_SWITCHES} {switchClass} />
-  </div>
+  <SwitchRows items={YT_BACKEND_SWITCHES} {switchClass} />
   <div class="space-y-5">
     <div class="space-y-5">
       <div class="p-5 rounded-2xl border bg-card space-y-2">
