@@ -36,7 +36,7 @@
 {#if uiState.showCustom}
   <div
     data-tauri-drag-region
-    class="h-10 w-full bg-sidebar flex items-center shrink-0 select-none z-50"
+    class="h-10 w-full bg-sidebar flex items-center shrink-0 select-none z-50 !pointer-events-auto z-9999"
     class:px-4={isMac}
     class:border-b={!isMac}
   >
