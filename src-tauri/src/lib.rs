@@ -41,6 +41,7 @@ pub fn run() {
             commands::download::cancel_download,
             commands::download::cancel_all_downloads,
             commands::download::downloader,
+            commands::download::pause_download,
             commands::init::check_links,
             commands::settings::settings,
             commands::settings::update_settings,
