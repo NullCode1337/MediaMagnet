@@ -152,7 +152,7 @@ pub fn overwrite_json(app: tauri::AppHandle, links: Vec<String>) {
 }
 
 // Set download path
-pub async fn set_download_path(app: tauri::AppHandle) {
+pub async fn set_download_path(app: tauri::AppHandle) -> std::path::PathBuf {
     let config_path = app.path().app_config_dir().unwrap().join("settings.json");
     let settings: Settings =
         serde_json::from_str(&std::fs::read_to_string(&config_path).unwrap()).unwrap();
@@ -184,6 +184,8 @@ pub async fn set_download_path(app: tauri::AppHandle) {
     };
 
     std::env::set_current_dir(&final_dir).unwrap();
+
+    final_dir
 }
 
 #[tauri::command]

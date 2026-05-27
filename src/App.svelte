@@ -36,6 +36,7 @@
     status: string;
     progress: number;
     isDownloading: boolean;
+    isPaused: boolean;
     error: string | null;
   }
 
@@ -82,7 +83,7 @@
     tasks = tasks.filter((t) => t.id !== id);
   }
 
-  async function startDownload(input: string) {
+  async function startDownload(input: string, existingId?: string) {
     const urlRegex = /https?:\/\/[^\s,)"]+/gi;
     const matches = input.match(urlRegex);
 
@@ -98,22 +99,36 @@
         continue;
       }
 
-      const id = crypto.randomUUID();
+      const id = existingId || crypto.randomUUID();
 
-      tasks = [
-        ...tasks,
-        {
-          id,
-          url: url,
-          status: "Queued…",
-          progress: 0,
+      if (existingId) {
+        updateTask(id, {
           isDownloading: true,
+          isPaused: false,
+          status: "Resuming…",
           error: null,
-        },
-      ];
+        });
+      } else {
+        tasks = [
+          ...tasks,
+          {
+            id,
+            url: url,
+            status: "Queued…",
+            progress: 0,
+            isDownloading: true,
+            isPaused: false,
+            error: null,
+          },
+        ];
+      }
 
       invoke("downloader", { url: url, downloadId: id }).catch((e: unknown) => {
-        updateTask(id, { error: String(e), isDownloading: false });
+        updateTask(id, {
+          error: String(e),
+          isDownloading: false,
+          isPaused: false,
+        });
       });
     }
   }
@@ -138,19 +153,46 @@
     }
   }
 
-  async function stopDownload(id: string) {
+  async function pauseDownload(id: string) {
     try {
-      await invoke("cancel_download", { downloadId: id });
+      updateTask(id, {
+        isPaused: true,
+        isDownloading: false,
+        status: "Paused",
+      });
+      await invoke("pause_download", { downloadId: id });
+    } catch (err) {
+      await invoke("notify", { body: "Failed to pause: " + err });
+    }
+  }
+
+  async function resumeDownload(id: string) {
+    const task = tasks.find((t) => t.id === id);
+    if (task) {
+      await startDownload(task.url, id);
+    }
+  }
+
+  async function cancelDownload(id: string, url: string) {
+    try {
+      await invoke("cancel_download", { downloadId: id, url: url });
     } catch (err) {
       await invoke("notify", { body: "Failed to cancel: " + err });
+    } finally {
+      removeTask(id);
     }
   }
 
   async function stopAllDownloads() {
     try {
       await invoke("cancel_all_downloads");
+      tasks.forEach((t) => {
+        if (t.isDownloading) {
+          removeTask(t.id);
+        }
+      });
     } catch (err) {
-      await invoke("notify", { body: "Failed to cancel all: " + err });
+      await invoke("notify", { body: "Failed to stop all: " + err });
     }
   }
 
@@ -189,11 +231,19 @@
       }),
 
       listen<StatusPayload>("download-status", (e) => {
-        updateTask(e.payload.id, { status: e.payload.value });
+        const task = tasks.find((t) => t.id === e.payload.id);
+        if (!task?.isPaused) {
+          updateTask(e.payload.id, { status: e.payload.value });
+        }
       }),
 
       listen<StatusPayload>("download-error", (e) => {
         const task = tasks.find((t) => t.id === e.payload.id);
+        if (task?.isPaused) return;
+        if (e.payload.value.includes("cancelled")) {
+          removeTask(e.payload.id);
+          return;
+        }
         updateTask(e.payload.id, {
           error: e.payload.value,
           isDownloading: false,
@@ -205,13 +255,16 @@
       listen<IdPayload>("download-started", (e) => {
         updateTask(e.payload.id, {
           isDownloading: true,
+          isPaused: false,
           error: null,
-          progress: 0,
         });
       }),
 
       listen<IdPayload>("download-finished", (e) => {
         const task = tasks.find((t) => t.id === e.payload.id);
+
+        if (task?.isPaused) return;
+
         if (task && !task.error) {
           addToHistory(task.url, "success");
         }
@@ -340,7 +393,13 @@
 
         <div class="flex-1 p-8 overflow-y-auto space-y-8 scrollbar-thin">
           <div class="max-w-5xl mx-auto w-full space-y-8">
-            <Downloader {tasks} {stopDownload} {stopAllDownloads} />
+            <Downloader
+              {tasks}
+              pauseTask={pauseDownload}
+              resumeTask={resumeDownload}
+              cancelTask={cancelDownload}
+              {stopAllDownloads}
+            />
             <History bind:history />
           </div>
         </div>

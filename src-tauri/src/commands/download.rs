@@ -1,5 +1,6 @@
 use serde::Serialize;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::path::{Component, Path};
 use std::process::Stdio;
 use std::sync::{Arc, Mutex, OnceLock};
 use tauri::{Emitter, Manager};
@@ -35,11 +36,14 @@ fn get_downloads() -> &'static Arc<Mutex<HashMap<String, tokio::process::Child>>
     DOWNLOADS.get_or_init(|| Arc::new(Mutex::new(HashMap::new())))
 }
 
-// Helper download functions
+#[inline]
+fn configure_cmd_flags(_cmd: &mut Command) {
+    #[cfg(target_os = "windows")]
+    _cmd.creation_flags(0x08000000);
+}
 
 fn apply_cookies(cmd: &mut Command, app: &tauri::AppHandle, link: &str) -> Result<()> {
     let cookies_dir = app.path().app_data_dir().unwrap().join("cookies");
-
     if !cookies_dir.exists() {
         println!("[MediaMagnet][Download] No cookies directory found, ignoring...");
         return Ok(());
@@ -48,12 +52,9 @@ fn apply_cookies(cmd: &mut Command, app: &tauri::AppHandle, link: &str) -> Resul
     if let Ok(entries) = std::fs::read_dir(&cookies_dir) {
         for entry in entries.flatten() {
             let path = entry.path();
-
             if path.is_file() {
                 if let Some(file_stem) = path.file_stem().and_then(|s| s.to_str()) {
-                    let stem_lc = file_stem.to_lowercase();
-
-                    if link.to_lowercase().contains(&stem_lc) {
+                    if link.to_lowercase().contains(&file_stem.to_lowercase()) {
                         if let Some(path_str) = path.to_str() {
                             cmd.args(["--cookies", path_str]);
                             println!("[MediaMagnet] Applied cookies from: {}", path_str);
@@ -68,68 +69,114 @@ fn apply_cookies(cmd: &mut Command, app: &tauri::AppHandle, link: &str) -> Resul
 }
 
 async fn base_command(app: &tauri::AppHandle, command: &str) -> Result<Command> {
-    static VERSION: OnceLock<Arc<Mutex<std::collections::HashSet<String>>>> = OnceLock::new();
-    let version = VERSION.get_or_init(|| Arc::new(Mutex::new(std::collections::HashSet::new())));
+    static VERSION: OnceLock<Arc<Mutex<HashSet<String>>>> = OnceLock::new();
+    let version = VERSION.get_or_init(|| Arc::new(Mutex::new(HashSet::new())));
 
     let mut check_cmd = Command::new(command);
-    #[cfg(target_os = "windows")]
-    check_cmd.creation_flags(0x08000000);
+    configure_cmd_flags(&mut check_cmd);
 
-    let check_cmd = check_cmd
+    let check_result = check_cmd
         .arg("--version")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .output()
         .await;
 
-    match check_cmd {
-        Ok(check_cmd) if check_cmd.status.success() => {
+    match check_result {
+        Ok(output) if output.status.success() => {
             let mut checked_set = version.lock().map_err(|_| "Lock failed")?;
             if !checked_set.contains(command) {
-                let version_out = String::from_utf8_lossy(&check_cmd.stdout);
                 println!(
                     "[MediaMagnet][Download] Backend: Local {}, Version: {}",
                     command,
-                    version_out.trim()
+                    String::from_utf8_lossy(&output.stdout).trim()
                 );
                 checked_set.insert(command.to_string());
             }
 
-            #[allow(unused_mut)]
             let mut cmd = Command::new(command);
-            #[cfg(target_os = "windows")]
-            cmd.creation_flags(0x08000000);
-            return Ok(cmd);
+            configure_cmd_flags(&mut cmd);
+            Ok(cmd)
         }
-        Ok(_) | Err(_) => match app.shell().sidecar(command) {
+        _ => match app.shell().sidecar(command) {
             Ok(sidecar) => {
                 let mut checked_set = version.lock().map_err(|_| "Lock failed")?;
                 if !checked_set.contains(command) {
                     println!("\n[MediaMagnet][Download] Backend: Prebuilt {}", command);
-                    println!(
-                        "  -> This is usually out-of-date, please download the latest version and put in PATH!"
-                    );
+                    println!("  -> This is usually out-of-date, please download the latest version and put in PATH!");
                     checked_set.insert(command.to_string());
                 }
 
                 let std_cmd: std::process::Command = sidecar.into();
-
-                #[allow(unused_mut)]
                 let mut cmd: Command = std_cmd.into();
-                #[cfg(target_os = "windows")]
-                cmd.creation_flags(0x08000000);
-
-                return Ok(cmd);
+                configure_cmd_flags(&mut cmd);
+                Ok(cmd)
             }
-            Err(e) => {
-                return Err(format!(
-                    "{} is not installed and no sidecar available: {}",
-                    command, e
-                )
-                .into());
-            }
+            Err(e) => Err(format!(
+                "{} is not installed and no sidecar available: {}",
+                command, e
+            )
+            .into()),
         },
     }
+}
+
+async fn is_youtube(app: &tauri::AppHandle, url: &str) -> bool {
+    if let Ok(mut check_cmd) = base_command(app, "yt-dlp").await {
+        check_cmd
+            .args(["--print", "title", "--no-download", url])
+            .stderr(Stdio::piped());
+        if let Ok(output) = check_cmd.output().await {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return output.status.success() && !stderr.contains("Falling back on generic");
+        }
+    }
+    false
+}
+
+fn strip_ansi_codes(s: &str) -> String {
+    static RE: std::sync::LazyLock<regex::Regex> =
+        std::sync::LazyLock::new(|| regex::Regex::new(r"\x1b\[[0-9;]*m").unwrap());
+    RE.replace_all(s, "").to_string()
+}
+
+fn split_args(args_str: &str) -> std::result::Result<Vec<String>, String> {
+    shell_words::split(args_str).map_err(|_| "Unable to split the arguments!".to_string())
+}
+
+fn apply_args(
+    cmd: &mut Command,
+    url: &str,
+    global_args: &str,
+    site_args: &[super::settings::SiteArguments],
+) -> std::result::Result<(), String> {
+    if !global_args.trim().is_empty() {
+        let tokens = split_args(global_args)
+            .map_err(|e| format!("Configuration Error (global arguments): {}", e))?;
+        cmd.args(tokens);
+    }
+
+    for item in site_args {
+        if !item.domain.trim().is_empty()
+            && url.to_lowercase().contains(&item.domain.to_lowercase())
+        {
+            if !item.args.trim().is_empty() {
+                let tokens = split_args(&item.args).map_err(|e| {
+                    format!(
+                        "Configuration Error (site [{}] arguments): {}",
+                        item.domain, e
+                    )
+                })?;
+                cmd.args(tokens);
+                println!(
+                    "[MediaMagnet] Applied custom arguments for domain [{}]: {}",
+                    item.domain, item.args
+                );
+            }
+        }
+    }
+
+    Ok(())
 }
 
 async fn run_downloader(
@@ -144,22 +191,11 @@ async fn run_downloader(
     let id_out = id.clone();
     let id_err = id.clone();
 
-    set_download_path(app.clone()).await;
+    let base_download_dir = set_download_path(app.clone()).await;
 
     let mut child = cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).spawn()?;
-
     let stdout = child.stdout.take().unwrap();
     let stderr = child.stderr.take().unwrap();
-
-    {
-        let mut guard = get_downloads().lock().unwrap();
-        guard.insert(id.clone(), child);
-    }
-
-    let mut out_reader = BufReader::new(stdout).lines();
-    let mut err_reader = BufReader::new(stderr).lines();
-
-    let mut downloaded = 0usize;
 
     let total_urls = if !ytdlp {
         println!("\n[MediaMagnet][gallery-dl] Counting total urls...");
@@ -174,6 +210,13 @@ async fn run_downloader(
     } else {
         0
     };
+
+    get_downloads().lock().unwrap().insert(id.clone(), child);
+
+    let mut out_reader = BufReader::new(stdout).lines();
+    let mut err_reader = BufReader::new(stderr).lines();
+
+    let mut downloaded = 0usize;
 
     if !ytdlp {
         println!(
@@ -297,7 +340,7 @@ async fn run_downloader(
         let mut guard = get_downloads().lock().map_err(|_| "Lock failed")?;
 
         if !guard.contains_key(&id) {
-            break; // cancelled externally
+            break;
         }
 
         let done = match guard.get_mut(&id).unwrap().try_wait() {
@@ -315,18 +358,17 @@ async fn run_downloader(
 
     if !ytdlp {
         // === directlink file cleanup ===
-        let dl_path = std::path::Path::new("directlink");
+        let dl_path = base_download_dir.join("directlink");
         if dl_path.exists() && dl_path.is_dir() {
-            for entry in std::fs::read_dir(dl_path)? {
-                let entry = entry?;
-                let path = entry.path();
+            for entry in std::fs::read_dir(&dl_path)? {
+                let path = entry?.path();
                 if path.is_file() {
                     if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
                         if name.to_lowercase().contains("part") {
                             continue;
                         }
-                        let domain_dir = std::path::Path::new(".")
-                            .join(name.split('_').next().unwrap_or("unknown"));
+                        let domain_dir =
+                            base_download_dir.join(name.split('_').next().unwrap_or("unknown"));
                         if !domain_dir.exists() {
                             std::fs::create_dir(&domain_dir)?;
                         }
@@ -343,49 +385,64 @@ async fn run_downloader(
     Ok(())
 }
 
-fn strip_ansi_codes(s: &str) -> String {
-    static RE: std::sync::LazyLock<regex::Regex> =
-        std::sync::LazyLock::new(|| regex::Regex::new(r"\x1b\[[0-9;]*m").unwrap());
-    RE.replace_all(s, "").to_string()
-}
+async fn clean_downloaded(app: &tauri::AppHandle, url: &str, is_youtube: bool) -> Result<()> {
+    let base = set_download_path(app.clone()).await;
 
-fn split_args(args_str: &str) -> std::result::Result<Vec<String>, String> {
-    shell_words::split(args_str).map_err(|_| "Unable to split the arguments!".to_string())
-}
+    if is_youtube {
+        let settings = Settings::load(app);
+        let mut cmd = base_command(app, "yt-dlp").await?;
+        cmd.args([
+            "-o",
+            &settings.yt_output_template,
+            "--print",
+            "filename",
+            "--no-download",
+            url,
+        ])
+        .current_dir(&base);
 
-fn apply_args(
-    cmd: &mut Command,
-    url: &str,
-    global_args: &str,
-    site_args: &[super::settings::SiteArguments],
-) -> std::result::Result<(), String> {
-    if !global_args.trim().is_empty() {
-        match split_args(global_args) {
-            Ok(tokens) => {
-                cmd.args(tokens);
+        let out = cmd.output().await?;
+        for line in String::from_utf8_lossy(&out.stdout)
+            .lines()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+        {
+            let target = base.join(Path::new(line).file_name().unwrap_or_default());
+            for suffix in ["part", "ytdl"] {
+                let path = match target.extension() {
+                    Some(ext) => {
+                        target.with_extension(format!("{}.{}", ext.to_string_lossy(), suffix))
+                    }
+                    None => target.with_extension(suffix),
+                };
+                if path.is_file() {
+                    let _ = std::fs::remove_file(&path);
+                }
             }
-            Err(e) => return Err(format!("Configuration Error (global arguments): {}", e)),
         }
-    }
+    } else {
+        let mut cmd = base_command(app, "gallery-dl").await?;
+        cmd.args(["-s", "-d", ".", "--print", "{_directory}", url])
+            .current_dir(&base);
 
-    let lc = url.to_lowercase();
-    for item in site_args {
-        if !item.domain.trim().is_empty() && lc.contains(&item.domain.to_lowercase()) {
-            if !item.args.trim().is_empty() {
-                match split_args(&item.args) {
-                    Ok(tokens) => {
-                        cmd.args(tokens);
-                        println!(
-                            "[MediaMagnet] Applied custom arguments for domain [{}]: {}",
-                            item.domain, item.args
-                        );
-                    }
-                    Err(e) => {
-                        return Err(format!(
-                            "Configuration Error (site [{}] arguments): {}",
-                            item.domain, e
-                        ))
-                    }
+        let out = cmd.output().await?;
+        let mut deleted = HashSet::new();
+        for line in String::from_utf8_lossy(&out.stdout)
+            .lines()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+        {
+            let mut parts = Path::new(line).components().filter_map(|c| {
+                if let Component::Normal(s) = c {
+                    Some(s.to_owned())
+                } else {
+                    None
+                }
+            });
+            if let (Some(a), Some(b)) = (parts.next(), parts.next()) {
+                let sub = base.join(a).join(b);
+                if deleted.insert(sub.clone()) && sub.starts_with(&base) && sub.is_dir() {
+                    let _ = std::fs::remove_dir_all(&sub);
                 }
             }
         }
@@ -397,47 +454,28 @@ fn apply_args(
 #[tauri::command]
 pub async fn downloader(app: tauri::AppHandle, url: String, download_id: String) {
     let lc = url.to_lowercase();
-
-    if lc.contains("didg") && lc.contains("ls.i") {
-        if !lc.contains("original") {
-            let _ = app.emit(
-                "download-status",
-                StatusPayload {
-                    id: download_id.clone(),
-                    value: "Skipped: Not original version".into(),
-                },
-            );
-
-            let _ = app.emit("download-finished", IdPayload { id: download_id });
-
-            return;
-        }
-    }
-
-    if !lc.contains("http") {
+    let emit_status = |event: &str, msg: String| {
         let _ = app.emit(
-            "download-error",
+            event,
             StatusPayload {
-                id: download_id,
-                value: "Invalid URL".into(),
+                id: download_id.clone(),
+                value: msg,
             },
         );
+    };
+
+    if lc.contains("didg") && lc.contains("ls.i") && !lc.contains("original") {
+        emit_status("download-status", "Skipped: Not original version".into());
+        let _ = app.emit("download-finished", IdPayload { id: download_id });
         return;
     }
 
-    let mut check_cmd = base_command(&app, "yt-dlp").await.unwrap();
+    if !lc.contains("http") {
+        emit_status("download-error", "Invalid URL".into());
+        return;
+    }
 
-    check_cmd
-        .args(["--print", "title", "--no-download", &url])
-        .stderr(Stdio::piped());
-
-    let is_youtube = if let Ok(output) = check_cmd.output().await {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        output.status.success() && !stderr.contains("Falling back on generic")
-    } else {
-        false
-    };
-
+    let is_youtube = is_youtube(&app, &url).await;
     let _ = app.emit(
         "download-started",
         IdPayload {
@@ -446,9 +484,10 @@ pub async fn downloader(app: tauri::AppHandle, url: String, download_id: String)
     );
 
     let settings = Settings::load(&app);
-    let mut cmd = base_command(&app, if is_youtube { "yt-dlp" } else { "gallery-dl" })
-        .await
-        .unwrap();
+    let mut cmd = match base_command(&app, if is_youtube { "yt-dlp" } else { "gallery-dl" }).await {
+        Ok(c) => c,
+        Err(_) => return,
+    };
 
     if is_youtube {
         cmd.args([
@@ -481,73 +520,52 @@ pub async fn downloader(app: tauri::AppHandle, url: String, download_id: String)
             &settings.yt_global_args,
             &settings.yt_site_args,
         ) {
-            let _ = app.emit(
-                "download-error",
-                StatusPayload {
-                    id: download_id.clone(),
-                    value: e,
-                },
-            );
+            emit_status("download-error", e);
             let _ = app.emit("download-finished", IdPayload { id: download_id });
             return;
         }
-
         if settings.user_agent != "None" {
             cmd.args(["--user-agent", &settings.user_agent]);
         }
     } else {
         cmd.args(["-d", "."]);
-
         if let Err(e) = apply_args(
             &mut cmd,
             &url,
             &settings.gdl_global_args,
             &settings.gdl_site_args,
         ) {
-            let _ = app.emit(
-                "download-error",
-                StatusPayload {
-                    id: download_id.clone(),
-                    value: e,
-                },
-            );
+            emit_status("download-error", e);
             let _ = app.emit("download-finished", IdPayload { id: download_id });
             return;
         }
-
         if settings.user_agent != "None" {
             cmd.args(["-a", &settings.user_agent]);
         }
     }
 
-    apply_cookies(&mut cmd, &app, &url).unwrap();
-    cmd.args([&url]);
+    let _ = apply_cookies(&mut cmd, &app, &url);
+    cmd.arg(&url);
 
-    let result = run_downloader(app.clone(), cmd, &url, is_youtube, download_id.clone()).await;
-
-    if let Err(e) = result {
+    if let Err(e) = run_downloader(app.clone(), cmd, &url, is_youtube, download_id.clone()).await {
         println!("[MediaMagnet] Download failed ({}): {}", download_id, e);
-        let _ = app.emit(
-            "download-error",
-            StatusPayload {
-                id: download_id.clone(),
-                value: format!("Download failed: {}", e),
-            },
-        );
+        emit_status("download-error", format!("Download failed: {}", e));
     }
 
     let _ = app.emit("download-finished", IdPayload { id: download_id });
 }
 
 #[tauri::command]
-pub async fn cancel_download(
+pub async fn pause_download(
     app: tauri::AppHandle,
     download_id: String,
 ) -> std::result::Result<(), String> {
-    let child = get_downloads()
-        .lock()
-        .map_err(|_| "Lock failed")?
-        .remove(&download_id);
+    let child = {
+        get_downloads()
+            .lock()
+            .map_err(|_| "Lock failed")?
+            .remove(&download_id)
+    };
 
     if let Some(mut child) = child {
         child
@@ -560,25 +578,60 @@ pub async fn cancel_download(
             .map_err(|e| format!("Wait failed: {}", e))?;
 
         let _ = app.emit(
-            "download-error",
+            "download-status",
             StatusPayload {
                 id: download_id,
-                value: "Download cancelled".into(),
+                value: "Paused".into(),
             },
         );
         Ok(())
     } else {
-        Err(format!("No download with id: {}", download_id))
+        Err(format!("No active download with id: {}", download_id))
     }
 }
 
 #[tauri::command]
+pub async fn cancel_download(
+    app: tauri::AppHandle,
+    download_id: String,
+    url: String,
+) -> std::result::Result<(), String> {
+    let child = {
+        get_downloads()
+            .lock()
+            .map_err(|_| "Lock failed")?
+            .remove(&download_id)
+    };
+
+    if let Some(mut child) = child {
+        let _ = child.kill().await;
+        let _ = child.wait().await;
+    }
+
+    let is_youtube = is_youtube(&app, &url).await;
+    if let Err(e) = clean_downloaded(&app, &url, is_youtube).await {
+        println!("[MediaMagnet] Cleanup failed during cancellation: {}", e);
+    }
+
+    let _ = app.emit(
+        "download-error",
+        StatusPayload {
+            id: download_id,
+            value: "Download cancelled and files permanently deleted".into(),
+        },
+    );
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn cancel_all_downloads(app: tauri::AppHandle) -> std::result::Result<(), String> {
-    let children: Vec<(String, tokio::process::Child)> = get_downloads()
-        .lock()
-        .map_err(|_| "Lock failed")?
-        .drain()
-        .collect();
+    let children: Vec<(String, tokio::process::Child)> = {
+        get_downloads()
+            .lock()
+            .map_err(|_| "Lock failed")?
+            .drain()
+            .collect()
+    };
 
     for (id, mut child) in children {
         if let Err(e) = child.kill().await {
