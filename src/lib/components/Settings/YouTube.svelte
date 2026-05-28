@@ -171,7 +171,7 @@
         class="text-xs font-bold uppercase text-primary">Global Arguments</Label
       >
       <p class="text-[11px] text-muted-foreground leading-relaxed">
-        Pass custom arguments directly to the yt-dlp CLI execution.
+        Pass custom arguments directly to the yt-dlp CLI.
       </p>
     </div>
     <textarea
@@ -190,7 +190,7 @@
           >Site-Based Arguments</Label
         >
         <p class="text-[11px] text-muted-foreground leading-relaxed">
-          Override configuration rules for specified domains.
+          Pass custom arguments for specific sites only
         </p>
       </div>
       <Button
@@ -203,46 +203,53 @@
       </Button>
     </div>
 
-{#if settingsStore.config!.yt_site_args.length === 0}
-  <p class="text-xs text-muted-foreground/50 italic py-4 text-center bg-muted/10 rounded-lg border border-dashed">
-    No site-specific arguments configured.
-  </p>
-{:else}
-  <div class="space-y-4 max-h-[400px] overflow-y-auto pr-1">
-    {#each settingsStore.config!.yt_site_args as item (item.id)}
-      <div class="p-3 bg-secondary rounded-lg space-y-2 relative group border border-muted/40">
-        <div class="flex items-center justify-between gap-4">
-          <div class="flex items-center gap-2 flex-1">
-            <span class="text-[10px] font-bold uppercase text-muted-foreground/70 tracking-wider">Domain:</span>
-            <Input
-              bind:value={item.domain}
-              onchange={saveSettings}
-              placeholder="example.com"
-              class="h-7 text-xs bg-background max-w-[180px] font-mono px-2"
-            />
-          </div>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            onclick={() => removeSiteArg(item.id)}
-            class="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 !cursor-pointer px-2"
+    {#if settingsStore.config!.yt_site_args.length === 0}
+      <p
+        class="text-xs text-muted-foreground/50 italic py-4 text-center bg-muted/10 rounded-lg border border-dashed"
+      >
+        No site-specific arguments configured.
+      </p>
+    {:else}
+      <div class="space-y-4 max-h-[400px] overflow-y-auto pr-1">
+        {#each settingsStore.config!.yt_site_args as item (item.id)}
+          <div
+            class="p-3 bg-secondary rounded-lg space-y-2 relative group border border-muted/40"
           >
-            Delete
-          </Button>
-        </div>
+            <div class="flex items-center justify-between gap-4">
+              <div class="flex items-center gap-2 flex-1">
+                <span
+                  class="text-[10px] font-bold uppercase text-muted-foreground/70 tracking-wider"
+                  >Domain:</span
+                >
+                <Input
+                  bind:value={item.domain}
+                  onchange={saveSettings}
+                  placeholder="example.com"
+                  class="h-7 text-xs bg-background max-w-[180px] font-mono px-2"
+                />
+              </div>
 
-        <div class="space-y-1">
-          <textarea
-            bind:value={item.args}
-            onchange={saveSettings}
-            placeholder='-o "api-key=1234567890" -o "user-id=456789"'
-            class="{textareaClass} min-h-[50px] bg-background py-1.5 px-2"
-          ></textarea>
-        </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onclick={() => removeSiteArg(item.id)}
+                class="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 !cursor-pointer px-2"
+              >
+                Delete
+              </Button>
+            </div>
+
+            <div class="space-y-1">
+              <textarea
+                bind:value={item.args}
+                onchange={saveSettings}
+                placeholder='-o "api-key=1234567890" -o "user-id=456789"'
+                class="{textareaClass} min-h-[50px] bg-background py-1.5 px-2"
+              ></textarea>
+            </div>
+          </div>
+        {/each}
       </div>
-    {/each}
-  </div>
-{/if}
+    {/if}
   </div>
 </div>

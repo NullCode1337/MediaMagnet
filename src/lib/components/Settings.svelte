@@ -10,11 +10,12 @@
 
   import GeneralTab from "$lib/components/Settings/General.svelte";
   import DownloadsTab from "$lib/components/Settings/Download.svelte";
+  import CookiesTab from "$lib/components/Settings/Cookies.svelte";
+  import PrivacyTab from "$lib/components/Settings/Privacy.svelte";
   import ImportExportTab from "$lib/components/Settings/ImportExport.svelte";
   import YouTubeTab from "$lib/components/Settings/YouTube.svelte";
   import GalleryTab from "$lib/components/Settings/Gallery.svelte";
-  import CookiesTab from "$lib/components/Settings/Cookies.svelte";
-  import PrivacyTab from "$lib/components/Settings/Privacy.svelte";
+  import SpotdlTab from "$lib/components/Settings/Spotdl.svelte";
 
   let { isCollapsed } = $props();
   let activeTab = $state("general");
@@ -40,6 +41,7 @@
   const BACKEND_TABS = [
     { id: "youtube", label: "yt-dlp", icon: Icons.Video },
     { id: "gallery", label: "gallery-dl", icon: Icons.Image },
+    { id: "spotdl", label: "spotdl", icon: Icons.Music },
   ];
 
   const switchClass =
@@ -179,16 +181,18 @@
               <GeneralTab {switchClass} />
             {:else if activeTab === "downloads"}
               <DownloadsTab {saveSettings} {selectDirectory} />
-            {:else if activeTab === "youtube"}
-              <YouTubeTab {saveSettings} {switchClass} />
-            {:else if activeTab === "gallery"}
-              <GalleryTab {saveSettings} />
             {:else if activeTab === "cookies"}
               <CookiesTab />
             {:else if activeTab === "privacy"}
               <PrivacyTab {switchClass} />
             {:else if activeTab === "import_export"}
               <ImportExportTab />
+            {:else if activeTab === "youtube"}
+              <YouTubeTab {saveSettings} {switchClass} />
+            {:else if activeTab === "gallery"}
+              <GalleryTab {saveSettings} />
+            {:else if activeTab === "spotdl"}
+              <SpotdlTab {saveSettings} />
             {/if}
           </div>
         {:else}

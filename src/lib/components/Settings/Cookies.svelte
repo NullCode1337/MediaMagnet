@@ -130,19 +130,27 @@
 <header class="flex items-center justify-between">
   <h3 class="text-2xl font-extrabold">Cookies</h3>
   <div class="flex items-center gap-2">
-    <Button variant="outline" size="sm" class="!cursor-pointer" onclick={importCookie}>
+    <Button
+      variant="outline"
+      size="sm"
+      class="!cursor-pointer"
+      onclick={importCookie}
+    >
       <Icons.FileUp size={14} class="mr-1" /> Import File
     </Button>
-    <Button variant="destructive" size="sm" class="!cursor-pointer" onclick={clearAllCookies}>
+    <Button
+      variant="destructive"
+      size="sm"
+      class="!cursor-pointer"
+      onclick={clearAllCookies}
+    >
       <Icons.Trash2 size={14} class="mr-1" /> Delete All
     </Button>
   </div>
 </header>
 
 <div>
-  <Label
-    class="text-xs font-bold uppercase pb-2 text-primary"
-  >
+  <Label class="text-xs font-bold uppercase pb-2 text-primary">
     Add Cookie
   </Label>
   <div class="rounded-2xl border-solid space-y-4">
