@@ -1,12 +1,13 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button";
   import { Progress } from "$lib/components/ui/progress";
-  import { Menu, HardDrive, FolderOpen } from "@lucide/svelte";
+  import { Menu, HardDrive, FolderOpen, History, Download } from "@lucide/svelte";
   import { settingsStore } from "$lib/settings.svelte";
+  import { uiState } from "$lib/store.svelte";
 
   import SettingsDialog from "./Settings.svelte";
 
-  let { isCollapsed = $bindable(), diskUsage } = $props();
+  let { isCollapsed = $bindable(), diskUsage, anyDownloading } = $props();
 </script>
 
 <aside
@@ -33,6 +34,44 @@
 
   <div class="px-4 flex-1 space-y-6">
     <nav class="space-y-1">
+    {#if anyDownloading}
+      <Button
+        variant="ghost"
+        onclick={() => (uiState.activeTab = "downloads")}
+        class="w-full h-11 transition-all duration-200 cursor-pointer {isCollapsed
+          ? 'justify-center'
+          : 'justify-start gap-4 px-4'} 
+          {uiState.activeTab === 'downloads'
+          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+          : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'}"
+      >
+        <Download size={20} class="text-sidebar-foreground/70" />
+        {#if !isCollapsed}
+          <span class="font-medium text-[15px] text-sidebar-foreground">
+            Downloads
+          </span>
+        {/if}
+      </Button>
+
+        <Button
+          variant="ghost"
+          onclick={() => (uiState.activeTab = "history")}
+          class="w-full h-11 transition-all duration-200 cursor-pointer {isCollapsed
+            ? 'justify-center'
+            : 'justify-start gap-4 px-4'} 
+            {uiState.activeTab === 'history'
+            ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+            : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'}"
+        >
+          <History size={20} class="text-sidebar-foreground/70" />
+          {#if !isCollapsed}
+            <span class="font-medium text-[15px] text-sidebar-foreground">
+              Recent History
+            </span>
+          {/if}
+        </Button>
+      {/if}
+
       <Button
         variant="ghost"
         onclick={() => settingsStore.openDownloadDir()}
@@ -43,7 +82,7 @@
         <FolderOpen size={20} class="text-sidebar-foreground/70" />
         {#if !isCollapsed}
           <span class="font-medium text-[15px] text-sidebar-foreground">
-            Open Downloads
+            Open folder
           </span>
         {/if}
       </Button>
