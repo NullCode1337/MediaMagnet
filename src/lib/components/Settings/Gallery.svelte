@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
   import { settingsStore } from "$lib/settings.svelte";
@@ -24,83 +25,100 @@
       settingsStore.config.gdl_site_args.filter((item) => item.id !== id);
     saveSettings();
   }
+
+  const textareaClass =
+    "flex w-full rounded-md border border-input bg-muted/20 px-3 py-2 text-xs font-mono ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y min-h-[70px]";
 </script>
 
-<div class="space-y-6">
-  <div>
-    <h3 class="text-2xl font-extrabold">Gallery-DL</h3>
-    <p class="text-sm text-muted-foreground">Configure gallery-dl behavior</p>
-  </div>
+<h3 class="text-2xl font-extrabold mb-6">Gallery-DL</h3>
 
-  <div class="p-5 rounded-2xl border bg-card space-y-4">
-    <div>
-      <Label class="text-sm font-medium">Additional Arguments</Label>
-      <p class="text-xs text-muted-foreground">
+<div class="grid gap-6">
+  <div class="space-y-2">
+    <div class="flex flex-col gap-0.5">
+      <Label
+        for="gdl_global_args"
+        class="text-xs font-bold uppercase text-primary">Global Arguments</Label
+      >
+      <p class="text-[11px] text-muted-foreground leading-relaxed">
         Pass custom arguments directly to gallery-dl CLI
       </p>
     </div>
+    <textarea
+      id="gdl_global_args"
+      bind:value={settingsStore.config!.gdl_global_args}
+      onchange={saveSettings}
+      placeholder="--cookies cookies.txt --no-mtime"
+      class={textareaClass}
+    ></textarea>
+  </div>
 
-    <div class="space-y-1.5">
-      <Label
-        for="gdl_global_args"
-        class="text-xs font-semibold text-muted-foreground"
-        >Global Arguments</Label
-      >
-      <Input
-        id="gdl_global_args"
-        bind:value={settingsStore.config!.gdl_global_args}
-        onchange={saveSettings}
-        placeholder="--cookies cookies.txt --no-mtime"
-        class="font-mono text-xs bg-muted/20 w-full"
-      />
-    </div>
-
-    <div class="space-y-2 pt-2 border-t border-muted">
-      <div class="flex items-center justify-between">
-        <Label class="text-xs font-semibold text-muted-foreground"
+  <div class="space-y-3 pt-2 border-t border-muted/60">
+    <div class="flex items-center justify-between">
+      <div class="flex flex-col gap-0.5">
+        <Label class="text-xs font-bold uppercase text-primary/80"
           >Site-Based Arguments</Label
         >
-        <button
-          type="button"
-          onclick={addSiteArg}
-          class="text-xs text-primary font-medium hover:underline flex items-center gap-1"
-        >
-          + Add Site
-        </button>
-      </div>
-
-      {#if settingsStore.config!.gdl_site_args.length === 0}
-        <p class="text-xs text-muted-foreground/60 italic py-2">
-          No site-specific arguments configured.
+        <p class="text-[11px] text-muted-foreground leading-relaxed">
+          Pass custom arguments for specific sites only
         </p>
-      {:else}
-        <div class="space-y-2 max-h-60 overflow-y-auto pr-1">
-          {#each settingsStore.config!.gdl_site_args as item (item.id)}
-            <div class="flex items-center gap-2">
-              <Input
-                bind:value={item.domain}
-                onchange={saveSettings}
-                placeholder="danbooru.donmai.us"
-                class="text-xs bg-muted/20 w-1/3 font-mono"
-              />
-              <Input
-                bind:value={item.args}
-                onchange={saveSettings}
-                placeholder="-o 'api-key=...'"
-                class="text-xs bg-muted/20 flex-1 font-mono"
-              />
-              <button
-                type="button"
+      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        onclick={addSiteArg}
+        class="text-xs h-8 !cursor-pointer px-3"
+      >
+        Add Site
+      </Button>
+    </div>
+
+    {#if settingsStore.config!.gdl_site_args.length === 0}
+      <p
+        class="text-xs text-muted-foreground/50 italic py-4 text-center bg-muted/10 rounded-lg border border-dashed"
+      >
+        No site-specific arguments configured.
+      </p>
+    {:else}
+      <div class="space-y-4 max-h-[400px] overflow-y-auto pr-1">
+        {#each settingsStore.config!.gdl_site_args as item (item.id)}
+          <div
+            class="p-3 bg-secondary rounded-lg space-y-2 relative group border border-muted/40"
+          >
+            <div class="flex items-center justify-between gap-4">
+              <div class="flex items-center gap-2 flex-1">
+                <span
+                  class="text-[10px] font-bold uppercase text-muted-foreground/70 tracking-wider"
+                  >Domain:</span
+                >
+                <Input
+                  bind:value={item.domain}
+                  onchange={saveSettings}
+                  placeholder="danbooru.donmai.us"
+                  class="h-7 text-xs bg-background max-w-[220px] font-mono px-2"
+                />
+              </div>
+
+              <Button
+                variant="ghost"
+                size="sm"
                 onclick={() => removeSiteArg(item.id)}
-                class="h-9 px-2 text-xs text-destructive hover:bg-destructive/10 rounded-md transition-colors"
-                title="Remove rule"
+                class="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 !cursor-pointer px-2"
               >
                 Delete
-              </button>
+              </Button>
             </div>
-          {/each}
-        </div>
-      {/if}
-    </div>
+
+            <div class="space-y-1">
+              <textarea
+                bind:value={item.args}
+                onchange={saveSettings}
+                placeholder="Arguments (e.g., -o 'api-key=...')"
+                class="{textareaClass} min-h-[50px] bg-background py-1.5 px-2"
+              ></textarea>
+            </div>
+          </div>
+        {/each}
+      </div>
+    {/if}
   </div>
 </div>

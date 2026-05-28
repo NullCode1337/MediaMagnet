@@ -21,13 +21,7 @@
 
 <div class="space-y-5">
   <div class="space-y-1">
-    <h3 class="text-sm font-semibold text-foreground tracking-tight">
-      Import / Export Settings
-    </h3>
-    <p class="text-xs text-muted-foreground leading-relaxed">
-      Backup your active configuration or restore it from a JSON file or
-      clipboard.
-    </p>
+    <h3 class="text-2xl font-extrabold">Import/Export</h3>
   </div>
 
   <div class="flex flex-wrap items-center gap-2">
@@ -35,7 +29,7 @@
       <Button
         variant="ghost"
         size="sm"
-        class="h-7 gap-1.5 rounded-md px-2.5 text-xs font-medium hover:bg-background hover:shadow-sm transition-all"
+        class="h-7 gap-1.5 rounded-md px-2.5 text-xs cursor-pointer font-medium hover:bg-background hover:shadow-sm transition-all"
         onclick={() => settingsStore.importFromFile()}
       >
         <Icons.FileUp size={13} class="text-muted-foreground" />
@@ -45,18 +39,18 @@
       <Button
         variant="ghost"
         size="sm"
-        class="h-7 gap-1.5 rounded-md px-2.5 text-xs font-medium hover:bg-background hover:shadow-sm transition-all"
+        class="h-7 gap-1.5 rounded-md px-2.5 text-xs cursor-pointer font-medium hover:bg-background hover:shadow-sm transition-all"
         onclick={() => settingsStore.importFromClipboard()}
       >
         <Icons.ClipboardPaste size={13} class="text-muted-foreground" />
-        Paste JSON
+        Import JSON (clipboard)
       </Button>
     </div>
 
     <Button
       variant="secondary"
       size="sm"
-      class="ml-auto h-7 gap-1.5 rounded-md px-2.5 text-xs font-medium transition-all"
+      class="ml-auto h-7 gap-1.5 rounded-md px-2.5 text-xs font-medium cursor-pointer hover:bg-background hover:shadow-sm transition-all"
       onclick={handleCopy}
     >
       {#if copied}
@@ -64,7 +58,7 @@
         <span class="text-emerald-500">Copied!</span>
       {:else}
         <Icons.Copy size={13} />
-        Copy Config
+        Export JSON
       {/if}
     </Button>
   </div>
