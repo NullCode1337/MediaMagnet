@@ -369,7 +369,7 @@
                 }}
               >
                 <Input
-                  placeholder="Paste a link and press Enter…"
+                  placeholder="Enter URL"
                   bind:value={urlInput}
                   class="pr-10 h-11 bg-muted/30 focus-visible:ring-1"
                 />
@@ -381,10 +381,10 @@
               class="h-11 px-6 gap-2 cursor-pointer hover:bg-primary/80"
             >
               {#if urlInput === ""}
-                <Clipboard size={16} fill="currentColor" />
+                <Clipboard size={16} />
                 Paste
               {:else}
-                <Play size={16} fill="currentColor" />
+                <Play size={16} />
                 Download
               {/if}
             </Button>
