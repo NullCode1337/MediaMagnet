@@ -191,9 +191,19 @@
     }
   }
 
-  function addToHistory(url: string, status: "success" | "error", error?: string) {
+  function addToHistory(
+    url: string,
+    status: "success" | "error",
+    error?: string,
+  ) {
     history = [
-      { url, name: url, timestamp: new Date().toLocaleTimeString(), status, error },
+      {
+        url,
+        name: url,
+        timestamp: new Date().toLocaleTimeString(),
+        status,
+        error,
+      },
       ...history,
     ].slice(0, 20);
   }
@@ -347,7 +357,7 @@
     </div>
   {:else}
     <div class="flex flex-1 w-full min-h-0 overflow-hidden relative">
-      <Sidebar bind:isCollapsed {diskUsage} {anyDownloading} />
+      <Sidebar bind:isCollapsed {diskUsage} />
 
       <main
         class="flex flex-col h-screen w-full bg-background text-foreground overflow-hidden"
@@ -404,11 +414,6 @@
                   {stopAllDownloads}
                 />
               </div>
-              {#if tasks.length === 0}
-                <div>
-                  <History bind:history />
-                </div>
-              {/if}
             {/if}
           </div>
         </div>
