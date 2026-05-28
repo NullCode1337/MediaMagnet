@@ -2,13 +2,17 @@
   import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
   import { X, Minus, Plus, Expand, Copy, Square, Maximize2 } from "@lucide/svelte";
   import { uiState } from "$lib/store.svelte";
+  import { settingsStore } from "$lib/settings.svelte";
   import { onMount } from "svelte";
   import logo from "$lib/assets/favicon.png";
 
   let { currentPlatform = "windows" }: { currentPlatform?: string } = $props();
 
   const appWindow = getCurrentWindow();
-  const isMac = $derived(currentPlatform === "macos");
+  const barType = $derived(settingsStore.config?.custom_type);
+  const isMac = $derived(
+    barType === "mac" || (barType === "system" && currentPlatform === "macos")
+  );
 
   async function syncWindowState() {
     uiState.isMaximized = await appWindow.isMaximized();
@@ -36,9 +40,8 @@
 {#if uiState.showCustom}
   <div
     data-tauri-drag-region
-    class="h-10 w-full bg-sidebar flex items-center shrink-0 select-none z-50 !pointer-events-auto z-9999"
+    class="h-10 w-full bg-sidebar flex items-center shrink-0 select-none z-50 border-b !pointer-events-auto z-9999"
     class:px-4={isMac}
-    class:border-b={!isMac}
   >
     <div
       class="flex items-center gap-3 px-4 pointer-events-none"

@@ -15,6 +15,7 @@ export interface Config {
   accent_hue: number;
   always_on_top: boolean;
   show_custom: boolean;
+  custom_type: string;
   notifications: boolean;
   clear_on_exit: boolean;
 
