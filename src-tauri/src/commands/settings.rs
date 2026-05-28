@@ -18,6 +18,9 @@ fn default_hue() -> Number {
 fn default_user_agent() -> String {
     "None".to_string()
 }
+fn default_custom_titlebar() -> String {
+    "system".to_string()
+}
 fn default_dark_mode() -> bool {
     true
 }
@@ -47,6 +50,9 @@ pub struct Settings {
 
     #[serde(default)]
     pub show_custom: bool,
+
+    #[serde(default = "default_custom_titlebar")]
+    pub custom_type: String,
 
     #[serde(default)]
     pub notifications: bool,
@@ -103,6 +109,7 @@ impl Default for Settings {
             accent_hue: default_hue(),
             always_on_top: false,
             show_custom: false,
+            custom_type: default_custom_titlebar(),
             notifications: false,
             clear_on_exit: false,
 
@@ -112,8 +119,8 @@ impl Default for Settings {
             yt_embed_subs: false,
             yt_restrict_filenames: false,
 
-            spotdl_bitrate: "320k".to_string(),
-            spotdl_format: "mp3".to_string(),
+            spotdl_bitrate: "".to_string(),
+            spotdl_format: "".to_string(),
 
             yt_global_args: "".to_string(),
             yt_site_args: Vec::new(),

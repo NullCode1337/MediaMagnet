@@ -28,6 +28,8 @@
     },
   ];
 
+  let showCustom = $derived(settingsStore.config?.show_custom ?? false);
+  let customType = $derived(settingsStore.config?.custom_type ?? "system");
   let hue = $derived(settingsStore.config?.accent_hue ?? 260);
 
   function onSliderInput(e: Event) {
@@ -122,6 +124,35 @@
 </div>
 
 <SwitchRows items={GENERAL_SWITCHES} {switchClass} />
+
+{#if showCustom}
+  <div class="rounded-2xl border bg-card p-5 flex flex-col gap-3">
+    <div>
+      <Label class="text-base font-semibold">Title Bar Style</Label>
+      <p class="text-xs text-muted-foreground mt-0.5">
+        Choose the style of the custom title bar
+      </p>
+    </div>
+
+    <div class="flex gap-2">
+      {#each [
+        { value: "system", label: "System" },
+        { value: "mac",    label: "macOS"  },
+        { value: "win",    label: "Windows" },
+      ] as opt (opt.value)}
+        <button
+          class="flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors
+            {customType === opt.value
+              ? 'bg-primary text-primary-foreground border-primary'
+              : 'bg-background text-muted-foreground border-input hover:bg-muted'}"
+          onclick={() => settingsStore.update({ custom_type: opt.value })}
+        >
+          {opt.label}
+        </button>
+      {/each}
+    </div>
+  </div>
+{/if}
 
 <div class="rounded-2xl border bg-card p-5 flex flex-col gap-4">
   <div class="flex items-center justify-between">
