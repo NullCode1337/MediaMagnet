@@ -85,7 +85,7 @@
 
   async function startDownload(input: string, existingId?: string) {
     const urlRegex = /https?:\/\/[^\s,)"]+/gi;
-    const matches = input.match(urlRegex);
+    const matches = input.trim().match(urlRegex);
 
     if (!matches || matches.length === 0) {
       await invoke("notify", { body: "No valid URLs found in input" });
@@ -136,14 +136,9 @@
   async function pasteOrDownload() {
     if (!urlInput) {
       try {
-        const clipboardText = await readText();
-        if (clipboardText?.startsWith("http")) {
-          urlInput = clipboardText;
-          await startDownload(urlInput);
-          urlInput = "";
-        } else {
-          await invoke("notify", { body: "No valid URLs found in input" });
-        }
+        const clipboardText = (await readText())?.trim();
+        await startDownload(clipboardText);
+        urlInput = "";
       } catch (err) {
         await invoke("notify", { body: err });
       }
