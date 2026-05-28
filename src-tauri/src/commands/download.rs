@@ -78,6 +78,11 @@ fn get_downloads() -> &'static Arc<Mutex<HashMap<String, ActiveDownload>>> {
     DOWNLOADS.get_or_init(|| Arc::new(Mutex::new(HashMap::new())))
 }
 
+fn get_semaphore() -> &'static Arc<tokio::sync::Semaphore> {
+    static SEMAPHORE: OnceLock<Arc<tokio::sync::Semaphore>> = OnceLock::new();
+    SEMAPHORE.get_or_init(|| Arc::new(tokio::sync::Semaphore::new(5)))
+}
+
 #[inline]
 fn hide_cmd(_cmd: &mut Command) {
     #[cfg(target_os = "windows")]
@@ -300,7 +305,7 @@ async fn download_url(
                                 total_songs = total;
                             }
                             let denom = if total_songs > 0 { total_songs } else { 1 };
-                            let pct = ((done / denom) as f64 * 100.0).min(100.0);
+                            let pct = ((done as f64 / denom as f64) * 100.0).min(100.0);
 
                             let _ = app_stdout.emit(
                                 "download-progress",
@@ -322,10 +327,7 @@ async fn download_url(
                     }
                 }
 
-                // "CYPARISS - EMPTY DREAMS: Downloading / Embedding metadata / Done"
-                if line.contains(": Downloading")
-                    || line.contains(": Embedding")
-                {
+                if !line.contains("other audio") || !line.contains("http") {
                     let _ = app_stdout.emit(
                         "download-status",
                         StatusPayload {
@@ -333,27 +335,7 @@ async fn download_url(
                             value: line.clone(),
                         },
                     );
-                    continue;
                 }
-
-                if line.starts_with("Downloaded") {
-                    let _ = app_stdout.emit(
-                        "download-status",
-                        StatusPayload {
-                            id: id_out.clone(),
-                            value: line.clone(),
-                        },
-                    );
-                    continue;
-                }
-
-                let _ = app_stdout.emit(
-                    "download-status",
-                    StatusPayload {
-                        id: id_out.clone(),
-                        value: line.clone(),
-                    },
-                );
             }
 
             let _ = app_stdout.emit(
@@ -632,6 +614,15 @@ pub async fn downloader(app: tauri::AppHandle, url: String, download_id: String)
         return;
     }
 
+    let _permit = match get_semaphore().acquire().await {
+        Ok(p) => p,
+        Err(_) => {
+            emit_status("download-error", "Failed to acquire download permit".into());
+            return;
+        }
+    };
+    emit_status("download-status", "Starting...".into());
+
     let backend = Backend::identify(&app, &url).await;
     let settings = Settings::load(&app);
 
@@ -653,7 +644,13 @@ pub async fn downloader(app: tauri::AppHandle, url: String, download_id: String)
 
     match backend {
         Backend::SpotDL => {
-            cmd.args(["--simple-tui", "--log-level", "INFO"]);
+            cmd.args([
+                "--simple-tui",
+                "--log-level",
+                "INFO",
+                "--output",
+                "{list-name}/",
+            ]);
 
             if !settings.spotdl_format.is_empty() {
                 cmd.args(["--format", &settings.spotdl_format]);
@@ -830,5 +827,7 @@ pub async fn cancel_all_downloads(app: tauri::AppHandle) -> std::result::Result<
             },
         );
     }
+
+    get_semaphore().close();
     Ok(())
 }
