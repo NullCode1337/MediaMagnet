@@ -30,19 +30,66 @@ pub struct IdPayload {
     pub id: String,
 }
 
-fn get_downloads() -> &'static Arc<Mutex<HashMap<String, tokio::process::Child>>> {
-    static DOWNLOADS: OnceLock<Arc<Mutex<HashMap<String, tokio::process::Child>>>> =
-        OnceLock::new();
+#[derive(Clone, PartialEq, Copy)]
+enum Backend {
+    SpotDL,
+    YtDlp,
+    GalleryDl,
+}
+
+impl Backend {
+    async fn identify(app: &tauri::AppHandle, url: &str) -> Self {
+        if url.to_lowercase().contains("spotify.com") {
+            return Self::SpotDL;
+        }
+
+        if let Ok(mut check_cmd) = base_command(app, "yt-dlp").await {
+            check_cmd
+                .args(["--print", "title", "--no-download", url])
+                .stderr(Stdio::piped());
+
+            if let Ok(output) = check_cmd.output().await {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                if output.status.success() && !stderr.contains("Falling back on generic") {
+                    return Self::YtDlp;
+                }
+            }
+        }
+
+        Self::GalleryDl
+    }
+
+    fn as_str(&self) -> &'static str {
+        match self {
+            Self::SpotDL => "spotdl",
+            Self::YtDlp => "yt-dlp",
+            Self::GalleryDl => "gallery-dl",
+        }
+    }
+}
+
+struct ActiveDownload {
+    child: tokio::process::Child,
+    backend: Backend,
+}
+
+fn get_downloads() -> &'static Arc<Mutex<HashMap<String, ActiveDownload>>> {
+    static DOWNLOADS: OnceLock<Arc<Mutex<HashMap<String, ActiveDownload>>>> = OnceLock::new();
     DOWNLOADS.get_or_init(|| Arc::new(Mutex::new(HashMap::new())))
 }
 
 #[inline]
-fn configure_cmd_flags(_cmd: &mut Command) {
+fn hide_cmd(_cmd: &mut Command) {
     #[cfg(target_os = "windows")]
     _cmd.creation_flags(0x08000000);
 }
 
-fn apply_cookies(cmd: &mut Command, app: &tauri::AppHandle, link: &str) -> Result<()> {
+fn apply_cookies(
+    cmd: &mut Command,
+    app: &tauri::AppHandle,
+    link: &str,
+    backend: Backend,
+) -> Result<()> {
     let cookies_dir = app.path().app_data_dir().unwrap().join("cookies");
     if !cookies_dir.exists() {
         println!("[MediaMagnet][Download] No cookies directory found, ignoring...");
@@ -56,7 +103,11 @@ fn apply_cookies(cmd: &mut Command, app: &tauri::AppHandle, link: &str) -> Resul
                 if let Some(file_stem) = path.file_stem().and_then(|s| s.to_str()) {
                     if link.to_lowercase().contains(&file_stem.to_lowercase()) {
                         if let Some(path_str) = path.to_str() {
-                            cmd.args(["--cookies", path_str]);
+                            if backend == Backend::SpotDL {
+                                cmd.args(["--cookie-file", path_str]);
+                            } else {
+                                cmd.args(["--cookies", path_str]);
+                            }
                             println!("[MediaMagnet] Applied cookies from: {}", path_str);
                             return Ok(());
                         }
@@ -73,7 +124,7 @@ async fn base_command(app: &tauri::AppHandle, command: &str) -> Result<Command> 
     let version = VERSION.get_or_init(|| Arc::new(Mutex::new(HashSet::new())));
 
     let mut check_cmd = Command::new(command);
-    configure_cmd_flags(&mut check_cmd);
+    hide_cmd(&mut check_cmd);
 
     let check_result = check_cmd
         .arg("--version")
@@ -95,7 +146,7 @@ async fn base_command(app: &tauri::AppHandle, command: &str) -> Result<Command> 
             }
 
             let mut cmd = Command::new(command);
-            configure_cmd_flags(&mut cmd);
+            hide_cmd(&mut cmd);
             Ok(cmd)
         }
         _ => match app.shell().sidecar(command) {
@@ -109,7 +160,7 @@ async fn base_command(app: &tauri::AppHandle, command: &str) -> Result<Command> 
 
                 let std_cmd: std::process::Command = sidecar.into();
                 let mut cmd: Command = std_cmd.into();
-                configure_cmd_flags(&mut cmd);
+                hide_cmd(&mut cmd);
                 Ok(cmd)
             }
             Err(e) => Err(format!(
@@ -119,19 +170,6 @@ async fn base_command(app: &tauri::AppHandle, command: &str) -> Result<Command> 
             .into()),
         },
     }
-}
-
-async fn is_youtube(app: &tauri::AppHandle, url: &str) -> bool {
-    if let Ok(mut check_cmd) = base_command(app, "yt-dlp").await {
-        check_cmd
-            .args(["--print", "title", "--no-download", url])
-            .stderr(Stdio::piped());
-        if let Ok(output) = check_cmd.output().await {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            return output.status.success() && !stderr.contains("Falling back on generic");
-        }
-    }
-    false
 }
 
 fn strip_ansi_codes(s: &str) -> String {
@@ -179,11 +217,11 @@ fn apply_args(
     Ok(())
 }
 
-async fn run_downloader(
+async fn download_url(
     app: tauri::AppHandle,
     mut cmd: Command,
     link: &str,
-    ytdlp: bool,
+    backend: Backend,
     id: String,
 ) -> Result<()> {
     let app_stdout = app.clone();
@@ -193,14 +231,12 @@ async fn run_downloader(
 
     let base_download_dir = set_download_path(app.clone()).await;
 
-    let mut child = cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).spawn()?;
-    let stdout = child.stdout.take().unwrap();
-    let stderr = child.stderr.take().unwrap();
+    cmd.current_dir(&base_download_dir);
 
-    let total_urls = if !ytdlp {
+    let total_urls = if backend == Backend::GalleryDl {
         println!("\n[MediaMagnet][gallery-dl] Counting total urls...");
         let mut count_cmd = base_command(&app, "gallery-dl").await?;
-        let _ = apply_cookies(&mut count_cmd, &app, link);
+        let _ = apply_cookies(&mut count_cmd, &app, link, backend);
 
         let out = count_cmd.args(["-g", link]).output().await?;
         String::from_utf8_lossy(&out.stdout)
@@ -211,14 +247,25 @@ async fn run_downloader(
         0
     };
 
-    get_downloads().lock().unwrap().insert(id.clone(), child);
+    let mut child = cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).spawn()?;
+
+    let stdout = child.stdout.take().unwrap();
+    let stderr = child.stderr.take().unwrap();
+
+    get_downloads().lock().unwrap().insert(
+        id.clone(),
+        ActiveDownload {
+            child,
+            backend: backend.clone(),
+        },
+    );
 
     let mut out_reader = BufReader::new(stdout).lines();
     let mut err_reader = BufReader::new(stderr).lines();
 
     let mut downloaded = 0usize;
 
-    if !ytdlp {
+    if backend == Backend::GalleryDl {
         println!(
             "[MediaMagnet][Download] Found {} total items to download",
             total_urls
@@ -226,59 +273,184 @@ async fn run_downloader(
     }
 
     let out_handle = tokio::spawn(async move {
-        while let Ok(Some(line)) = out_reader.next_line().await {
-            if ytdlp {
-                if !line.contains('{') {
-                    println!("{:#}", line);
+        if backend == Backend::SpotDL {
+            let mut total_songs: i32 = 1;
+
+            while let Ok(Some(line)) = out_reader.next_line().await {
+                println!("[spotdl] {}", line);
+
+                // "Found 8 songs in [Date] 04 - 2026 (Playlist)"
+                if let Some(rest) = line.strip_prefix("Found ") {
+                    if let Some(count_str) = rest.split_whitespace().next() {
+                        if let Ok(n) = count_str.parse::<i32>() {
+                            total_songs = n;
+                        }
+                    }
+                    continue;
                 }
-                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&line) {
-                    if let (Some("downloading"), Some(percent)) = (
-                        json.get("status").and_then(|s| s.as_str()),
-                        json.get("_percent").and_then(|p| p.as_f64()),
-                    ) {
-                        let _ = app_stdout.emit(
-                            "download-progress",
-                            ProgressPayload {
-                                id: id_out.clone(),
-                                value: percent,
-                            },
-                        );
 
-                        let mut msg = String::new();
-                        if let Some(p) = json.get("_percent_str").and_then(|p| p.as_str()) {
-                            msg.push_str(&format!("Downloading: {}", strip_ansi_codes(p)));
-                        }
-                        if let Some(s) = json.get("_speed_str").and_then(|s| s.as_str()) {
-                            msg.push_str(&format!(" Speed: {}", strip_ansi_codes(s)));
-                        }
-                        if let Some(e) = json.get("_eta_str").and_then(|e| e.as_str()) {
-                            msg.push_str(&format!(" ETA: {}", strip_ansi_codes(e)));
-                        }
+                // "3/8 complete"
+                if line.trim().ends_with("complete") {
+                    if let Some((num, rest)) = line.trim().split_once('/') {
+                        if let (Ok(done), Ok(total)) = (
+                            num.trim().parse::<i32>(),
+                            rest.split_whitespace().next().unwrap_or("0").parse::<i32>(),
+                        ) {
+                            if total > 0 {
+                                total_songs = total;
+                            }
+                            let denom = if total_songs > 0 { total_songs } else { 1 };
+                            let pct = ((done / denom) as f64 * 100.0).min(100.0);
 
+                            let _ = app_stdout.emit(
+                                "download-progress",
+                                ProgressPayload {
+                                    id: id_out.clone(),
+                                    value: pct,
+                                },
+                            );
+
+                            let _ = app_stdout.emit(
+                                "download-status",
+                                StatusPayload {
+                                    id: id_out.clone(),
+                                    value: format!("{}/{} complete", done as u64, total as u64),
+                                },
+                            );
+                            continue;
+                        }
+                    }
+                }
+
+                // "CYPARISS - EMPTY DREAMS: Downloading / Embedding metadata / Done"
+                if line.contains(": Downloading")
+                    || line.contains(": Embedding")
+                {
+                    let _ = app_stdout.emit(
+                        "download-status",
+                        StatusPayload {
+                            id: id_out.clone(),
+                            value: line.clone(),
+                        },
+                    );
+                    continue;
+                }
+
+                if line.starts_with("Downloaded") {
+                    let _ = app_stdout.emit(
+                        "download-status",
+                        StatusPayload {
+                            id: id_out.clone(),
+                            value: line.clone(),
+                        },
+                    );
+                    continue;
+                }
+
+                let _ = app_stdout.emit(
+                    "download-status",
+                    StatusPayload {
+                        id: id_out.clone(),
+                        value: line.clone(),
+                    },
+                );
+            }
+
+            let _ = app_stdout.emit(
+                "download-progress",
+                ProgressPayload {
+                    id: id_out.clone(),
+                    value: 100.0,
+                },
+            );
+        } else {
+            while let Ok(Some(line)) = out_reader.next_line().await {
+                if backend == Backend::YtDlp {
+                    if !line.contains('{') {
+                        println!("{:#}", line);
+                    }
+                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&line) {
+                        if let (Some("downloading"), Some(percent)) = (
+                            json.get("status").and_then(|s| s.as_str()),
+                            json.get("_percent").and_then(|p| p.as_f64()),
+                        ) {
+                            let _ = app_stdout.emit(
+                                "download-progress",
+                                ProgressPayload {
+                                    id: id_out.clone(),
+                                    value: percent,
+                                },
+                            );
+
+                            let mut msg = String::new();
+                            if let Some(p) = json.get("_percent_str").and_then(|p| p.as_str()) {
+                                msg.push_str(&format!("Downloading: {}", strip_ansi_codes(p)));
+                            }
+                            if let Some(s) = json.get("_speed_str").and_then(|s| s.as_str()) {
+                                msg.push_str(&format!(" Speed: {}", strip_ansi_codes(s)));
+                            }
+                            if let Some(e) = json.get("_eta_str").and_then(|e| e.as_str()) {
+                                msg.push_str(&format!(" ETA: {}", strip_ansi_codes(e)));
+                            }
+
+                            let _ = app_stdout.emit(
+                                "download-status",
+                                StatusPayload {
+                                    id: id_out.clone(),
+                                    value: msg,
+                                },
+                            );
+                        } else if json.get("status").and_then(|s| s.as_str()) == Some("finished") {
+                            let _ = app_stdout.emit(
+                                "download-progress",
+                                ProgressPayload {
+                                    id: id_out.clone(),
+                                    value: 100.0,
+                                },
+                            );
+                            let _ = app_stdout.emit(
+                                "download-status",
+                                StatusPayload {
+                                    id: id_out.clone(),
+                                    value: "Download finished".into(),
+                                },
+                            );
+                        }
+                    } else {
                         let _ = app_stdout.emit(
                             "download-status",
                             StatusPayload {
                                 id: id_out.clone(),
-                                value: msg,
+                                value: line,
                             },
                         );
-                    } else if json.get("status").and_then(|s| s.as_str()) == Some("finished") {
+                    }
+                } else if backend == Backend::GalleryDl {
+                    let _ = app_stdout.emit(
+                        "download-status",
+                        StatusPayload {
+                            id: id_out.clone(),
+                            value: line.clone(),
+                        },
+                    );
+
+                    if !line.trim_start().starts_with('#') && !line.trim().is_empty() {
+                        downloaded += 1;
+                        let pct = if total_urls > 0 {
+                            (downloaded as f64 / total_urls as f64) * 100.0
+                        } else {
+                            0.0
+                        };
                         let _ = app_stdout.emit(
                             "download-progress",
                             ProgressPayload {
                                 id: id_out.clone(),
-                                value: 100.0,
-                            },
-                        );
-                        let _ = app_stdout.emit(
-                            "download-status",
-                            StatusPayload {
-                                id: id_out.clone(),
-                                value: "Download finished".into(),
+                                value: pct.min(100.0),
                             },
                         );
                     }
                 } else {
+                    println!("{:#}", line);
                     let _ = app_stdout.emit(
                         "download-status",
                         StatusPayload {
@@ -287,27 +459,6 @@ async fn run_downloader(
                         },
                     );
                 }
-            } else {
-                let _ = app_stdout.emit(
-                    "download-status",
-                    StatusPayload {
-                        id: id_out.clone(),
-                        value: line,
-                    },
-                );
-                downloaded += 1;
-                let pct = if total_urls > 0 {
-                    (downloaded as f64 / total_urls as f64) * 100.0
-                } else {
-                    0.0
-                };
-                let _ = app_stdout.emit(
-                    "download-progress",
-                    ProgressPayload {
-                        id: id_out.clone(),
-                        value: pct,
-                    },
-                );
             }
         }
     });
@@ -317,7 +468,7 @@ async fn run_downloader(
             println!("{:#}", line);
             let event = if line.contains("[error") {
                 "download-error"
-            } else if !ytdlp
+            } else if !(backend == Backend::YtDlp)
                 || line.to_lowercase().contains("downloaded")
                 || line.to_lowercase().contains("merged")
             {
@@ -343,7 +494,7 @@ async fn run_downloader(
             break;
         }
 
-        let done = match guard.get_mut(&id).unwrap().try_wait() {
+        let done = match guard.get_mut(&id).unwrap().child.try_wait() {
             Ok(Some(_)) | Err(_) => true,
             Ok(None) => false,
         };
@@ -356,8 +507,8 @@ async fn run_downloader(
 
     let _ = tokio::join!(out_handle, err_handle);
 
-    if !ytdlp {
-        // === directlink file cleanup ===
+    if backend == Backend::GalleryDl {
+        // === create folder from directlink domain name ===
         let dl_path = base_download_dir.join("directlink");
         if dl_path.exists() && dl_path.is_dir() {
             for entry in std::fs::read_dir(&dl_path)? {
@@ -385,64 +536,70 @@ async fn run_downloader(
     Ok(())
 }
 
-async fn clean_downloaded(app: &tauri::AppHandle, url: &str, is_youtube: bool) -> Result<()> {
+async fn clean_tempfiles(app: &tauri::AppHandle, url: &str, backend: Backend) -> Result<()> {
     let base = set_download_path(app.clone()).await;
 
-    if is_youtube {
-        let settings = Settings::load(app);
-        let mut cmd = base_command(app, "yt-dlp").await?;
-        cmd.args([
-            "-o",
-            &settings.yt_output_template,
-            "--print",
-            "filename",
-            "--no-download",
-            url,
-        ])
-        .current_dir(&base);
+    match backend {
+        Backend::SpotDL => {
+            return Ok(()); // no temp files in download path
+        }
+        Backend::YtDlp => {
+            let settings = Settings::load(app);
+            let mut cmd = base_command(app, "yt-dlp").await?;
+            cmd.args([
+                "-o",
+                &settings.yt_output_template,
+                "--print",
+                "filename",
+                "--no-download",
+                url,
+            ])
+            .current_dir(&base);
 
-        let out = cmd.output().await?;
-        for line in String::from_utf8_lossy(&out.stdout)
-            .lines()
-            .map(str::trim)
-            .filter(|s| !s.is_empty())
-        {
-            let target = base.join(Path::new(line).file_name().unwrap_or_default());
-            for suffix in ["part", "ytdl"] {
-                let path = match target.extension() {
-                    Some(ext) => {
-                        target.with_extension(format!("{}.{}", ext.to_string_lossy(), suffix))
+            let out = cmd.output().await?;
+            for line in String::from_utf8_lossy(&out.stdout)
+                .lines()
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+            {
+                let target = base.join(Path::new(line).file_name().unwrap_or_default());
+                for suffix in ["part", "ytdl"] {
+                    let path = match target.extension() {
+                        Some(ext) => {
+                            target.with_extension(format!("{}.{}", ext.to_string_lossy(), suffix))
+                        }
+                        None => target.with_extension(suffix),
+                    };
+                    if path.is_file() {
+                        let _ = std::fs::remove_file(&path);
                     }
-                    None => target.with_extension(suffix),
-                };
-                if path.is_file() {
-                    let _ = std::fs::remove_file(&path);
                 }
             }
         }
-    } else {
-        let mut cmd = base_command(app, "gallery-dl").await?;
-        cmd.args(["-s", "-d", ".", "--print", "{_directory}", url])
-            .current_dir(&base);
+        Backend::GalleryDl => {
+            let mut cmd = base_command(app, "gallery-dl").await?;
+            cmd.args(["-s", "-d", ".", "--print", "{_directory}", url])
+                .current_dir(&base);
 
-        let out = cmd.output().await?;
-        let mut deleted = HashSet::new();
-        for line in String::from_utf8_lossy(&out.stdout)
-            .lines()
-            .map(str::trim)
-            .filter(|s| !s.is_empty())
-        {
-            let mut parts = Path::new(line).components().filter_map(|c| {
-                if let Component::Normal(s) = c {
-                    Some(s.to_owned())
-                } else {
-                    None
-                }
-            });
-            if let (Some(a), Some(b)) = (parts.next(), parts.next()) {
-                let sub = base.join(a).join(b);
-                if deleted.insert(sub.clone()) && sub.starts_with(&base) && sub.is_dir() {
-                    let _ = std::fs::remove_dir_all(&sub);
+            let out = cmd.output().await?;
+            let mut deleted = HashSet::new();
+            for line in String::from_utf8_lossy(&out.stdout)
+                .lines()
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+            {
+                let mut parts = Path::new(line).components().filter_map(|c| {
+                    if let Component::Normal(s) = c {
+                        Some(s.to_owned())
+                    } else {
+                        None
+                    }
+                });
+                if let (Some(a), Some(b)) = (parts.next(), parts.next()) {
+                    let sub = base.join(a).join(b);
+                    if deleted.insert(sub.clone()) && sub.starts_with(&base) && sub.is_dir() {
+                        let _ = std::fs::remove_dir_all(&sub);
+                    }
                 }
             }
         }
@@ -470,12 +627,14 @@ pub async fn downloader(app: tauri::AppHandle, url: String, download_id: String)
         return;
     }
 
-    if !lc.contains("http") {
+    if !lc.starts_with("http://") && !lc.starts_with("https://") {
         emit_status("download-error", "Invalid URL".into());
         return;
     }
 
-    let is_youtube = is_youtube(&app, &url).await;
+    let backend = Backend::identify(&app, &url).await;
+    let settings = Settings::load(&app);
+
     let _ = app.emit(
         "download-started",
         IdPayload {
@@ -483,71 +642,94 @@ pub async fn downloader(app: tauri::AppHandle, url: String, download_id: String)
         },
     );
 
-    let settings = Settings::load(&app);
-    let mut cmd = match base_command(&app, if is_youtube { "yt-dlp" } else { "gallery-dl" }).await {
+    let mut cmd = match base_command(&app, backend.as_str()).await {
         Ok(c) => c,
-        Err(_) => return,
+        Err(e) => {
+            let err_msg = format!("{} backend error: {}", backend.as_str(), e);
+            emit_status("download-error", err_msg);
+            return;
+        }
     };
 
-    if is_youtube {
-        cmd.args([
-            "-o",
-            &settings.yt_output_template,
-            "--progress-template",
-            "%(progress)j",
-            "--newline",
-        ]);
+    match backend {
+        Backend::SpotDL => {
+            cmd.args(["--simple-tui", "--log-level", "INFO"]);
 
-        if !settings.yt_format.is_empty() {
-            cmd.args(["-f", &settings.yt_format]);
-        }
+            if !settings.spotdl_format.is_empty() {
+                cmd.args(["--format", &settings.spotdl_format]);
+            }
 
-        if settings.yt_embed_thumbnail {
-            cmd.arg("--embed-thumbnail");
-        }
+            if !settings.spotdl_bitrate.is_empty() {
+                cmd.args(["--bitrate", &settings.spotdl_bitrate]);
+            }
 
-        if settings.yt_embed_subs {
-            cmd.args(["--write-subs", "--write-auto-sub", "--embed-subs"]);
+            if let Err(e) = apply_args(&mut cmd, &url, &settings.spotdl_global_args, &Vec::new()) {
+                emit_status("download-error", e);
+                let _ = app.emit("download-finished", IdPayload { id: download_id });
+                return;
+            }
         }
+        Backend::YtDlp => {
+            cmd.args([
+                "-o",
+                &settings.yt_output_template,
+                "--progress-template",
+                "%(progress)j",
+                "--newline",
+            ]);
 
-        if settings.yt_restrict_filenames {
-            cmd.arg("--restrict-filenames");
-        }
+            if !settings.yt_format.is_empty() {
+                cmd.args(["-f", &settings.yt_format]);
+            }
 
-        if let Err(e) = apply_args(
-            &mut cmd,
-            &url,
-            &settings.yt_global_args,
-            &settings.yt_site_args,
-        ) {
-            emit_status("download-error", e);
-            let _ = app.emit("download-finished", IdPayload { id: download_id });
-            return;
+            if settings.yt_embed_thumbnail {
+                cmd.arg("--embed-thumbnail");
+            }
+
+            if settings.yt_embed_subs {
+                cmd.args(["--write-subs", "--write-auto-sub", "--embed-subs"]);
+            }
+
+            if settings.yt_restrict_filenames {
+                cmd.arg("--restrict-filenames");
+            }
+
+            if let Err(e) = apply_args(
+                &mut cmd,
+                &url,
+                &settings.yt_global_args,
+                &settings.yt_site_args,
+            ) {
+                emit_status("download-error", e);
+                let _ = app.emit("download-finished", IdPayload { id: download_id });
+                return;
+            }
+            if settings.user_agent != "None" {
+                cmd.args(["--user-agent", &settings.user_agent]);
+            }
         }
-        if settings.user_agent != "None" {
-            cmd.args(["--user-agent", &settings.user_agent]);
-        }
-    } else {
-        cmd.args(["-d", "."]);
-        if let Err(e) = apply_args(
-            &mut cmd,
-            &url,
-            &settings.gdl_global_args,
-            &settings.gdl_site_args,
-        ) {
-            emit_status("download-error", e);
-            let _ = app.emit("download-finished", IdPayload { id: download_id });
-            return;
-        }
-        if settings.user_agent != "None" {
-            cmd.args(["-a", &settings.user_agent]);
+        Backend::GalleryDl => {
+            cmd.args(["-d", "."]);
+            if let Err(e) = apply_args(
+                &mut cmd,
+                &url,
+                &settings.gdl_global_args,
+                &settings.gdl_site_args,
+            ) {
+                emit_status("download-error", e);
+                let _ = app.emit("download-finished", IdPayload { id: download_id });
+                return;
+            }
+            if settings.user_agent != "None" {
+                cmd.args(["-a", &settings.user_agent]);
+            }
         }
     }
 
-    let _ = apply_cookies(&mut cmd, &app, &url);
+    let _ = apply_cookies(&mut cmd, &app, &url, backend);
     cmd.arg(&url);
 
-    if let Err(e) = run_downloader(app.clone(), cmd, &url, is_youtube, download_id.clone()).await {
+    if let Err(e) = download_url(app.clone(), cmd, &url, backend, download_id.clone()).await {
         println!("[MediaMagnet] Download failed ({}): {}", download_id, e);
         emit_status("download-error", format!("Download failed: {}", e));
     }
@@ -560,19 +742,21 @@ pub async fn pause_download(
     app: tauri::AppHandle,
     download_id: String,
 ) -> std::result::Result<(), String> {
-    let child = {
+    let entry = {
         get_downloads()
             .lock()
             .map_err(|_| "Lock failed")?
             .remove(&download_id)
     };
 
-    if let Some(mut child) = child {
-        child
+    if let Some(mut entry) = entry {
+        entry
+            .child
             .kill()
             .await
             .map_err(|e| format!("Kill failed: {}", e))?;
-        child
+        entry
+            .child
             .wait()
             .await
             .map_err(|e| format!("Wait failed: {}", e))?;
@@ -596,21 +780,20 @@ pub async fn cancel_download(
     download_id: String,
     url: String,
 ) -> std::result::Result<(), String> {
-    let child = {
+    let entry = {
         get_downloads()
             .lock()
             .map_err(|_| "Lock failed")?
             .remove(&download_id)
     };
 
-    if let Some(mut child) = child {
-        let _ = child.kill().await;
-        let _ = child.wait().await;
-    }
+    if let Some(mut entry) = entry {
+        let _ = entry.child.kill().await;
+        let _ = entry.child.wait().await;
 
-    let is_youtube = is_youtube(&app, &url).await;
-    if let Err(e) = clean_downloaded(&app, &url, is_youtube).await {
-        println!("[MediaMagnet] Cleanup failed during cancellation: {}", e);
+        if let Err(e) = clean_tempfiles(&app, &url, entry.backend).await {
+            println!("[MediaMagnet] Cleanup failed during cancellation: {}", e);
+        }
     }
 
     let _ = app.emit(
@@ -625,7 +808,7 @@ pub async fn cancel_download(
 
 #[tauri::command]
 pub async fn cancel_all_downloads(app: tauri::AppHandle) -> std::result::Result<(), String> {
-    let children: Vec<(String, tokio::process::Child)> = {
+    let children: Vec<(String, ActiveDownload)> = {
         get_downloads()
             .lock()
             .map_err(|_| "Lock failed")?
@@ -633,16 +816,16 @@ pub async fn cancel_all_downloads(app: tauri::AppHandle) -> std::result::Result<
             .collect()
     };
 
-    for (id, mut child) in children {
-        if let Err(e) = child.kill().await {
+    for (id, mut entry) in children {
+        if let Err(e) = entry.child.kill().await {
             eprintln!("[MediaMagnet] Failed to kill {}: {}", id, e);
         }
-        let _ = child.wait().await;
+        let _ = entry.child.wait().await;
 
         let _ = app.emit(
             "download-error",
             StatusPayload {
-                id: id,
+                id,
                 value: "Download cancelled".into(),
             },
         );

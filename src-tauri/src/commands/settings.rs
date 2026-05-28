@@ -82,6 +82,16 @@ pub struct Settings {
 
     #[serde(default)]
     pub gdl_site_args: Vec<SiteArguments>,
+
+    // spotdl backend options
+    #[serde(default)]
+    pub spotdl_format: String,
+
+    #[serde(default)]
+    pub spotdl_bitrate: String,
+
+    #[serde(default)]
+    pub spotdl_global_args: String,
 }
 
 impl Default for Settings {
@@ -102,11 +112,16 @@ impl Default for Settings {
             yt_embed_subs: false,
             yt_restrict_filenames: false,
 
+            spotdl_bitrate: "320k".to_string(),
+            spotdl_format: "mp3".to_string(),
+
             yt_global_args: "".to_string(),
             yt_site_args: Vec::new(),
 
             gdl_global_args: "".to_string(),
             gdl_site_args: Vec::new(),
+
+            spotdl_global_args: "".to_string(),
         }
     }
 }
