@@ -47,7 +47,7 @@
   const switchClass =
     "data-[state=checked]:bg-primary data-[state=unchecked]:bg-input border-2 border-transparent cursor-pointer";
   const btnClass =
-    "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all relative";
+    "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground relative";
 
   const nextTick = () => new Promise((res) => setTimeout(res, 0));
 
