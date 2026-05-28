@@ -24,8 +24,8 @@
   }
 </script>
 
-<section>
-  <div class="flex items-center justify-between mb-4">
+<section class="flex flex-col h-full w-full min-h-0">
+  <div class="flex items-center justify-between mb-4 shrink-0">
     <h3
       class="text-xs font-bold text-muted-foreground uppercase tracking-widest"
     >
@@ -43,22 +43,26 @@
     {/if}
   </div>
 
-  <div class="space-y-2">
+  <div
+    class="space-y-2 w-full overflow-y-auto overflow-x-hidden pr-1.5 flex-1 min-h-0 scrollbar-thin"
+  >
     {#each history as item, index (index)}
       <button
         type="button"
         class="flex items-center justify-between p-3 bg-card border border-border rounded-lg
-          min-w-full transition-colors cursor-pointer hover:bg-accent/50 group"
+          w-full min-w-0 transition-colors cursor-pointer hover:bg-accent/50 group text-left shrink-0"
         onclick={() => copy(item.url)}
         title="Click to copy URL"
       >
-        <div class="flex items-center gap-3 overflow-hidden min-w-0">
+        <div class="flex items-center gap-3 overflow-hidden min-w-0 w-full">
           {#if item.status === "success"}
             <CheckCircle2 size={14} class="text-primary shrink-0" />
           {:else}
             <AlertCircle size={14} class="text-destructive shrink-0" />
           {/if}
-          <span class="text-xs truncate font-medium text-foreground flex-1">
+          <span
+            class="text-xs truncate font-medium text-foreground block flex-1"
+          >
             {item.url}
           </span>
         </div>

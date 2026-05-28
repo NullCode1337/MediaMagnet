@@ -347,7 +347,7 @@
     </div>
   {:else}
     <div class="flex flex-1 w-full min-h-0 overflow-hidden relative">
-      <Sidebar bind:isCollapsed {diskUsage} />
+      <Sidebar bind:isCollapsed {diskUsage} {anyDownloading} />
 
       <main
         class="flex flex-col h-screen w-full bg-background text-foreground overflow-hidden"
@@ -386,16 +386,30 @@
           </div>
         </header>
 
-        <div class="flex-1 p-8 overflow-y-auto space-y-8 scrollbar-thin">
-          <div class="max-w-5xl mx-auto w-full space-y-8">
-            <Downloader
-              {tasks}
-              pauseTask={pauseDownload}
-              resumeTask={resumeDownload}
-              cancelTask={cancelDownload}
-              {stopAllDownloads}
-            />
-            <History bind:history />
+        <div
+          class="flex-1 p-8 overflow-y-auto overflow-x-hidden scrollbar-thin pb-12"
+        >
+          <div class="max-w-5xl mx-auto w-full flex flex-col gap-8">
+            {#if uiState.activeTab === "history"}
+              <div>
+                <History bind:history />
+              </div>
+            {:else}
+              <div>
+                <Downloader
+                  {tasks}
+                  pauseTask={pauseDownload}
+                  resumeTask={resumeDownload}
+                  cancelTask={cancelDownload}
+                  {stopAllDownloads}
+                />
+              </div>
+              {#if tasks.length === 0}
+                <div>
+                  <History bind:history />
+                </div>
+              {/if}
+            {/if}
           </div>
         </div>
       </main>
