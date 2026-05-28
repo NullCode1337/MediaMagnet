@@ -30,6 +30,11 @@ export interface Config {
   // gallery-dl
   gdl_global_args: string;
   gdl_site_args: Array<{ id: string; domain: string; args: string }>;
+
+  // spotdl
+  spotdl_format: string;
+  spotdl_bitrate: string;
+  spotdl_global_args: string;
 }
 
 function applyAccentHue(hue: number) {
@@ -138,7 +143,7 @@ class SettingsStore {
     try {
       const jsonString = JSON.stringify($state.snapshot(this.config), null, 2);
       await writeText(jsonString);
-      toast.success("Configuration copied directly to clipboard!");
+      toast.success("Settings config copied to clipboard!");
     } catch (err) {
       toast.error("Failed to copy: " + err);
     }

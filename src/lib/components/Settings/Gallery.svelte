@@ -40,7 +40,7 @@
         class="text-xs font-bold uppercase text-primary">Global Arguments</Label
       >
       <p class="text-[11px] text-muted-foreground leading-relaxed">
-        Pass custom arguments directly to gallery-dl CLI
+        Pass custom arguments directly to the gallery-dl CLI
       </p>
     </div>
     <textarea
