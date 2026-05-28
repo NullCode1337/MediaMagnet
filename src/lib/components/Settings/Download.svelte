@@ -22,9 +22,13 @@
       <Input
         bind:value={settingsStore.config!.download_path}
         onchange={saveSettings}
-        class="bg-muted"
+        class="bg-muted h-10"
       />
-      <Button variant="secondary" onclick={selectDirectory}>Browse</Button>
+      <Button
+        variant="secondary"
+        class="!cursor-pointer h-10"
+        onclick={selectDirectory}>Browse</Button
+      >
     </div>
   </div>
 
@@ -34,7 +38,7 @@
     <Input
       bind:value={settingsStore.config!.user_agent}
       onchange={saveSettings}
-      class="font-mono text-xs bg-muted/20"
+      class="font-mono text-xs bg-muted/20 h-10"
     />
   </div>
 </div>

@@ -119,7 +119,6 @@
 
 <div>
   <h3 class="text-2xl font-extrabold">Appearance</h3>
-  <p class="text-sm text-muted-foreground">Customize application style</p>
 </div>
 
 <SwitchRows items={GENERAL_SWITCHES} {switchClass} />

@@ -130,22 +130,22 @@
 <header class="flex items-center justify-between">
   <h3 class="text-2xl font-extrabold">Cookies</h3>
   <div class="flex items-center gap-2">
-    <Button variant="outline" size="sm" onclick={importCookie}>
-      <Icons.FileUp size={14} class="mr-1" /> Import
+    <Button variant="outline" size="sm" class="!cursor-pointer" onclick={importCookie}>
+      <Icons.FileUp size={14} class="mr-1" /> Import File
     </Button>
-    <Button variant="destructive" size="sm" onclick={clearAllCookies}>
-      <Icons.Trash2 size={14} class="mr-1" /> Clear
+    <Button variant="destructive" size="sm" class="!cursor-pointer" onclick={clearAllCookies}>
+      <Icons.Trash2 size={14} class="mr-1" /> Delete All
     </Button>
   </div>
 </header>
 
 <div>
   <Label
-    class="text-xs font-bold uppercase p-1 mb-2 tracking-widest text-primary"
+    class="text-xs font-bold uppercase pb-2 text-primary"
   >
     Add Cookie
   </Label>
-  <div class="p-6 rounded-2xl border bg-card space-y-4">
+  <div class="rounded-2xl border-solid space-y-4">
     <Input bind:value={cookieDomain} placeholder="Domain (e.g. google)" />
     <textarea
       bind:value={cookieRawContent}
@@ -153,7 +153,7 @@
       placeholder={"[ { 'domain': '.google.com', ... } ] or # Netscape format..."}
     ></textarea>
     <Button
-      class="w-full"
+      class="w-full cursor-pointer"
       disabled={!cookieDomain || !cookieRawContent}
       onclick={saveCookies}
     >
@@ -163,8 +163,8 @@
 </div>
 
 <div class="grid gap-2">
-  <Label class="text-xs font-bold uppercase tracking-widest p-1 text-primary">
-    Active Sessions
+  <Label class="text-xs font-bold uppercase pb-2 text-primary">
+    Active Cookies
   </Label>
   {#each Object.entries(savedCookies) as [domain, path] (domain)}
     <!-- svelte-ignore a11y_click_events_have_key_events -->

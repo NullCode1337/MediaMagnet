@@ -39,7 +39,7 @@
 
   const BACKEND_TABS = [
     { id: "youtube", label: "yt-dlp", icon: Icons.Video },
-    { id: "gallery", label: "gallery-dl", icon: Icons.GalleryThumbnailsIcon },
+    { id: "gallery", label: "gallery-dl", icon: Icons.Image },
   ];
 
   const switchClass =
