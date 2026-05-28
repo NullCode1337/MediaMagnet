@@ -9,6 +9,7 @@
     name: string;
     timestamp: string;
     status: "success" | "error";
+    error?: string;
   }
 
   let { history = $bindable<HistoryItem[]>([]) } = $props();
@@ -49,24 +50,36 @@
     {#each history as item, index (index)}
       <button
         type="button"
-        class="flex items-center justify-between p-3 bg-card border border-border rounded-lg
-          w-full min-w-0 transition-colors cursor-pointer hover:bg-accent/50 group text-left shrink-0"
+        class="flex items-start justify-between p-3 bg-card border rounded-lg w-full min-w-0
+          transition-colors cursor-pointer hover:bg-accent/50 group text-left shrink-0
+          {item.status === 'error' ? 'border-destructive/40' : 'border-border'}"
         onclick={() => copy(item.url)}
         title="Click to copy URL"
       >
-        <div class="flex items-center gap-3 overflow-hidden min-w-0 w-full">
+        <div class="flex items-start gap-3 overflow-hidden min-w-0 flex-1">
           {#if item.status === "success"}
-            <CheckCircle2 size={14} class="text-primary shrink-0" />
+            <CheckCircle2 size={14} class="text-primary shrink-0 mt-0.5" />
           {:else}
-            <AlertCircle size={14} class="text-destructive shrink-0" />
+            <AlertCircle size={14} class="text-destructive shrink-0 mt-0.5" />
           {/if}
-          <span
-            class="text-xs truncate font-medium text-foreground block flex-1"
-          >
-            {item.url}
-          </span>
+
+          <div class="flex flex-col gap-1 overflow-hidden min-w-0 flex-1">
+            <span class="text-xs truncate font-medium text-foreground block">
+              {item.url}
+            </span>
+            {#if item.status === "error" && item.error}
+              <span
+                class="text-[10px] text-destructive leading-snug break-words"
+              >
+                {item.error}
+              </span>
+            {/if}
+          </div>
         </div>
-        <span class="text-[10px] text-muted-foreground shrink-0 font-mono ml-3">
+
+        <span
+          class="text-[10px] text-muted-foreground shrink-0 font-mono ml-3 mt-0.5"
+        >
           {item.timestamp}
         </span>
       </button>

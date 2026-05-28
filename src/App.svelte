@@ -191,9 +191,9 @@
     }
   }
 
-  function addToHistory(url: string, status: "success" | "error") {
+  function addToHistory(url: string, status: "success" | "error", error?: string) {
     history = [
-      { url, name: url, timestamp: new Date().toLocaleTimeString(), status },
+      { url, name: url, timestamp: new Date().toLocaleTimeString(), status, error },
       ...history,
     ].slice(0, 20);
   }
@@ -244,7 +244,7 @@
           isDownloading: false,
           status: "Error",
         });
-        addToHistory(task?.url ?? e.payload.id, "error");
+        addToHistory(task?.url ?? e.payload.id, "error", e.payload.value);
       }),
 
       listen<IdPayload>("download-started", (e) => {
