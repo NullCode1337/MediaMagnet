@@ -87,7 +87,7 @@
       <Button
         {...props}
         variant="ghost"
-        class="w-full h-11 transition-all duration-200 {isCollapsed
+        class="w-full h-11 transition-all duration-200 cursor-pointer {isCollapsed
           ? 'justify-center'
           : 'justify-start gap-4 px-4'} hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
       >
