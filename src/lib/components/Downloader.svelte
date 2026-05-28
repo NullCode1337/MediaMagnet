@@ -69,7 +69,7 @@
 
   {#if !hasAny}
     <div
-      class="h-32 flex flex-col items-center justify-center border-2 border-dashed border-border/50 rounded-xl bg-muted/30"
+      class="h-32 flex flex-col items-center justify-center bg-muted/20 rounded-xl"
     >
       <p class="text-xs text-muted-foreground font-medium">
         No active downloads

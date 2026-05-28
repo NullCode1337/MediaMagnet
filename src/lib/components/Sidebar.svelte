@@ -1,24 +1,35 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button";
   import { Progress } from "$lib/components/ui/progress";
-  import { Menu, HardDrive, FolderOpen, History, Download } from "@lucide/svelte";
+  import {
+    Menu,
+    HardDrive,
+    FolderOpen,
+    History,
+    Download,
+  } from "@lucide/svelte";
   import { settingsStore } from "$lib/settings.svelte";
   import { uiState } from "$lib/store.svelte";
 
   import SettingsDialog from "./Settings.svelte";
+  import Separator from "./ui/separator/separator.svelte";
 
-  let { isCollapsed = $bindable(), diskUsage, anyDownloading } = $props();
+  let { isCollapsed = $bindable(), diskUsage } = $props();
 </script>
 
 <aside
   class="flex flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out shrink-0 {isCollapsed
-    ? 'w-[80px]'
-    : 'w-[280px]'}"
+    ? 'w-20'
+    : 'w-70'}"
   data-tauri-drag-region
 >
-  <div class="p-6 flex items-center justify-between">
+  <div
+    class="px-8 py-4 flex items-center {isCollapsed
+      ? 'justify-center p-0 h-18'
+      : 'justify-between h-20'}"
+  >
     {#if !isCollapsed}
-      <div class="flex items-center gap-2">
+      <div class="flex items-center">
         <span class="font-bold text-lg tracking-tight">MediaMagnet</span>
       </div>
     {/if}
@@ -26,7 +37,7 @@
       variant="ghost"
       size="icon"
       onclick={() => (isCollapsed = !isCollapsed)}
-      class="shrink-0 ml-auto hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors cursor-pointer"
+      class="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors cursor-pointer"
     >
       <Menu size={18} />
     </Button>
@@ -34,7 +45,6 @@
 
   <div class="px-4 flex-1 space-y-6">
     <nav class="space-y-1">
-    {#if anyDownloading}
       <Button
         variant="ghost"
         onclick={() => (uiState.activeTab = "downloads")}
@@ -53,24 +63,25 @@
         {/if}
       </Button>
 
-        <Button
-          variant="ghost"
-          onclick={() => (uiState.activeTab = "history")}
-          class="w-full h-11 transition-all duration-200 cursor-pointer {isCollapsed
-            ? 'justify-center'
-            : 'justify-start gap-4 px-4'} 
+      <Button
+        variant="ghost"
+        onclick={() => (uiState.activeTab = "history")}
+        class="w-full h-11 transition-all duration-200 cursor-pointer {isCollapsed
+          ? 'justify-center'
+          : 'justify-start gap-4 px-4'} 
             {uiState.activeTab === 'history'
-            ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-            : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'}"
-        >
-          <History size={20} class="text-sidebar-foreground/70" />
-          {#if !isCollapsed}
-            <span class="font-medium text-[15px] text-sidebar-foreground">
-              Recent History
-            </span>
-          {/if}
-        </Button>
-      {/if}
+          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+          : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'}"
+      >
+        <History size={20} class="text-sidebar-foreground/70" />
+        {#if !isCollapsed}
+          <span class="font-medium text-[15px] text-sidebar-foreground">
+            Recent History
+          </span>
+        {/if}
+      </Button>
+
+      <Separator class="gap-1" />
 
       <Button
         variant="ghost"

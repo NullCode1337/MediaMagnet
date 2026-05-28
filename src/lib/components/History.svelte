@@ -28,7 +28,7 @@
 <section class="flex flex-col h-full w-full min-h-0">
   <div class="flex items-center justify-between mb-4 shrink-0">
     <h3
-      class="text-xs font-bold text-muted-foreground uppercase tracking-widest"
+      class="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.15em]"
     >
       Recent History
     </h3>
@@ -84,9 +84,13 @@
         </span>
       </button>
     {:else}
-      <p class="text-center py-8 text-xs text-muted-foreground italic">
-        History is empty
-      </p>
+      <div
+        class="h-32 flex flex-col items-center justify-center bg-muted/20 rounded-xl"
+      >
+        <p class="text-xs text-muted-foreground font-medium">
+          History is empty
+        </p>
+      </div>
     {/each}
   </div>
 </section>
