@@ -129,8 +129,12 @@ async fn base_command(app: &tauri::AppHandle, command: &str) -> Result<Command> 
     let version = VERSION.get_or_init(|| Arc::new(Mutex::new(HashSet::new())));
 
     if let Ok(paths) = which::which_all(command) {
-        let filtered = paths.filter(|path| { // no sidecar
-            !path.to_string_lossy().to_ascii_lowercase().contains("mediamagnet")
+        let filtered = paths.filter(|path| {
+            // no sidecar
+            !path
+                .to_string_lossy()
+                .to_ascii_lowercase()
+                .contains("mediamagnet")
         });
 
         for bin_path in filtered {
@@ -161,7 +165,7 @@ async fn base_command(app: &tauri::AppHandle, command: &str) -> Result<Command> 
                     return Ok(cmd);
                 }
             }
-            
+
             println!(
                 "[MediaMagnet][Download] Backend: Local {} [INVALID]. Continuing...",
                 bin_path.display()
@@ -187,7 +191,7 @@ async fn base_command(app: &tauri::AppHandle, command: &str) -> Result<Command> 
             "{} is not installed and no sidecar available: {}",
             command, e
         )
-         .into()),
+        .into()),
     }
 }
 
