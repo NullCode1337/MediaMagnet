@@ -9,126 +9,63 @@ pub struct SiteArguments {
     pub args: String,
 }
 
-fn default_download_path() -> String {
-    "Default".to_string()
-}
-fn default_hue() -> Number {
-    Number::from(260)
-}
-fn default_user_agent() -> String {
-    "None".to_string()
-}
-fn default_custom_titlebar() -> String {
-    "system".to_string()
-}
-fn default_dark_mode() -> bool {
-    true
-}
-fn default_yt_format() -> String {
-    "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best".to_string()
-}
-fn default_yt_output_template() -> String {
-    "%(title)s.%(ext)s".to_string()
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(default)]
 pub struct Settings {
-    #[serde(default = "default_download_path")]
     pub download_path: String,
-
-    #[serde(default = "default_user_agent")]
     pub user_agent: String,
-
-    #[serde(default = "default_dark_mode")]
     pub dark_mode: bool,
-
-    #[serde(default = "default_hue")]
-    pub accent_hue: serde_json::Number,
-
-    #[serde(default)]
+    pub accent_hue: Number,
     pub always_on_top: bool,
-
-    #[serde(default)]
     pub show_custom: bool,
-
-    #[serde(default = "default_custom_titlebar")]
     pub custom_type: String,
-
-    #[serde(default)]
     pub notifications: bool,
-
-    #[serde(default)]
     pub clear_on_exit: bool,
 
-    // YouTube / yt-dlp backend options
-    #[serde(default = "default_yt_format")]
+    // yt-dlp backend options
     pub yt_format: String,
-
-    #[serde(default = "default_yt_output_template")]
     pub yt_output_template: String,
-
-    #[serde(default)]
     pub yt_embed_thumbnail: bool,
-
-    #[serde(default)]
     pub yt_embed_subs: bool,
-
-    #[serde(default)]
     pub yt_restrict_filenames: bool,
-
-    #[serde(default)]
     pub yt_global_args: String,
-
-    #[serde(default)]
     pub yt_site_args: Vec<SiteArguments>,
 
     // gallery-dl backend options
-    #[serde(default)]
     pub gdl_global_args: String,
-
-    #[serde(default)]
     pub gdl_site_args: Vec<SiteArguments>,
 
     // spotdl backend options
-    #[serde(default)]
     pub spotdl_format: String,
-
-    #[serde(default)]
     pub spotdl_bitrate: String,
-
-    #[serde(default)]
     pub spotdl_global_args: String,
 }
 
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            download_path: default_download_path(),
-            user_agent: default_user_agent(),
-            dark_mode: default_dark_mode(),
-            accent_hue: default_hue(),
+            download_path: "Default".to_string(),
+            user_agent: "None".to_string(),
+            dark_mode: true,
+            accent_hue: Number::from(260),
+            custom_type: "system".to_string(),
+            yt_format: "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best".to_string(),
+            yt_output_template: "%(title)s.%(ext)s".to_string(),
+
             always_on_top: false,
             show_custom: false,
-            custom_type: default_custom_titlebar(),
             notifications: false,
             clear_on_exit: false,
-
-            yt_format: default_yt_format(),
-            yt_output_template: default_yt_output_template(),
             yt_embed_thumbnail: false,
             yt_embed_subs: false,
             yt_restrict_filenames: false,
-
-            spotdl_bitrate: "".to_string(),
-            spotdl_format: "".to_string(),
-
-            yt_global_args: "".to_string(),
+            spotdl_bitrate: String::new(),
+            spotdl_format: String::new(),
+            yt_global_args: String::new(),
             yt_site_args: Vec::new(),
-
-            gdl_global_args: "".to_string(),
+            gdl_global_args: String::new(),
             gdl_site_args: Vec::new(),
-
-            spotdl_global_args: "".to_string(),
+            spotdl_global_args: String::new(),
         }
     }
 }
