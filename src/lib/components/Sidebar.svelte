@@ -14,6 +14,7 @@
   import SettingsDialog from "./Settings.svelte";
   import Separator from "./ui/separator/separator.svelte";
 
+  let menuOpen = $state(false);
   let { isCollapsed = $bindable(), diskUsage } = $props();
 </script>
 
@@ -45,7 +46,7 @@
 {/snippet}
 
 <aside
-  class="z-50 flex items-center justify-center rounded-full border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-xl px-4 py-2 h-16 w-auto shrink-0 transition-all duration-300 ease-in-out
+  class="max-sm:z-100 pointer-events-none sm:pointer-events-auto flex items-center justify-center rounded-full border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-xl px-4 py-2 h-16 w-auto shrink-0 transition-all duration-300 ease-in-out
     fixed bottom-4 left-1/2 -translate-x-1/2
     sm:relative sm:bottom-0 sm:left-0 sm:translate-x-0 sm:flex-col sm:h-full sm:rounded-none sm:border-r sm:shadow-none sm:p-0
     {isCollapsed ? 'sm:w-20' : 'sm:w-70'}"
@@ -72,7 +73,7 @@
   <div
     class="flex items-start sm:flex-1 sm:flex-col sm:space-y-2 sm:px-4 w-full"
   >
-    <nav class="flex flex-row gap-1 sm:flex-col sm:space-y-1 w-full">
+    <nav class="pointer-events-auto flex flex-row gap-1 sm:flex-col sm:space-y-1 w-full">
       {@render SidebarButton(
         Download,
         "Downloads",
@@ -93,7 +94,7 @@
         settingsStore.openDownloadDir(),
       )}
 
-      <SettingsDialog {isCollapsed} />
+      <SettingsDialog {isCollapsed} {menuOpen} />
     </nav>
   </div>
 
