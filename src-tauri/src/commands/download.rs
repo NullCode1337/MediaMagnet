@@ -128,52 +128,66 @@ async fn base_command(app: &tauri::AppHandle, command: &str) -> Result<Command> 
     static VERSION: OnceLock<Arc<Mutex<HashSet<String>>>> = OnceLock::new();
     let version = VERSION.get_or_init(|| Arc::new(Mutex::new(HashSet::new())));
 
-    let mut check_cmd = Command::new(command);
-    hide_cmd(&mut check_cmd);
+    if let Ok(paths) = which::which_all(command) {
+        let filtered = paths.filter(|path| { // no sidecar
+            !path.to_string_lossy().to_ascii_lowercase().contains("mediamagnet")
+        });
 
-    let check_result = check_cmd
-        .arg("--version")
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
-        .await;
+        for bin_path in filtered {
+            let mut check_cmd = Command::new(&bin_path);
+            hide_cmd(&mut check_cmd);
 
-    match check_result {
-        Ok(output) if output.status.success() => {
+            let check_result = check_cmd
+                .arg("--version")
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .output()
+                .await;
+
+            if let Ok(output) = check_result {
+                if output.status.success() {
+                    let mut checked_set = version.lock().map_err(|_| "Lock failed")?;
+                    if !checked_set.contains(command) {
+                        println!(
+                            "[MediaMagnet][Download] Backend: Local {}, Version: {}",
+                            bin_path.display(),
+                            String::from_utf8_lossy(&output.stdout).trim()
+                        );
+                        checked_set.insert(command.to_string());
+                    }
+
+                    let mut cmd = Command::new(bin_path);
+                    hide_cmd(&mut cmd);
+                    return Ok(cmd);
+                }
+            }
+            
+            println!(
+                "[MediaMagnet][Download] Backend: Local {} [INVALID]. Continuing...",
+                bin_path.display()
+            );
+        }
+    }
+
+    match app.shell().sidecar(command) {
+        Ok(sidecar) => {
             let mut checked_set = version.lock().map_err(|_| "Lock failed")?;
             if !checked_set.contains(command) {
-                println!(
-                    "[MediaMagnet][Download] Backend: Local {}, Version: {}",
-                    command,
-                    String::from_utf8_lossy(&output.stdout).trim()
-                );
+                println!("\n[MediaMagnet][Download] Backend: Prebuilt {}", command);
+                println!("  -> This is usually out-of-date, please download the latest version and put in PATH!");
                 checked_set.insert(command.to_string());
             }
 
-            let mut cmd = Command::new(command);
+            let std_cmd: std::process::Command = sidecar.into();
+            let mut cmd: Command = std_cmd.into();
             hide_cmd(&mut cmd);
             Ok(cmd)
         }
-        _ => match app.shell().sidecar(command) {
-            Ok(sidecar) => {
-                let mut checked_set = version.lock().map_err(|_| "Lock failed")?;
-                if !checked_set.contains(command) {
-                    println!("\n[MediaMagnet][Download] Backend: Prebuilt {}", command);
-                    println!("  -> This is usually out-of-date, please download the latest version and put in PATH!");
-                    checked_set.insert(command.to_string());
-                }
-
-                let std_cmd: std::process::Command = sidecar.into();
-                let mut cmd: Command = std_cmd.into();
-                hide_cmd(&mut cmd);
-                Ok(cmd)
-            }
-            Err(e) => Err(format!(
-                "{} is not installed and no sidecar available: {}",
-                command, e
-            )
-            .into()),
-        },
+        Err(e) => Err(format!(
+            "{} is not installed and no sidecar available: {}",
+            command, e
+        )
+         .into()),
     }
 }
 
