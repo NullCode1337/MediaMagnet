@@ -14,7 +14,7 @@ optdepends=('gallery-dl: Required for gallery-dl media downloading support'
 makedepends=('git' 'openssl' 'appmenu-gtk-module' 'libappindicator-gtk3' 'librsvg' 'cargo' 'bun')
 provides=('mediamagnet')
 conflicts=('mediamagnet' 'mediamagnet-bin')
-source=("git+${url}.git")
+source=("${pkgname}::git+${url}.git")
 sha256sums=('SKIP')
 
 pkgver() {
@@ -38,4 +38,12 @@ build() {
 package() {
   cd "${pkgname}"
   cp -a src-tauri/target/release/bundle/deb/MediaMagnet_*_*/data/* "${pkgdir}/"
+
+  if [ -f "${pkgdir}/usr/bin/gallery-dl" ]; then
+    rm "${pkgdir}/usr/bin/gallery-dl" 
+  fi
+
+  if [ -f "${pkgdir}/usr/bin/yt-dlp" ]; then
+    rm "${pkgdir}/usr/bin/yt-dlp" 
+  fi
 }
