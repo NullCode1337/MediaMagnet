@@ -73,8 +73,10 @@ impl Default for Settings {
 impl Settings {
     pub fn apply(&self, app: &tauri::AppHandle) {
         if let Some(window) = app.get_webview_window("main") {
-            let _ = window.set_always_on_top(self.always_on_top);
-            let _ = window.set_decorations(!self.show_custom);
+            #[cfg(not(target_os = "android"))] {
+                let _ = window.set_always_on_top(self.always_on_top);
+                let _ = window.set_decorations(!self.show_custom);
+            }
         }
     }
 
