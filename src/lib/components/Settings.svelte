@@ -3,7 +3,7 @@
   import { Button } from "$lib/components/ui/button";
   import * as Icons from "@lucide/svelte";
   import { invoke } from "@tauri-apps/api/core";
-  import { open } from "@tauri-apps/plugin-dialog";
+  import { open, ask } from "@tauri-apps/plugin-dialog";
 
   import { uiState } from "$lib/store.svelte";
   import { settingsStore, type Config } from "$lib/settings.svelte";
@@ -61,10 +61,22 @@
     setTimeout(() => (saveStatus = "idle"), 2000);
   }
 
-  const resetSettings = async () =>
-    (settingsStore.config = (await invoke("settings", {
-      action: "reset",
-    })) as Config);
+  const resetSettings = async () => {
+    const confirmed = await ask(
+      `Are you sure you want to reset all settings?`,
+      {
+        title: "WARNING",
+        kind: "warning",
+        okLabel: "Reset",
+        cancelLabel: "Cancel",
+      },
+    );
+    if (confirmed) {
+      (settingsStore.config = (await invoke("settings", {
+        action: "reset",
+      })) as Config);
+    }
+  }
 
   async function selectDirectory() {
     try {
