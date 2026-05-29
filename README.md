@@ -83,10 +83,10 @@ bun run tauri build
 - [x] yt-dlp integration
 - [x] Custom arguments (global & site-wide)
 - [x] Settings import / export
-- [ ] macOS Apple Silicon support
+- [x] macOS Apple Silicon support
 - [ ] aria2 integration 
-- [ ] spotdl integration
-- [ ] AUR package
+- [x] spotdl integration
+- [x] AUR package
 - [ ] UI refinements (feedback welcome — open an issue!)
 
 </br>
