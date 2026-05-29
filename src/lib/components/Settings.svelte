@@ -17,7 +17,7 @@
   import GalleryTab from "$lib/components/Settings/Gallery.svelte";
   import SpotdlTab from "$lib/components/Settings/Spotdl.svelte";
 
-  let { isCollapsed } = $props();
+  let { menuOpen = $bindable(false), isCollapsed } = $props();
   let activeTab = $state("general");
   let saveStatus = $state<"idle" | "saved">("idle");
   let windowWidth = $state(
@@ -100,8 +100,9 @@
 </script>
 
 <Dialog.Root
-  onOpenChange={(open) => {
-    if (open) mobileView = "list";
+  bind:open={menuOpen}
+  onOpenChange={(isOpen) => {
+    if (isOpen) mobileView = "list";
   }}
 >
   <Dialog.Trigger>
@@ -113,6 +114,10 @@
           {isCollapsed
           ? 'justify-center'
           : 'justify-center sm:w-full sm:justify-start sm:gap-4 sm:px-4'}"
+        onclick={(e) => {
+          e.preventDefault();
+          menuOpen = !menuOpen;
+        }}
       >
         <Icons.Settings size={20} class="text-sidebar-foreground/70 shrink-0" />
         {#if !isCollapsed}
@@ -131,7 +136,7 @@
       if (isFullscreen) e.preventDefault();
     }}
     showCloseButton={!isMobile}
-    class="p-0 flex flex-col transition-all
+    class="p-0 flex flex-col transition-all max-sm:z-60
       {isFullscreen
       ? `w-screen! max-w-none! max-h-none! rounded-none! left-0! translate-x-0! translate-y-0!
            ${uiState.showCustom ? 'top-10! h-[calc(100vh-2.5rem)]!' : 'top-0! h-screen!'}`
@@ -193,7 +198,7 @@
 
         <Button
           variant="ghost"
-          class="mt-auto gap-3 text-xs opacity-60 justify-start px-3"
+          class="max-sm:hidden mt-auto gap-3 text-xs opacity-60 justify-start px-3"
           onclick={resetSettings}
         >
           <Icons.RotateCcw size={14} />
