@@ -17,21 +17,47 @@
   let { isCollapsed = $bindable(), diskUsage } = $props();
 </script>
 
+<!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -->
+{#snippet SidebarButton(icon: any,
+  label: string,
+  active: boolean,
+  onClick: () => void,
+)}
+  {@const IconComponent = icon}
+  <Button
+    variant="ghost"
+    onclick={onClick}
+    class="w-11 sm:w-full h-11 transition-all duration-200 cursor-pointer justify-center 
+      {isCollapsed ? '' : 'sm:justify-start sm:gap-4 sm:px-4'}
+      {active
+      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+      : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'}"
+  >
+    <IconComponent size={20} class="text-sidebar-foreground/70" />
+    {#if !isCollapsed}
+      <span
+        class="hidden sm:inline font-medium text-[15px] text-sidebar-foreground"
+      >
+        {label}
+      </span>
+    {/if}
+  </Button>
+{/snippet}
+
 <aside
-  class="flex flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out shrink-0 {isCollapsed
-    ? 'w-20'
-    : 'w-70'}"
+  class="z-50 flex items-center justify-center rounded-full border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-xl px-4 py-2 h-16 w-auto shrink-0 transition-all duration-300 ease-in-out
+    fixed bottom-4 left-1/2 -translate-x-1/2
+    sm:relative sm:bottom-0 sm:left-0 sm:translate-x-0 sm:flex-col sm:h-full sm:rounded-none sm:border-r sm:shadow-none sm:p-0
+    {isCollapsed ? 'sm:w-20' : 'sm:w-70'}"
   data-tauri-drag-region
 >
   <div
-    class="px-8 py-4 flex items-center {isCollapsed
+    class="hidden sm:flex px-8 py-4 items-center w-full {isCollapsed
       ? 'justify-center p-0 h-18'
       : 'justify-between h-20'}"
   >
     {#if !isCollapsed}
-      <div class="flex items-center">
-        <span class="font-bold text-lg tracking-tight">MediaMagnet</span>
-      </div>
+      <span class="font-bold text-lg tracking-tight">MediaMagnet</span>
     {/if}
     <Button
       variant="ghost"
@@ -43,66 +69,35 @@
     </Button>
   </div>
 
-  <div class="px-4 flex-1 space-y-6">
-    <nav class="space-y-1">
-      <Button
-        variant="ghost"
-        onclick={() => (uiState.activeTab = "downloads")}
-        class="w-full h-11 transition-all duration-200 cursor-pointer {isCollapsed
-          ? 'justify-center'
-          : 'justify-start gap-4 px-4'} 
-          {uiState.activeTab === 'downloads'
-          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-          : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'}"
-      >
-        <Download size={20} class="text-sidebar-foreground/70" />
-        {#if !isCollapsed}
-          <span class="font-medium text-[15px] text-sidebar-foreground">
-            Downloads
-          </span>
-        {/if}
-      </Button>
+  <div
+    class="flex items-start sm:flex-1 sm:flex-col sm:space-y-2 sm:px-4 w-full"
+  >
+    <nav class="flex flex-row gap-1 sm:flex-col sm:space-y-1 w-full">
+      {@render SidebarButton(
+        Download,
+        "Downloads",
+        uiState.activeTab === "downloads",
+        () => (uiState.activeTab = "downloads"),
+      )}
 
-      <Button
-        variant="ghost"
-        onclick={() => (uiState.activeTab = "history")}
-        class="w-full h-11 transition-all duration-200 cursor-pointer {isCollapsed
-          ? 'justify-center'
-          : 'justify-start gap-4 px-4'} 
-            {uiState.activeTab === 'history'
-          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-          : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'}"
-      >
-        <History size={20} class="text-sidebar-foreground/70" />
-        {#if !isCollapsed}
-          <span class="font-medium text-[15px] text-sidebar-foreground">
-            Recent History
-          </span>
-        {/if}
-      </Button>
+      {@render SidebarButton(
+        History,
+        "Recent History",
+        uiState.activeTab === "history",
+        () => (uiState.activeTab = "history"),
+      )}
 
-      <Separator class="gap-1" />
+      <Separator class="hidden sm:block gap-1" />
 
-      <Button
-        variant="ghost"
-        onclick={() => settingsStore.openDownloadDir()}
-        class="w-full h-11 transition-all duration-200 cursor-pointer {isCollapsed
-          ? 'justify-center'
-          : 'justify-start gap-4 px-4'} hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-      >
-        <FolderOpen size={20} class="text-sidebar-foreground/70" />
-        {#if !isCollapsed}
-          <span class="font-medium text-[15px] text-sidebar-foreground">
-            Open folder
-          </span>
-        {/if}
-      </Button>
+      {@render SidebarButton(FolderOpen, "Open folder", false, () =>
+        settingsStore.openDownloadDir(),
+      )}
 
       <SettingsDialog {isCollapsed} />
     </nav>
   </div>
 
-  <div class="p-6 border-t border-sidebar-border">
+  <div class="hidden sm:block p-6 border-t border-sidebar-border w-full">
     <div class="flex items-center gap-3 {isCollapsed ? 'justify-center' : ''}">
       <HardDrive size={18} class="text-sidebar-foreground/70 shrink-0" />
       {#if !isCollapsed}
@@ -112,10 +107,12 @@
               >Storage</span
             >
             <span
-              class={diskUsage > 90
-                ? "text-destructive"
-                : "text-sidebar-foreground/80"}>{diskUsage.toFixed(1)}%</span
+              class="text-sidebar-foreground/80 {diskUsage > 90
+                ? 'text-destructive'
+                : ''}"
             >
+              {diskUsage.toFixed(1)}%
+            </span>
           </div>
           <Progress value={diskUsage} class="h-1 bg-sidebar-accent" />
         </div>
