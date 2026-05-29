@@ -20,7 +20,10 @@
   let { isCollapsed } = $props();
   let activeTab = $state("general");
   let saveStatus = $state<"idle" | "saved">("idle");
-  let windowWidth = $state(typeof window !== "undefined" ? window.innerWidth : 1200);
+  let windowWidth = $state(
+    typeof window !== "undefined" ? window.innerWidth : 1200,
+  );
+  let mobileView = $state<"list" | "content">("list");
 
   $effect(() => {
     const onResize = () => (windowWidth = window.innerWidth);
@@ -28,6 +31,7 @@
     return () => window.removeEventListener("resize", onResize);
   });
 
+  const isMobile = $derived(windowWidth < 640);
   const isFullscreen = $derived(windowWidth < 1000);
 
   const CONFIG_TABS = [
@@ -47,7 +51,7 @@
   const switchClass =
     "data-[state=checked]:bg-primary data-[state=unchecked]:bg-input border-2 border-transparent cursor-pointer";
   const btnClass =
-    "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground relative";
+    "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground relative justify-start";
 
   const nextTick = () => new Promise((res) => setTimeout(res, 0));
 
@@ -72,11 +76,11 @@
       },
     );
     if (confirmed) {
-      (settingsStore.config = (await invoke("settings", {
+      settingsStore.config = (await invoke("settings", {
         action: "reset",
-      })) as Config);
+      })) as Config;
     }
-  }
+  };
 
   async function selectDirectory() {
     try {
@@ -95,49 +99,69 @@
   }
 </script>
 
-<Dialog.Root>
+<Dialog.Root
+  onOpenChange={(open) => {
+    if (open) mobileView = "list";
+  }}
+>
   <Dialog.Trigger>
     {#snippet child({ props })}
       <Button
         {...props}
         variant="ghost"
-        class="w-full h-11 transition-all duration-200 cursor-pointer {isCollapsed
+        class="w-11 h-11 flex items-center transition-all duration-200 cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground
+          {isCollapsed
           ? 'justify-center'
-          : 'justify-start gap-4 px-4'} hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          : 'justify-center sm:w-full sm:justify-start sm:gap-4 sm:px-4'}"
       >
-        <Icons.Settings size={20} class="text-sidebar-foreground/70" />
+        <Icons.Settings size={20} class="text-sidebar-foreground/70 shrink-0" />
         {#if !isCollapsed}
-          <span class="font-medium text-[15px] text-sidebar-foreground"
-            >Settings</span
+          <span
+            class="hidden sm:inline font-medium text-[15px] text-sidebar-foreground leading-none"
           >
+            Settings
+          </span>
         {/if}
       </Button>
     {/snippet}
   </Dialog.Trigger>
 
   <Dialog.Content
-    onInteractOutside={(e) => { if (isFullscreen) e.preventDefault(); }}
+    onInteractOutside={(e) => {
+      if (isFullscreen) e.preventDefault();
+    }}
+    showCloseButton={!isMobile}
     class="p-0 flex flex-col transition-all
       {isFullscreen
-        ? `w-screen! max-w-none! max-h-none! rounded-none! left-0! translate-x-0! translate-y-0!
+      ? `w-screen! max-w-none! max-h-none! rounded-none! left-0! translate-x-0! translate-y-0!
            ${uiState.showCustom ? 'top-10! h-[calc(100vh-2.5rem)]!' : 'top-0! h-screen!'}`
-        : `max-w-[1000px]! w-full! h-[89vh] rounded-2xl
+      : `max-w-[1000px]! w-full! h-[89vh]! rounded-2xl! backdrop:backdrop-blur-md
            ${uiState.showCustom ? 'top-[calc(50%+20px)]!' : 'top-[50%]!'}`}"
   >
     <div
-      class="flex flex-col sm:flex-row h-full w-full overflow-hidden! {isFullscreen ? 'rounded-none!' : 'rounded-xl!'}"
+      class="flex h-full w-full overflow-hidden!
+        {isMobile ? 'flex-col' : 'flex-row'} 
+        {isFullscreen ? 'rounded-none!' : 'rounded-xl!'}"
     >
       <aside
-        class="flex sm:flex-col overflow-x-auto sm:w-[240px] bg-sidebar border-r border-sidebar-border p-2 sm:p-6 gap-1 shrink-0"
+        class="bg-sidebar shrink-0 transition-all
+          {isMobile
+          ? mobileView === 'list'
+            ? 'flex flex-col w-full h-full p-6 overflow-y-auto gap-1'
+            : 'hidden'
+          : 'flex flex-col w-[240px] border-r border-sidebar-border p-6 gap-1 h-full'}"
       >
         <h2
-          class="hidden sm:block text-[11px] font-bold uppercase tracking-[0.2em] text-sidebar-foreground/50 mb-4 px-2"
+          class="text-[11px] font-bold uppercase tracking-[0.2em] text-sidebar-foreground/50 mb-4 px-2"
         >
           Configuration
         </h2>
         {#each CONFIG_TABS as tab (tab.id)}
           <button
-            onclick={() => (activeTab = tab.id)}
+            onclick={() => {
+              activeTab = tab.id;
+              mobileView = "content";
+            }}
             class="{btnClass} {activeTab === tab.id
               ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
               : 'text-sidebar-foreground/70'}"
@@ -148,13 +172,16 @@
         {/each}
 
         <h2
-          class="hidden sm:block text-[11px] font-bold uppercase tracking-[0.2em] text-sidebar-foreground/50 mt-6 mb-4 px-2"
+          class="text-[11px] font-bold uppercase tracking-[0.2em] text-sidebar-foreground/50 mt-6 mb-4 px-2"
         >
           Backend
         </h2>
         {#each BACKEND_TABS as tab (tab.id)}
           <button
-            onclick={() => (activeTab = tab.id)}
+            onclick={() => {
+              activeTab = tab.id;
+              mobileView = "content";
+            }}
             class="{btnClass} {activeTab === tab.id
               ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
               : 'text-sidebar-foreground/70'}"
@@ -166,16 +193,35 @@
 
         <Button
           variant="ghost"
-          class="sm:mt-auto gap-3 text-xs opacity-60"
+          class="mt-auto gap-3 text-xs opacity-60 justify-start px-3"
           onclick={resetSettings}
         >
-          <Icons.RotateCcw size={14} /> Reset
+          <Icons.RotateCcw size={14} />
+          <span>Reset</span>
         </Button>
       </aside>
 
       <main
-        class="flex-1 w-full min-w-0 overflow-y-auto p-6 sm:p-10 bg-background scrollbar-thin relative"
+        class="flex-1 w-full min-w-0 overflow-y-auto bg-background scrollbar-thin relative transition-all
+          {isMobile
+          ? mobileView === 'content'
+            ? 'block w-full h-full p-6 pt-20'
+            : 'hidden'
+          : 'p-6 sm:p-10'}"
       >
+        {#if isMobile && mobileView === "content"}
+          <div class="absolute top-4 left-4 z-50">
+            <Button
+              variant="outline"
+              size="icon"
+              class="rounded-full shadow-sm cursor-pointer bg-background"
+              onclick={() => (mobileView = "list")}
+            >
+              <Icons.ArrowLeft size={18} />
+            </Button>
+          </div>
+        {/if}
+
         <div class="absolute top-6 right-6 z-50 pointer-events-none">
           {#if saveStatus === "saved"}
             <div
@@ -188,7 +234,9 @@
         </div>
 
         {#if settingsStore.config}
-          <div class="w-full space-y-8 animate-in fade-in slide-in-from-bottom-2">
+          <div
+            class="w-full space-y-8 animate-in fade-in slide-in-from-bottom-2"
+          >
             {#if activeTab === "general"}
               <GeneralTab {switchClass} />
             {:else if activeTab === "downloads"}
