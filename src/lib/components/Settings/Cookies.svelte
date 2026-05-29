@@ -112,7 +112,7 @@
     const confirmed = await ask(
       `Are you sure you want to delete all cookies?`,
       {
-        title: "MediaMagnet",
+        title: "WARNING",
         kind: "warning",
         okLabel: "Delete",
         cancelLabel: "Cancel",
