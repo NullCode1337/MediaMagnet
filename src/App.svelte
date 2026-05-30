@@ -16,6 +16,7 @@
   import History from "$lib/components/History.svelte";
   import Titlebar from "$lib/components/Titlebar.svelte";
   import { uiState } from "$lib/store.svelte";
+  import { settingsStore } from "$lib/settings.svelte";
 
   import { toast, Toaster } from "svelte-sonner";
 
@@ -219,23 +220,26 @@
   onMount(() => {
     updateDiskSpace();
     currentPlatform = platform();
-
-    if (currentPlatform === "android") {
-      const current = (mode.current as "system" | "dark" | "light") || "system";
-      import("tauri-plugin-m3")
-        .then(({ M3 }) => {
-          M3.applyColors(current);
-          M3.setBarColor(current === "dark" ? "light" : "dark");
-        })
-        .catch(() => {});
-    }
-
     const interval = setInterval(updateDiskSpace, 60000);
     return () => clearInterval(interval);
   });
 
   $effect(() => {
     isCollapsed = uiState.innerWidth < 1024;
+  });
+
+  $effect(() => {
+    const targetTheme = mode.current;
+
+    if (!targetTheme) return;
+
+    import("tauri-plugin-m3")
+      .then(async ({ M3 }) => {
+        await M3.applyColors(targetTheme);
+        await M3.setBarColor(targetTheme === "dark" ? "light" : "dark");
+      });
+
+    void settingsStore.update({ dark_mode: targetTheme === "dark" });
   });
 
   $effect(() => {
@@ -320,9 +324,11 @@
   class="flex flex-col h-screen w-full bg-background text-foreground overflow-hidden"
   style="padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right);"
 >
-  <div class="relative z-100">
-    <Titlebar {currentPlatform} />
-  </div>
+  {#if currentPlatform !== "android"}
+    <div class="relative z-100">
+      <Titlebar {currentPlatform} />
+    </div>
+  {/if}
 
   {#if uiState.headless}
     <div class="relative flex items-center justify-center h-full w-full">

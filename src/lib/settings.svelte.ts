@@ -151,24 +151,7 @@ class SettingsStore {
   }
 
   async setTheme(themeMode: "system" | "dark" | "light") {
-    if (themeMode === "system") {
-      setMode("system");
-    } else {
-      setMode(themeMode);
-    }
-
-    try {
-      const { M3 } = await import("tauri-plugin-m3");
-      await M3.applyColors(themeMode);
-      await M3.setBarColor(themeMode === "dark" ? "light" : "dark");
-    } catch (e) {
-      console.warn(
-        "M3 platform architecture layout features bypassed on desktop environments:",
-        e,
-      );
-    }
-
-    void this.update({ dark_mode: themeMode === "dark" });
+    setMode(themeMode);
   }
 }
 

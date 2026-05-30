@@ -2,6 +2,7 @@
   "$schema": "../gen/schemas/android-schema.json",
   "identifier": "android-default",
   "description": "enables the default android permissions",
+  "platforms": ["android"],
   "windows": [
     "main"
   ],

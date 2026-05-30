@@ -26,7 +26,7 @@
       />
       <Button
         variant="secondary"
-        class="!cursor-pointer h-10"
+        class="!cursor-pointer h-10 bg-secondary"
         onclick={selectDirectory}>Browse</Button
       >
     </div>
