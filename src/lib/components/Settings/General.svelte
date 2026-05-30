@@ -101,7 +101,7 @@
     hexInput = hueToHex(hue);
     hexError = false;
   });
-  
+
   function onHexChange(e: Event) {
     const val = (e.target as HTMLInputElement).value;
     hexInput = val;
@@ -137,9 +137,10 @@
         type="button"
         class="flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors cursor-pointer
           {userPrefersMode.current === opt.value
-            ? 'bg-primary text-primary-foreground border-primary'
-            : 'bg-background text-muted-foreground border-input hover:bg-muted'}"
-        onclick={() => settingsStore.setTheme(opt.value as "system" | "dark" | "light")}
+          ? 'bg-primary text-primary-foreground border-primary'
+          : 'bg-background text-muted-foreground border-input hover:bg-muted'}"
+        onclick={() =>
+          settingsStore.setTheme(opt.value as "system" | "dark" | "light")}
       >
         {opt.label}
       </button>
