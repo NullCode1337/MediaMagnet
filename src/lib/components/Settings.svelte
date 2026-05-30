@@ -110,7 +110,7 @@
       <Button
         {...props}
         variant="ghost"
-        class="w-14 sm:w-full h-13 sm:h-11 transition-all duration-200 cursor-pointer justify-center hover:bg-sidebar-accent hover:text-sidebar-accent-foreground
+        class="w-12 sm:w-full h-14 sm:h-11 transition-all duration-200 cursor-pointer justify-center hover:bg-sidebar-accent hover:text-sidebar-accent-foreground
           {isCollapsed ? '' : 'sm:justify-start sm:gap-4 sm:px-4'}"
         onclick={(e) => {
           e.preventDefault();
@@ -153,58 +153,124 @@
         class="bg-sidebar shrink-0 transition-all
           {isMobile
           ? mobileView === 'list'
-            ? 'flex flex-col w-full h-full p-6 overflow-y-auto gap-1'
+            ? 'flex flex-col w-full h-full overflow-hidden'
             : 'hidden'
           : 'flex flex-col w-[240px] border-r border-sidebar-border p-6 gap-1 h-full'}"
       >
-        <h2
-          class="text-[11px] font-bold uppercase tracking-[0.2em] text-sidebar-foreground/50 mb-4 px-2"
-        >
-          Configuration
-        </h2>
-        {#each CONFIG_TABS as tab (tab.id)}
-          <button
-            onclick={() => {
-              activeTab = tab.id;
-              mobileView = "content";
-            }}
-            class="{btnClass} {activeTab === tab.id
-              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
-              : 'text-sidebar-foreground/70'}"
-          >
-            <tab.icon size={17} />
-            <span class="whitespace-nowrap">{tab.label}</span>
-          </button>
-        {/each}
+        {#if isMobile}
+          <div class="flex items-center gap-1 px-2 h-14 bg-muted/40 shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              class="rounded-full cursor-pointer"
+              onclick={() => (menuOpen = false)}
+            >
+              <Icons.ArrowLeft size={20} />
+            </Button>
+            <span class="font-semibold text-base">Settings</span>
+          </div>
 
-        <h2
-          class="text-[11px] font-bold uppercase tracking-[0.2em] text-sidebar-foreground/50 mt-6 mb-4 px-2"
-        >
-          Backend
-        </h2>
-        {#each BACKEND_TABS as tab (tab.id)}
-          <button
-            onclick={() => {
-              activeTab = tab.id;
-              mobileView = "content";
-            }}
-            class="{btnClass} {activeTab === tab.id
-              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
-              : 'text-sidebar-foreground/70'}"
-          >
-            <tab.icon size={17} />
-            <span class="whitespace-nowrap">{tab.label}</span>
-          </button>
-        {/each}
+          <div class="flex-1 overflow-y-auto bg-muted/40 px-4 py-5 space-y-6">
+            <div>
+              <p class="text-sm text-muted-foreground font-bold px-1 ml-2 mb-4">
+                Configuration
+              </p>
+              <div
+                class="rounded-2xl overflow-hidden bg-background divide-y divide-border/60"
+              >
+                {#each CONFIG_TABS as tab (tab.id)}
+                  <button
+                    onclick={() => {
+                      activeTab = tab.id;
+                      mobileView = "content";
+                    }}
+                    class="w-full flex items-center gap-5 px-5 py-6 text-sm text-foreground hover:bg-muted/50 active:bg-muted transition-colors cursor-pointer"
+                  >
+                    <tab.icon
+                      size={20}
+                      class="text-muted-foreground shrink-0"
+                    />
+                    <span class="font-medium">{tab.label}</span>
+                  </button>
+                {/each}
+              </div>
+            </div>
 
-        <Button
-          variant="ghost"
-          class="max-sm:hidden mt-auto gap-3 text-xs opacity-60 justify-start px-3"
-          onclick={resetSettings}
-        >
-          <Icons.RotateCcw size={14} />
-          <span>Reset</span>
-        </Button>
+            <div>
+              <p class="text-sm text-muted-foreground font-bold px-1 ml-2 mb-4">
+                Backend
+              </p>
+              <div
+                class="rounded-2xl overflow-hidden bg-background divide-y divide-border/60"
+              >
+                {#each BACKEND_TABS as tab (tab.id)}
+                  <button
+                    onclick={() => {
+                      activeTab = tab.id;
+                      mobileView = "content";
+                    }}
+                    class="w-full flex items-center gap-5 px-5 py-6 text-sm text-foreground hover:bg-muted/50 active:bg-muted transition-colors cursor-pointer"
+                  >
+                    <tab.icon
+                      size={20}
+                      class="text-muted-foreground shrink-0"
+                    />
+                    <span class="font-medium">{tab.label}</span>
+                  </button>
+                {/each}
+              </div>
+            </div>
+          </div>
+        {:else}
+          <h2
+            class="text-[11px] font-bold uppercase tracking-[0.2em] text-sidebar-foreground/50 mb-4 px-2"
+          >
+            Configuration
+          </h2>
+          {#each CONFIG_TABS as tab (tab.id)}
+            <button
+              onclick={() => {
+                activeTab = tab.id;
+                mobileView = "content";
+              }}
+              class="{btnClass} {activeTab === tab.id
+                ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
+                : 'text-sidebar-foreground/70'}"
+            >
+              <tab.icon size={17} />
+              <span class="whitespace-nowrap">{tab.label}</span>
+            </button>
+          {/each}
+
+          <h2
+            class="text-[11px] font-bold uppercase tracking-[0.2em] text-sidebar-foreground/50 mt-6 mb-4 px-2"
+          >
+            Backend
+          </h2>
+          {#each BACKEND_TABS as tab (tab.id)}
+            <button
+              onclick={() => {
+                activeTab = tab.id;
+                mobileView = "content";
+              }}
+              class="{btnClass} {activeTab === tab.id
+                ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
+                : 'text-sidebar-foreground/70'}"
+            >
+              <tab.icon size={17} />
+              <span class="whitespace-nowrap">{tab.label}</span>
+            </button>
+          {/each}
+
+          <Button
+            variant="ghost"
+            class="max-sm:hidden mt-auto gap-3 text-xs opacity-60 justify-start px-3"
+            onclick={resetSettings}
+          >
+            <Icons.RotateCcw size={14} />
+            <span>Reset</span>
+          </Button>
+        {/if}
       </aside>
 
       <main
