@@ -225,7 +225,7 @@
       import("tauri-plugin-m3")
         .then(({ M3 }) => {
           M3.applyColors(current);
-          M3.setBarColor(current);
+          M3.setBarColor(current === "dark" ? "light" : "dark");
         })
         .catch(() => {});
     }
