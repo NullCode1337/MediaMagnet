@@ -1,7 +1,7 @@
 /// <reference types="svelte" />
 /// <reference types="vite/client" />
 
-declare module 'tauri-plugin-m3' {
+declare module "tauri-plugin-m3" {
   export type ColorScheme = {
     primary?: string;
     onPrimary?: string;
@@ -66,8 +66,12 @@ declare module 'tauri-plugin-m3' {
 
   export const M3: {
     getColors: (theme?: "dark" | "light" | "system") => Promise<ColorScheme>;
-    applyColors: (theme?: "dark" | "light" | "system") => Promise<boolean | string>;
+    applyColors: (
+      theme?: "dark" | "light" | "system",
+    ) => Promise<boolean | string>;
     getInsets: () => Promise<DeviceInsets>;
-    setBarColor: (theme?: "dark" | "light" | "system") => Promise<boolean | string>;
+    setBarColor: (
+      theme?: "dark" | "light" | "system",
+    ) => Promise<boolean | string>;
   };
 }

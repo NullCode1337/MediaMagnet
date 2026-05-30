@@ -73,7 +73,9 @@
   <div
     class="flex items-start sm:flex-1 sm:flex-col sm:space-y-2 sm:px-4 w-full"
   >
-    <nav class="pointer-events-auto flex flex-row gap-1 sm:flex-col sm:space-y-1 w-full">
+    <nav
+      class="pointer-events-auto flex flex-row gap-1 sm:flex-col sm:space-y-1 w-full"
+    >
       {@render SidebarButton(
         Download,
         "Downloads",

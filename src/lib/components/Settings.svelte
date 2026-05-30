@@ -143,7 +143,6 @@
       : `max-w-[1000px]! w-full! h-[89vh]! rounded-2xl! backdrop:backdrop-blur-md
            ${uiState.showCustom ? 'top-[calc(50%+20px)]!' : 'top-[50%]!'}`}"
     style="padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right);"
-
   >
     <div
       class="flex h-full w-full overflow-hidden!

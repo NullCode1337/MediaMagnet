@@ -2,7 +2,6 @@
   import { Label } from "$lib/components/ui/label";
   import { Switch } from "$lib/components/ui/switch";
   import { settingsStore } from "$lib/settings.svelte";
-  import { mode } from "mode-watcher";
 
   let {
     items,
@@ -21,17 +20,11 @@
     </div>
     <Switch
       id={item.id}
-      checked={item.id === "dark_mode"
-        ? mode.current === "dark"
-        : (settingsStore.config![
-            item.id as keyof typeof settingsStore.config
-          ] as boolean)}
+      checked={settingsStore.config![
+        item.id as keyof typeof settingsStore.config
+      ] as boolean}
       onCheckedChange={(val) => {
-        if (item.id === "dark_mode") {
-          settingsStore.toggleTheme();
-        } else {
-          settingsStore.update({ [item.id]: val });
-        }
+        settingsStore.update({ [item.id]: val });
       }}
       class={switchClass}
     />

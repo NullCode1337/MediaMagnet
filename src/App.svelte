@@ -219,13 +219,15 @@
   onMount(() => {
     updateDiskSpace();
     currentPlatform = platform();
-    
+
     if (currentPlatform === "android") {
       const current = (mode.current as "system" | "dark" | "light") || "system";
-      import("tauri-plugin-m3").then(({ M3 }) => {
-        M3.applyColors(current);
-        M3.setBarColor(current);
-      }).catch(() => {});
+      import("tauri-plugin-m3")
+        .then(({ M3 }) => {
+          M3.applyColors(current);
+          M3.setBarColor(current);
+        })
+        .catch(() => {});
     }
 
     const interval = setInterval(updateDiskSpace, 60000);
