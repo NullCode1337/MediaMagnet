@@ -28,7 +28,7 @@
   <Button
     variant="ghost"
     onclick={onClick}
-    class="w-14 sm:w-full h-14 sm:h-11 transition-all duration-200 cursor-pointer justify-center 
+    class="w-12 sm:w-full h-14 sm:h-11 transition-all duration-200 cursor-pointer justify-center 
       {isCollapsed ? '' : 'sm:justify-start sm:gap-4 sm:px-4'}
       {active
       ? 'bg-sidebar-accent text-sidebar-accent-foreground'
@@ -74,7 +74,7 @@
     class="flex items-start sm:flex-1 sm:flex-col sm:space-y-2 sm:px-4 w-full"
   >
     <nav
-      class="pointer-events-auto flex flex-row gap-2 sm:flex-col sm:space-y-1 w-full"
+      class="pointer-events-auto flex flex-row gap-1 sm:flex-col sm:space-y-1 w-full"
     >
       {@render SidebarButton(
         Download,
