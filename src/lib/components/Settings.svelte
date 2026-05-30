@@ -110,16 +110,16 @@
       <Button
         {...props}
         variant="ghost"
-        class="w-11 h-11 flex items-center transition-all duration-200 cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground
-          {isCollapsed
-          ? 'justify-center'
-          : 'justify-center sm:w-full sm:justify-start sm:gap-4 sm:px-4'}"
+        class="w-14 sm:w-full h-13 sm:h-11 transition-all duration-200 cursor-pointer justify-center hover:bg-sidebar-accent hover:text-sidebar-accent-foreground
+          {isCollapsed ? '' : 'sm:justify-start sm:gap-4 sm:px-4'}"
         onclick={(e) => {
           e.preventDefault();
           menuOpen = !menuOpen;
         }}
       >
-        <Icons.Settings size={20} class="text-sidebar-foreground/70 shrink-0" />
+        <Icons.Settings
+          class="text-sidebar-foreground/70 size-5 sm:!size-5 shrink-0"
+        />
         {#if !isCollapsed}
           <span
             class="hidden sm:inline font-medium text-[15px] text-sidebar-foreground leading-none"

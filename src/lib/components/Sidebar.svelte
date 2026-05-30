@@ -28,13 +28,13 @@
   <Button
     variant="ghost"
     onclick={onClick}
-    class="w-11 sm:w-full h-11 transition-all duration-200 cursor-pointer justify-center 
+    class="w-14 sm:w-full h-14 sm:h-11 transition-all duration-200 cursor-pointer justify-center 
       {isCollapsed ? '' : 'sm:justify-start sm:gap-4 sm:px-4'}
       {active
       ? 'bg-sidebar-accent text-sidebar-accent-foreground'
       : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'}"
   >
-    <IconComponent size={20} class="text-sidebar-foreground/70" />
+    <IconComponent class="size-5 text-sidebar-foreground/70 sm:!w-5 sm:!h-5" />
     {#if !isCollapsed}
       <span
         class="hidden sm:inline font-medium text-[15px] text-sidebar-foreground"
@@ -46,7 +46,7 @@
 {/snippet}
 
 <aside
-  class="max-sm:z-100 pointer-events-none sm:pointer-events-auto flex items-center justify-center rounded-full border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-xl px-4 py-2 h-16 w-auto shrink-0 transition-all duration-300 ease-in-out
+  class="max-sm:z-100 max-sm:mb-10 pointer-events-none sm:pointer-events-auto flex items-center justify-center rounded-full border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-xl px-5 py-3 h-20 w-auto shrink-0 transition-all duration-300 ease-in-out
     fixed bottom-4 left-1/2 -translate-x-1/2
     sm:relative sm:bottom-0 sm:left-0 sm:translate-x-0 sm:flex-col sm:h-full sm:rounded-none sm:border-r sm:shadow-none sm:p-0
     {isCollapsed ? 'sm:w-20' : 'sm:w-70'}"
@@ -74,7 +74,7 @@
     class="flex items-start sm:flex-1 sm:flex-col sm:space-y-2 sm:px-4 w-full"
   >
     <nav
-      class="pointer-events-auto flex flex-row gap-1 sm:flex-col sm:space-y-1 w-full"
+      class="pointer-events-auto flex flex-row gap-2 sm:flex-col sm:space-y-1 w-full"
     >
       {@render SidebarButton(
         Download,
