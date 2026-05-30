@@ -16,6 +16,64 @@
 
   let menuOpen = $state(false);
   let { isCollapsed = $bindable(), diskUsage, currentPlatform } = $props();
+
+  let barVisible = $state(true);
+  let barRestore: ReturnType<typeof setTimeout>;
+
+  function scheduleRestore(delay = 2000) {
+    clearTimeout(barRestore);
+    barRestore = setTimeout(() => {
+      barVisible = true;
+    }, delay);
+  }
+
+  $effect(() => {
+    if (typeof window === "undefined") return;
+
+    let touchStartY = 0;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartY = e.touches[0].clientY;
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      const diff = touchStartY - e.touches[0].clientY;
+      if (diff > 8) {
+        barVisible = false;
+        clearTimeout(barRestore);
+      } else if (diff < -8) {
+        barVisible = true;
+        clearTimeout(barRestore);
+      }
+    };
+
+    const handleTouchEnd = () => {
+      if (!barVisible) scheduleRestore(2000);
+    };
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.deltaY > 0) {
+        barVisible = false;
+        scheduleRestore(1500);
+      } else if (e.deltaY < 0) {
+        barVisible = true;
+        clearTimeout(barRestore);
+      }
+    };
+
+    document.addEventListener("touchstart", handleTouchStart, { passive: true });
+    document.addEventListener("touchmove", handleTouchMove, { passive: true });
+    document.addEventListener("touchend", handleTouchEnd, { passive: true });
+    document.addEventListener("wheel", handleWheel, { passive: true });
+
+    return () => {
+      document.removeEventListener("touchstart", handleTouchStart);
+      document.removeEventListener("touchmove", handleTouchMove);
+      document.removeEventListener("touchend", handleTouchEnd);
+      document.removeEventListener("wheel", handleWheel);
+      clearTimeout(barRestore);
+    };
+  });
 </script>
 
 <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -->
@@ -46,10 +104,14 @@
 {/snippet}
 
 <aside
-  class="max-sm:z-100 max-sm:mb-10 pointer-events-none sm:pointer-events-auto flex items-center justify-center rounded-2xl border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-xl px-3 py-2 h-20 w-auto shrink-0 transition-all duration-300 ease-in-out
+  class="max-sm:z-100 max-sm:mb-10 pointer-events-none sm:pointer-events-auto flex items-center justify-center rounded-2xl border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-xl px-3 py-2 h-20 w-auto shrink-0
     fixed bottom-4 left-1/2 -translate-x-1/2
     sm:relative sm:bottom-0 sm:left-0 sm:translate-x-0 sm:flex-col sm:h-full sm:rounded-none sm:border-r sm:shadow-none sm:p-0
-    {isCollapsed ? 'sm:w-20' : 'sm:w-70'}"
+    transition-all duration-300 ease-in-out
+    {isCollapsed ? 'sm:w-20' : 'sm:w-70'}
+    {barVisible
+    ? 'translate-y-0 opacity-100'
+    : 'max-sm:translate-y-[calc(100%+2rem)] max-sm:opacity-0 max-sm:pointer-events-none'}"
   data-tauri-drag-region
 >
   <div
