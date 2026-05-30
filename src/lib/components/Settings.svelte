@@ -17,7 +17,7 @@
   import GalleryTab from "$lib/components/Settings/Gallery.svelte";
   import SpotdlTab from "$lib/components/Settings/Spotdl.svelte";
 
-  let { menuOpen = $bindable(false), isCollapsed } = $props();
+  let { menuOpen = $bindable(false), isCollapsed, currentPlatform } = $props();
   let activeTab = $state("general");
   let saveStatus = $state<"idle" | "saved">("idle");
   let windowWidth = $state(
@@ -245,7 +245,7 @@
             class="w-full space-y-8 animate-in fade-in slide-in-from-bottom-2"
           >
             {#if activeTab === "general"}
-              <GeneralTab {switchClass} />
+              <GeneralTab {switchClass} {currentPlatform} />
             {:else if activeTab === "downloads"}
               <DownloadsTab {saveSettings} {selectDirectory} />
             {:else if activeTab === "cookies"}

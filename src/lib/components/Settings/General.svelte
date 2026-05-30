@@ -3,19 +3,17 @@
   import { Label } from "$lib/components/ui/label";
   import SwitchRows from "./SwitchRows.svelte";
   import { settingsStore } from "$lib/settings.svelte";
+  import { mode } from "mode-watcher";
 
   let {
     switchClass,
+    currentPlatform,
   }: {
     switchClass: string;
+    currentPlatform: string;
   } = $props();
 
   const GENERAL_SWITCHES = [
-    {
-      id: "dark_mode",
-      label: "Dark Mode",
-      desc: "Use a dark color scheme for the interface",
-    },
     {
       id: "always_on_top",
       label: "Keep Always on Top",
@@ -123,7 +121,35 @@
   <h3 class="text-2xl font-extrabold">Appearance</h3>
 </div>
 
-<SwitchRows items={GENERAL_SWITCHES} {switchClass} />
+{#if currentPlatform !== "android"}
+  <SwitchRows items={GENERAL_SWITCHES} {switchClass} />
+{/if}
+
+<div class="rounded-2xl border bg-card p-5 flex flex-col gap-4 mt-4">
+  <div>
+    <!-- svelte-ignore a11y_label_has_associated_control -->
+    <label class="text-base font-semibold">Application Theme</label>
+  </div>
+
+  <div class="flex gap-2">
+    {#each [
+      { value: "system", label: "System" },
+      { value: "light",  label: "Light" },
+      { value: "dark",   label: "Dark" },
+    ] as opt (opt.value)}
+      <button
+        type="button"
+        class="flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors cursor-pointer
+          {(opt.value === 'system' && mode.current === undefined) || mode.current === opt.value
+            ? 'bg-primary text-primary-foreground border-primary'
+            : 'bg-background text-muted-foreground border-input hover:bg-muted'}"
+        onclick={() => settingsStore.setTheme(opt.value as "system" | "dark" | "light")}
+      >
+        {opt.label}
+      </button>
+    {/each}
+  </div>
+</div>
 
 {#if showCustom}
   <div class="rounded-2xl border bg-card p-5 flex flex-col gap-3">
