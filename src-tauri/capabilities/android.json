@@ -1,0 +1,11 @@
+{
+  "$schema": "../gen/schemas/android-schema.json",
+  "identifier": "android-default",
+  "description": "enables the default android permissions",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "m3:default"
+  ]
+}
