@@ -3,7 +3,7 @@
   import { Label } from "$lib/components/ui/label";
   import SwitchRows from "./SwitchRows.svelte";
   import { settingsStore } from "$lib/settings.svelte";
-  import { mode } from "mode-watcher";
+  import { userPrefersMode } from "mode-watcher";
 
   let {
     switchClass,
@@ -101,7 +101,7 @@
     hexInput = hueToHex(hue);
     hexError = false;
   });
-
+  
   function onHexChange(e: Event) {
     const val = (e.target as HTMLInputElement).value;
     hexInput = val;
@@ -136,12 +136,10 @@
       <button
         type="button"
         class="flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors cursor-pointer
-          {(opt.value === 'system' && mode.current === undefined) ||
-        mode.current === opt.value
-          ? 'bg-primary text-primary-foreground border-primary'
-          : 'bg-background text-muted-foreground border-input hover:bg-muted'}"
-        onclick={() =>
-          settingsStore.setTheme(opt.value as "system" | "dark" | "light")}
+          {userPrefersMode.current === opt.value
+            ? 'bg-primary text-primary-foreground border-primary'
+            : 'bg-background text-muted-foreground border-input hover:bg-muted'}"
+        onclick={() => settingsStore.setTheme(opt.value as "system" | "dark" | "light")}
       >
         {opt.label}
       </button>
@@ -153,9 +151,6 @@
   <div class="rounded-2xl border bg-card p-5 flex flex-col gap-3">
     <div>
       <Label class="text-base font-semibold">Title Bar Style</Label>
-      <p class="text-xs text-muted-foreground mt-0.5">
-        Choose the style of the custom title bar
-      </p>
     </div>
 
     <div class="flex gap-2">
@@ -178,9 +173,6 @@
   <div class="flex items-center justify-between">
     <div>
       <Label class="text-base font-semibold">Accent Color</Label>
-      <p class="text-xs text-muted-foreground mt-0.5">
-        Change application color palette
-      </p>
     </div>
     <div
       class="w-8 h-8 rounded-full border-2 border-border shadow-sm transition-colors duration-200"
