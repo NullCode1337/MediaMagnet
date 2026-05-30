@@ -132,18 +132,16 @@
   </div>
 
   <div class="flex gap-2">
-    {#each [
-      { value: "system", label: "System" },
-      { value: "light",  label: "Light" },
-      { value: "dark",   label: "Dark" },
-    ] as opt (opt.value)}
+    {#each [{ value: "system", label: "System" }, { value: "light", label: "Light" }, { value: "dark", label: "Dark" }] as opt (opt.value)}
       <button
         type="button"
         class="flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors cursor-pointer
-          {(opt.value === 'system' && mode.current === undefined) || mode.current === opt.value
-            ? 'bg-primary text-primary-foreground border-primary'
-            : 'bg-background text-muted-foreground border-input hover:bg-muted'}"
-        onclick={() => settingsStore.setTheme(opt.value as "system" | "dark" | "light")}
+          {(opt.value === 'system' && mode.current === undefined) ||
+        mode.current === opt.value
+          ? 'bg-primary text-primary-foreground border-primary'
+          : 'bg-background text-muted-foreground border-input hover:bg-muted'}"
+        onclick={() =>
+          settingsStore.setTheme(opt.value as "system" | "dark" | "light")}
       >
         {opt.label}
       </button>
@@ -161,16 +159,12 @@
     </div>
 
     <div class="flex gap-2">
-      {#each [
-        { value: "system", label: "System" },
-        { value: "mac",    label: "macOS"  },
-        { value: "win",    label: "Windows" },
-      ] as opt (opt.value)}
+      {#each [{ value: "system", label: "System" }, { value: "mac", label: "macOS" }, { value: "win", label: "Windows" }] as opt (opt.value)}
         <button
           class="flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors
             {customType === opt.value
-              ? 'bg-primary text-primary-foreground border-primary'
-              : 'bg-background text-muted-foreground border-input hover:bg-muted'}"
+            ? 'bg-primary text-primary-foreground border-primary'
+            : 'bg-background text-muted-foreground border-input hover:bg-muted'}"
           onclick={() => settingsStore.update({ custom_type: opt.value })}
         >
           {opt.label}

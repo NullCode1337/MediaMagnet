@@ -162,7 +162,10 @@ class SettingsStore {
       await M3.applyColors(themeMode);
       await M3.setBarColor(themeMode);
     } catch (e) {
-      console.warn("M3 platform architecture layout features bypassed on desktop environments:", e);
+      console.warn(
+        "M3 platform architecture layout features bypassed on desktop environments:",
+        e,
+      );
     }
 
     void this.update({ dark_mode: themeMode === "dark" });

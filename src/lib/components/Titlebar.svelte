@@ -1,6 +1,14 @@
 <script lang="ts">
   import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
-  import { X, Minus, Plus, Expand, Copy, Square, Maximize2 } from "@lucide/svelte";
+  import {
+    X,
+    Minus,
+    Plus,
+    Expand,
+    Copy,
+    Square,
+    Maximize2,
+  } from "@lucide/svelte";
   import { uiState } from "$lib/store.svelte";
   import { settingsStore } from "$lib/settings.svelte";
   import { onMount } from "svelte";
@@ -11,7 +19,7 @@
   const appWindow = getCurrentWindow();
   const barType = $derived(settingsStore.config?.custom_type);
   const isMac = $derived(
-    barType === "mac" || (barType === "system" && currentPlatform === "macos")
+    barType === "mac" || (barType === "system" && currentPlatform === "macos"),
   );
 
   async function syncWindowState() {
