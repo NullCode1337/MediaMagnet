@@ -219,6 +219,15 @@
   onMount(() => {
     updateDiskSpace();
     currentPlatform = platform();
+    
+    if (currentPlatform === "android") {
+      const current = (mode.current as "system" | "dark" | "light") || "system";
+      import("tauri-plugin-m3").then(({ M3 }) => {
+        M3.applyColors(current);
+        M3.setBarColor(current);
+      }).catch(() => {});
+    }
+
     const interval = setInterval(updateDiskSpace, 60000);
     return () => clearInterval(interval);
   });
@@ -358,7 +367,7 @@
     </div>
   {:else}
     <div class="flex flex-1 w-full min-h-0 overflow-hidden relative">
-      <Sidebar bind:isCollapsed {diskUsage} />
+      <Sidebar bind:isCollapsed {diskUsage} {currentPlatform} />
 
       <main
         class="flex flex-col h-screen w-full bg-background text-foreground overflow-hidden"

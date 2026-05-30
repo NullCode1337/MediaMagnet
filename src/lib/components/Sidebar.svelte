@@ -15,7 +15,7 @@
   import Separator from "./ui/separator/separator.svelte";
 
   let menuOpen = $state(false);
-  let { isCollapsed = $bindable(), diskUsage } = $props();
+  let { isCollapsed = $bindable(), diskUsage, currentPlatform } = $props();
 </script>
 
 <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -->
@@ -94,7 +94,7 @@
         settingsStore.openDownloadDir(),
       )}
 
-      <SettingsDialog {isCollapsed} {menuOpen} />
+      <SettingsDialog {isCollapsed} {menuOpen} {currentPlatform} />
     </nav>
   </div>
 

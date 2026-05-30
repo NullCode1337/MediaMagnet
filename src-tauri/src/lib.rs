@@ -15,6 +15,11 @@ pub fn run() {
         }
     }));
 
+
+    #[cfg(target_os = "android")]
+    let builder = builder
+        .plugin(tauri_plugin_m3::init());
+
     builder
         .plugin(tauri_plugin_os::init())
         .setup(|app| {

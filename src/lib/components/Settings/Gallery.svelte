@@ -82,7 +82,7 @@
       <div class="space-y-4 max-h-[400px] overflow-y-auto pr-1">
         {#each settingsStore.config!.gdl_site_args as item (item.id)}
           <div
-            class="p-3 bg-secondary rounded-lg space-y-2 relative group border border-muted/40"
+            class="p-3 bg-popover rounded-lg space-y-2 relative group border border-muted/40"
           >
             <div class="flex items-center justify-between gap-4">
               <div class="flex items-center gap-2 flex-1">

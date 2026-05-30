@@ -57,6 +57,11 @@
     "mode-watcher": "^1.1.0",
     "svelte-sonner": "^1.1.1",
     "tailwind-merge": "^3.5.0",
-    "tailwindcss": "^4.2.1"
-  }
+    "tailwindcss": "^4.2.1",
+    "tauri-plugin-m3": "https://github.com/0xk1f0/tauri-plugin-m3",
+    "tsdown": "^0.22.1"
+  },
+  "trustedDependencies": [
+    "tauri-plugin-m3"
+  ]
 }
