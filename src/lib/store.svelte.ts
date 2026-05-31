@@ -4,7 +4,7 @@ export const uiState = $state({
   innerWidth: 0,
   innerHeight: 0,
   isMaximized: false,
-  activeTab: "home" as "downloads" | "home",
+  activeTab: "home" as "downloads" | "home" | "settings",
 
   get showCustom() {
     return settingsStore.config?.show_custom ?? true;
