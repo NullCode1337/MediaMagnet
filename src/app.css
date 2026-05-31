@@ -1,4 +1,5 @@
 @import "tailwindcss";
+
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
@@ -6,53 +7,24 @@
 :root {
   --hue: 260;
   --radius: 0.625rem;
-  --primary: oklch(0.35 0.12 var(--hue));
-  --onPrimary: oklch(0.98 0 0);
-  --primaryContainer: oklch(0.45 0.1 var(--hue));
-  --onPrimaryContainer: oklch(0.98 0 0);
-  --secondary: oklch(0.96 0.01 var(--hue));
-  --onSecondary: oklch(0.25 0.02 var(--hue));
-  --secondaryContainer: oklch(0.9 0.02 var(--hue));
-  --onSecondaryContainer: oklch(0.25 0.02 var(--hue));
-  --tertiary: oklch(0.5 0.1 var(--hue));
-  --onTertiary: oklch(1 0 0);
-  --tertiaryContainer: oklch(0.6 0.1 var(--hue));
-  --onTertiaryContainer: oklch(1 0 0);
-
   --background: oklch(0.98 0.008 var(--hue));
-  --onBackground: oklch(0.25 0.02 var(--hue));
-  --surface: oklch(0.995 0.004 var(--hue));
-  --onSurface: oklch(0.25 0.02 var(--hue));
-  --surfaceVariant: oklch(0.94 0.02 var(--hue));
-  --onSurfaceVariant: oklch(0.25 0.02 var(--hue));
-  --inverseSurface: oklch(0.25 0.02 var(--hue));
-  --inverseOnSurface: oklch(0.98 0.01 var(--hue));
-
-  --error: oklch(0.6 0.18 25);
-  --onError: oklch(1 0 0);
-  --errorContainer: oklch(0.7 0.15 25);
-  --onErrorContainer: oklch(1 0 0);
-
-  --outline: oklch(0.85 0.01 var(--hue));
-  --outlineVariant: oklch(0.9 0.01 var(--hue));
-  --scrim: oklch(0 0 0);
-
-  --foreground: var(--onBackground);
-  --card: var(--surface);
-  --card-foreground: var(--onSurface);
-  --popover: var(--surface);
-  --popover-foreground: var(--onSurface);
-  --primary-foreground: var(--onPrimary);
-  --secondary-foreground: var(--onSecondary);
-  --muted: var(--surfaceVariant);
-  --muted-foreground: var(--onSurfaceVariant);
-  --accent: var(--surfaceVariant);
-  --accent-foreground: var(--onSurface);
-  --destructive: var(--error);
-  --border: var(--outlineVariant);
-  --input: var(--outlineVariant);
-  --ring: var(--primary);
-
+  --foreground: oklch(0.25 0.02 var(--hue));
+  --card: oklch(0.995 0.004 var(--hue));
+  --card-foreground: oklch(0.25 0.02 var(--hue));
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.25 0.02 var(--hue));
+  --primary: oklch(0.35 0.12 var(--hue));
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.96 0.01 var(--hue));
+  --secondary-foreground: oklch(0.25 0.02 var(--hue));
+  --muted: oklch(0.96 0.01 var(--hue));
+  --muted-foreground: oklch(0.5 0.02 var(--hue));
+  --accent: oklch(0.94 0.02 var(--hue));
+  --accent-foreground: oklch(0.25 0.02 var(--hue));
+  --destructive: oklch(0.6 0.18 25);
+  --border: oklch(0.9 0.01 var(--hue));
+  --input: oklch(0.85 0.01 var(--hue));
+  --ring: oklch(0.7 0.05 var(--hue));
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0.01 var(--hue));
   --sidebar-primary: oklch(0.35 0.12 var(--hue));
@@ -65,14 +37,23 @@
 
 .dark {
   --background: oklch(0.25 0.03 var(--hue));
+  --foreground: oklch(0.98 0.01 var(--hue));
+  --card: oklch(0.3 0.03 var(--hue));
+  --card-foreground: oklch(0.98 0.01 var(--hue));
+  --popover: oklch(0.3 0.03 var(--hue));
+  --popover-foreground: oklch(0.98 0.01 var(--hue));
   --primary: oklch(0.75 0.15 var(--hue));
-  --surface: oklch(0.3 0.03 var(--hue));
-  --surfaceVariant: oklch(0.4 0.05 var(--hue));
-  --onBackground: oklch(0.98 0.01 var(--hue));
-  --onSurface: oklch(0.98 0.01 var(--hue));
-  --onSurfaceVariant: oklch(0.98 0.01 var(--hue));
-  --outlineVariant: oklch(0.45 0.03 var(--hue));
-
+  --primary-foreground: oklch(0.1 0.02 var(--hue));
+  --secondary: oklch(0.35 0.04 var(--hue));
+  --secondary-foreground: oklch(0.98 0.01 var(--hue));
+  --muted: oklch(0.35 0.04 var(--hue));
+  --muted-foreground: oklch(0.8 0.02 var(--hue));
+  --accent: oklch(0.4 0.05 var(--hue));
+  --accent-foreground: oklch(0.98 0.01 var(--hue));
+  --destructive: oklch(0.6 0.18 25);
+  --border: oklch(0.45 0.03 var(--hue));
+  --input: oklch(0.45 0.03 var(--hue));
+  --ring: oklch(0.75 0.15 var(--hue) / 40%);
   --sidebar: oklch(0.215 0.02 var(--hue));
   --sidebar-foreground: oklch(0.98 0.01 var(--hue));
   --sidebar-primary: oklch(0.7 0.18 var(--hue));
