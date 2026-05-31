@@ -397,7 +397,7 @@
       <Sidebar bind:isCollapsed {diskUsage} {currentPlatform} />
 
       <main
-        class="flex flex-col h-full w-full bg-background text-foreground overflow-hidden"
+        class="flex flex-col h-full w-full max-h-full min-h-0 bg-background text-foreground overflow-hidden"
       >
         <header
           class="hidden sm:flex h-20 items-center px-8 bg-background/50 sticky top-0 z-10 gap-4 shrink-0"
@@ -433,7 +433,7 @@
           </div>
         </header>
 
-        <div class="flex-1 w-full overflow-hidden relative">
+        <div class="flex-1 w-full overflow-hidden relative min-h-0">
           <div
             class="sm:hidden w-full h-full flex transition-transform duration-300 ease-out"
             style="transform: translateX(-{mobileTabIndex() * 100}%);"
@@ -483,7 +483,10 @@
                 </div>
               </div>
             </div>
-            <div class="w-full h-full shrink-0 overflow-y-auto p-6 pb-32">
+
+            <div
+              class="w-full h-full max-h-full shrink-0 overflow-y-auto p-6 pb-32"
+            >
               <div class="max-w-5xl mx-auto w-full">
                 <Downloader
                   {tasks}
@@ -496,10 +499,10 @@
               </div>
             </div>
 
-            <div class="w-full h-full shrink-0 overflow-y-auto p-0 pb-32">
-              <div class="flex flex-col min-h-full bg-background">
-                <Settings isCollapsed={true} {currentPlatform} />
-              </div>
+            <div
+              class="w-full h-full max-h-full shrink-0 overflow-hidden bg-background"
+            >
+              <Settings isCollapsed={true} {currentPlatform} />
             </div>
           </div>
 
