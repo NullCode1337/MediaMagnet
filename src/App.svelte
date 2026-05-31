@@ -13,14 +13,12 @@
 
   import Sidebar from "$lib/components/Sidebar.svelte";
   import Downloader from "$lib/components/Downloader.svelte";
-  import History from "$lib/components/History.svelte";
   import Titlebar from "$lib/components/Titlebar.svelte";
 
   import logo from "$lib/assets/favicon.png";
   import { uiState } from "$lib/store.svelte";
   import { settingsStore } from "$lib/settings.svelte";
   import { toast, Toaster } from "svelte-sonner";
-
 
   interface Task {
     id: string;
@@ -73,9 +71,6 @@
       case "home":
         return 0;
       case "downloads":
-        return 1;
-      case "history":
-        return 2;
       default:
         return 1;
     }
@@ -314,7 +309,7 @@
           status: "Complete",
           progress: 100,
         });
-        setTimeout(() => removeTask(e.payload.id), 4000);
+        removeTask(e.payload.id);
       }),
     ];
 
@@ -482,17 +477,12 @@
               <div class="max-w-5xl mx-auto w-full pb-20">
                 <Downloader
                   {tasks}
+                  bind:history
                   pauseTask={pauseDownload}
                   resumeTask={resumeDownload}
                   cancelTask={cancelDownload}
                   {stopAllDownloads}
                 />
-              </div>
-            </div>
-
-            <div class="w-full h-full shrink-0 overflow-y-auto p-6">
-              <div class="max-w-5xl mx-auto w-full pb-20">
-                <History bind:history />
               </div>
             </div>
           </div>
@@ -501,21 +491,14 @@
             class="hidden sm:block w-full h-full p-8 overflow-y-auto overflow-x-hidden scrollbar-thin pb-12"
           >
             <div class="max-w-5xl mx-auto w-full flex flex-col gap-8">
-              {#if uiState.activeTab === "history"}
-                <div>
-                  <History bind:history />
-                </div>
-              {:else}
-                <div>
-                  <Downloader
-                    {tasks}
-                    pauseTask={pauseDownload}
-                    resumeTask={resumeDownload}
-                    cancelTask={cancelDownload}
-                    {stopAllDownloads}
-                  />
-                </div>
-              {/if}
+              <Downloader
+                {tasks}
+                bind:history
+                pauseTask={pauseDownload}
+                resumeTask={resumeDownload}
+                cancelTask={cancelDownload}
+                {stopAllDownloads}
+              />
             </div>
           </div>
         </div>
