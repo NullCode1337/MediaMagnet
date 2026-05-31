@@ -9,7 +9,7 @@
 [![Svelte](https://img.shields.io/badge/frontend-Svelte%205-ff3e00)](https://svelte.dev)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-6366f1)](#-installation)
  
-[**Download**](#-installation) · [**Features**](#features) · [**Building from Source**](#-building-from-source) · [**Contributing**](#-contributing)
+[**Download**](#installation) · [**Features**](#features) · [**Building from Source**](#building-from-source) · [**Disclaimer**](#disclaimer)
  
 </div>
 
@@ -32,7 +32,7 @@ Paste a URL, configure your options, and let MediaMagnet handle the rest.
 - **Lightweight**: Built on Tauri to be fast, performant and minimal
 ---
  
-## 📦 Installation
+## Installation
  
 ### Pre-built Binaries
  
@@ -52,7 +52,7 @@ Head to the [**Releases**](https://github.com/NullCode1337/MediaMagnet/releases)
 
 ---
  
-## 🛠 Building from Source
+## Building from Source
  
 ### Requirements
  
@@ -86,12 +86,11 @@ bun run tauri build
 - [x] macOS Apple Silicon support
 - [ ] aria2 integration 
 - [x] spotdl integration
-- [x] AUR package
-- [ ] UI refinements (feedback welcome — open an issue!)
+- [ ] AUR package
 
 </br>
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/my-feature`
@@ -101,13 +100,13 @@ Please [open an issue](https://github.com/NullCode1337/MediaMagnet/issues) first
  
 </br>
  
-## ⚖️ DISCLAIMER
+## DISCLAIMER
  
 MediaMagnet is a GUI frontend for numerous backends and does not itself host, cache, or redistribute any media, or provide any means to obtain said media. Users are responsible for ensuring their downloads comply with the terms of service of the sites they download from and applicable copyright law.
  
 ---
  
-⚠️ **Alpha software.** MediaMagnet is actively developed. Expect rough edges, and please [report any bugs](https://github.com/NullCode1337/MediaMagnet/issues).
+⚠️ **Alpha software.** MediaMagnet is in active development. Please [report any bugs](https://github.com/NullCode1337/MediaMagnet/issues) that you might encounter.
 
 </br>
 
