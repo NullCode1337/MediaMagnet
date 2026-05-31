@@ -251,7 +251,6 @@
     if (!targetTheme) return;
 
     import("tauri-plugin-m3").then(async ({ M3 }) => {
-      await M3.applyColors(targetTheme);
       await M3.setBarColor(targetTheme === "dark" ? "light" : "dark");
     });
 
