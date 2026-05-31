@@ -62,91 +62,104 @@
 
 {#snippet downloadCard(task: Task)}
   <Card.Root
-    class="overflow-hidden border-0 shadow-none relative rounded-2xl transition-all duration-200
-    {task.error
-      ? 'bg-destructive/10'
+    class="relative overflow-hidden rounded-xl border shadow-sm transition-all duration-300
+      {task.error
+      ? 'border-destructive/30 bg-destructive/5'
       : task.isPaused
-        ? 'bg-amber-500/10'
-        : 'bg-muted/40'}
-    {!task.isDownloading && !task.isPaused && !task.error ? 'opacity-60' : ''}"
+        ? 'border-amber-500/30 bg-amber-500/5'
+        : 'bg-muted/20'}
+      {!task.isDownloading && !task.isPaused && !task.error
+      ? 'opacity-60 hover:opacity-100'
+      : ''}"
   >
-    <Card.Content class="py-4 px-2.5 flex items-center gap-3">
-      <div class="flex-1 min-w-0">
-        <div class="flex justify-between items-baseline mb-0.5 gap-2">
+    <Card.Content class="flex flex-col p-3.5 space-y-3">
+      <div class="flex items-center justify-between w-full">
+        <button
+          type="button"
+          class="group flex items-center min-w-0 flex-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer truncate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
+          title="Click to copy URL"
+          onclick={() => copyUrl(task.url)}
+        >
+          <span class="truncate">{task.url}</span>
+        </button>
+
+        <div class="flex items-center shrink-0 gap-0.5">
+          {#if task.isDownloading}
+            <Button
+              variant="ghost"
+              size="icon"
+              class="h-7 w-7 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-all hover:scale-105 active:scale-95"
+              onclick={() => pauseTask(task.id)}
+              title="Pause download"
+            >
+              <Pause size={14} />
+            </Button>
+          {:else if task.isPaused}
+            <Button
+              variant="ghost"
+              size="icon"
+              class="h-7 w-7 rounded-lg text-amber-600 hover:bg-amber-500/10 hover:text-amber-700 transition-all hover:scale-105 active:scale-95"
+              onclick={() => resumeTask(task.id, task.url)}
+              title="Resume download"
+            >
+              <Play size={14} />
+            </Button>
+          {/if}
+
+          {#if task.isDownloading || task.isPaused || task.error}
+            <Button
+              variant="ghost"
+              size="icon"
+              class="h-7 w-7 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all hover:scale-105 active:scale-95"
+              onclick={() => cancelTask(task.id, task.url)}
+              title="Cancel and remove files"
+            >
+              <Trash2 size={14} />
+            </Button>
+          {/if}
+        </div>
+      </div>
+
+      <div class="flex flex-col">
+        <div class="flex justify-between items-center">
           <p
-            class="text-xs font-medium truncate text-muted-foreground flex-1"
-            title={task.url}
+            class="text-xs font-medium truncate leading-tight {task.error
+              ? 'text-destructive'
+              : 'text-foreground'}"
+            title={task.error ?? task.status}
           >
-            {task.url}
+            {task.error ?? task.status}
           </p>
+
           {#if task.error}
             <span
-              class="text-xs font-bold text-destructive tracking-wide shrink-0"
+              class="text-xs font-semibold uppercase tracking-wider text-destructive bg-destructive/10 px-1.5 py-0.5 rounded-full"
               >Failed</span
             >
           {:else if task.isPaused}
             <span
-              class="text-xs font-bold text-amber-700 tracking-wide shrink-0"
+              class="text-xs font-semibold uppercase tracking-wider text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded-full"
               >Paused</span
             >
           {:else if !task.isDownloading}
-            <span class="text-xs font-bold text-primary tracking-wide shrink-0"
-              >Done</span
+            <span
+              class="text-xs font-semibold uppercase tracking-wider text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded-full"
+              >Complete</span
             >
           {:else}
-            <span class="text-xs font-bold text-foreground shrink-0"
+            <span
+              class="text-xs font-semibold tabular-nums text-muted-foreground"
               >{Math.round(task.progress)}%</span
             >
           {/if}
         </div>
 
-        <p
-          class="text-sm font-medium truncate mb-2.5 {task.error
-            ? 'text-destructive'
-            : 'text-foreground'}"
-          title={task.error ?? task.status}
-        >
-          {task.error ?? task.status}
-        </p>
-
         {#if !task.error}
-          <Progress value={task.progress} class="h-2 bg-muted rounded-full" />
-        {/if}
-      </div>
-
-      <div class="flex items-center gap-1.5">
-        {#if task.isDownloading}
-          <Button
-            variant="ghost"
-            size="icon"
-            class="h-9 w-9 rounded-full text-muted-foreground hover:bg-foreground/10"
-            onclick={() => pauseTask(task.id)}
-            title="Pause download"
+          <div
+            class="relative h-1.5 w-full overflow-hidden rounded-full bg-muted/40 mt-1.5"
           >
-            <Pause size={16} />
-          </Button>
-        {:else if task.isPaused}
-          <Button
-            variant="ghost"
-            size="icon"
-            class="h-9 w-9 rounded-full text-primary hover:bg-primary/10"
-            onclick={() => resumeTask(task.id, task.url)}
-            title="Resume download"
-          >
-            <Play size={16} />
-          </Button>
-        {/if}
-
-        {#if task.isDownloading || task.isPaused || task.error}
-          <Button
-            variant="ghost"
-            size="icon"
-            class="h-9 w-9 rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-            onclick={() => cancelTask(task.id, task.url)}
-            title="Cancel and remove files"
-          >
-            <Trash2 size={16} />
-          </Button>
+            <Progress value={task.progress} class="h-2 bg-muted rounded-full" />
+          </div>
         {/if}
       </div>
     </Card.Content>
@@ -194,11 +207,11 @@
   </button>
 {/snippet}
 
-<div class="space-y-6 w-full max-w-full mx-auto py-1 px-4 sm:px-8 md:px-12">
+<div class="space-y-6 w-full max-w-full mx-auto p-2 sm:px-2">
   <section>
     <div class="flex items-center justify-between mb-3">
       <div class="flex items-center gap-2">
-        <h3 class="text-sm font-semibold tracking-wide text-foreground">
+        <h3 class="text-sm mx-2 font-semibold tracking-wide text-foreground">
           Downloads
         </h3>
         {#if active > 0}
@@ -239,7 +252,7 @@
 
   <section class="flex flex-col mt-2">
     <div class="flex items-center justify-between mb-3">
-      <h3 class="text-sm font-semibold tracking-wide text-foreground">
+      <h3 class="text-sm mx-2 font-semibold tracking-wide text-foreground">
         History
       </h3>
       {#if history.length > 0}
