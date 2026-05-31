@@ -15,21 +15,12 @@
   import Downloader from "$lib/components/Downloader.svelte";
   import History from "$lib/components/History.svelte";
   import Titlebar from "$lib/components/Titlebar.svelte";
+
+  import logo from "$lib/assets/favicon.png";
   import { uiState } from "$lib/store.svelte";
   import { settingsStore } from "$lib/settings.svelte";
-
   import { toast, Toaster } from "svelte-sonner";
 
-  $effect(() => {
-    const unlisten = listen<{ message: string }>("notification", (event) => {
-      let message = event.payload as unknown as string;
-      toast(message);
-    });
-
-    return () => {
-      unlisten.then((f) => f());
-    };
-  });
 
   interface Task {
     id: string;
@@ -66,6 +57,7 @@
       name: string;
       timestamp: string;
       status: "success" | "error";
+      error?: string;
     }[]
   >([]);
 
@@ -75,6 +67,19 @@
       ? 0
       : tasks.reduce((sum, t) => sum + t.progress, 0) / tasks.length,
   );
+
+  let mobileTabIndex = $derived(() => {
+    switch (uiState.activeTab) {
+      case "home":
+        return 0;
+      case "downloads":
+        return 1;
+      case "history":
+        return 2;
+      default:
+        return 1;
+    }
+  });
 
   function updateTask(id: string, patch: Partial<Task>) {
     tasks = tasks.map((t) => (t.id === id ? { ...t, ...patch } : t));
@@ -131,6 +136,8 @@
           isPaused: false,
         });
       });
+
+      uiState.activeTab = "downloads";
     }
   }
 
@@ -183,9 +190,7 @@
     try {
       await invoke("cancel_all_downloads");
       tasks.forEach((t) => {
-        if (t.isDownloading) {
-          removeTask(t.id);
-        }
+        if (t.isDownloading) removeTask(t.id);
       });
     } catch (err) {
       await invoke("notify", { body: "Failed to stop all: " + err });
@@ -226,6 +231,23 @@
 
   $effect(() => {
     isCollapsed = uiState.innerWidth < 1024;
+  });
+
+  $effect(() => {
+    if (uiState.innerWidth >= 640 && uiState.activeTab === "home") {
+      uiState.activeTab = "downloads";
+    }
+  });
+
+  $effect(() => {
+    const unlisten = listen<{ message: string }>("notification", (event) => {
+      let message = event.payload as unknown as string;
+      toast(message);
+    });
+
+    return () => {
+      unlisten.then((f) => f());
+    };
   });
 
   $effect(() => {
@@ -377,10 +399,10 @@
       <Sidebar bind:isCollapsed {diskUsage} {currentPlatform} />
 
       <main
-        class="flex flex-col h-screen w-full bg-background text-foreground overflow-hidden"
+        class="flex flex-col h-full w-full bg-background text-foreground overflow-hidden"
       >
         <header
-          class="h-20 flex items-center px-8 bg-background/50 sticky top-0 z-10 gap-4 shrink-0"
+          class="hidden sm:flex h-20 items-center px-8 bg-background/50 sticky top-0 z-10 gap-4 shrink-0"
         >
           <div class="flex-1 max-w-2xl mx-auto flex items-center gap-2">
             <div class="relative flex-1">
@@ -413,16 +435,51 @@
           </div>
         </header>
 
-        <div
-          class="flex-1 p-8 overflow-y-auto overflow-x-hidden scrollbar-thin pb-12"
-        >
-          <div class="max-w-5xl mx-auto w-full flex flex-col gap-8">
-            {#if uiState.activeTab === "history"}
-              <div>
-                <History bind:history />
+        <div class="flex-1 w-full overflow-hidden relative">
+          <div
+            class="sm:hidden w-full h-full flex transition-transform duration-300 ease-out"
+            style="transform: translateX(-{mobileTabIndex() * 100}%);"
+          >
+            <div class="w-full h-full shrink-0 overflow-y-auto p-6">
+              <div
+                class="max-w-md mx-auto w-full h-full flex flex-col items-center justify-center gap-2"
+              >
+                <div class="flex flex-row items-center gap-3">
+                  <img src={logo} alt="logo" class="w-16 h-16" />
+                  <h2 class="text-2xl font-bold tracking-tight">MediaMagnet</h2>
+                </div>
+
+                <div class="w-full flex items-center gap-2">
+                  <form
+                    onsubmit={(e) => {
+                      e.preventDefault();
+                      pasteOrDownload();
+                    }}
+                    class="flex-1"
+                  >
+                    <Input
+                      placeholder="Enter URL"
+                      bind:value={urlInput}
+                      class="h-12 bg-muted/40 focus-visible:ring-1 text-sm rounded-xl w-full"
+                    />
+                  </form>
+                  <Button
+                    variant="secondary"
+                    onclick={pasteOrDownload}
+                    class="h-12 w-12 bg-primary-foreground shrink-0 rounded-xl shadow-md flex items-center justify-center"
+                  >
+                    {#if urlInput === ""}
+                      <Clipboard size={18} />
+                    {:else}
+                      <Play size={18} />
+                    {/if}
+                  </Button>
+                </div>
               </div>
-            {:else}
-              <div>
+            </div>
+
+            <div class="w-full h-full shrink-0 overflow-y-auto p-6">
+              <div class="max-w-5xl mx-auto w-full pb-20">
                 <Downloader
                   {tasks}
                   pauseTask={pauseDownload}
@@ -431,7 +488,35 @@
                   {stopAllDownloads}
                 />
               </div>
-            {/if}
+            </div>
+
+            <div class="w-full h-full shrink-0 overflow-y-auto p-6">
+              <div class="max-w-5xl mx-auto w-full pb-20">
+                <History bind:history />
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="hidden sm:block w-full h-full p-8 overflow-y-auto overflow-x-hidden scrollbar-thin pb-12"
+          >
+            <div class="max-w-5xl mx-auto w-full flex flex-col gap-8">
+              {#if uiState.activeTab === "history"}
+                <div>
+                  <History bind:history />
+                </div>
+              {:else}
+                <div>
+                  <Downloader
+                    {tasks}
+                    pauseTask={pauseDownload}
+                    resumeTask={resumeDownload}
+                    cancelTask={cancelDownload}
+                    {stopAllDownloads}
+                  />
+                </div>
+              {/if}
+            </div>
           </div>
         </div>
       </main>
