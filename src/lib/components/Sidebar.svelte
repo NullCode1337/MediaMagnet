@@ -171,7 +171,7 @@
 
       <Separator class="hidden sm:block gap-1" />
 
-      {#if currentPlatform === "android"}
+      {#if currentPlatform !== "android"}
         {@render SidebarButton(FolderOpen, "Open folder", false, () =>
           settingsStore.openDownloadDir(),
         )}
