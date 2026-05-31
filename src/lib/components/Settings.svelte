@@ -115,20 +115,12 @@
     >
       {#if isMobile}
         <div class="flex items-center gap-1 px-2 h-14 bg-muted/40 shrink-0">
-          <Button
-            variant="ghost"
-            size="icon"
-            class="rounded-full cursor-pointer"
-            onclick={() => (menuOpen = false)}
-          >
-            <Icons.ArrowLeft size={20} />
-          </Button>
-          <span class="font-semibold text-base">Settings</span>
+          <span class="font-semibold mx-2 my-2 text-lg text-base">Settings</span>
         </div>
 
         <div class="flex-1 overflow-y-auto bg-muted/40 px-4 py-5 space-y-6">
           <div>
-            <p class="text-sm text-muted-foreground font-bold px-1 ml-2 mb-4">
+            <p class="text-xs text-muted-foreground font-bold px-1 ml-2 mb-4">
               Configuration
             </p>
             <div
@@ -150,7 +142,7 @@
           </div>
 
           <div>
-            <p class="text-sm text-muted-foreground font-bold px-1 ml-2 mb-4">
+            <p class="text-xs text-muted-foreground font-bold px-1 ml-2 mb-4">
               Backend
             </p>
             <div
