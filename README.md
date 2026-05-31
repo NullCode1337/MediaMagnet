@@ -17,13 +17,13 @@
  
 ## Overview
  
-MediaMagnet puts the power of [gallery-dl](https://github.com/mikf/gallery-dl) and [yt-dlp](https://github.com/yt-dlp/yt-dlp) behind a clean, native desktop GUI. 
+MediaMagnet puts the power of [gallery-dl](https://github.com/mikf/gallery-dl), [yt-dlp](https://github.com/yt-dlp/yt-dlp) and more behind a clean, native desktop GUI. 
 
 Paste a URL, configure your options, and let MediaMagnet handle the rest.
 
 ## Features
  
-- **Unified downloader**: *Smart selection between gallery-dl and yt-dlp to download media
+- **Unified downloader**: *Smart selection between gallery-dl, yt-dlp and spotdl to download media
 - **Headless mode**: Exclusive feature - Download as you browse through sites!
 - **Custom arguments**: Pass **global** or **per-site arguments** directly to the backends (API keys, user IDs, anything supported by backend)
 - **Cookie Manager**: Native cookie manager which supports both JSON and Netscape formats!
@@ -81,11 +81,12 @@ bun run tauri build
  
 - [x] gallery-dl integration
 - [x] yt-dlp integration
-- [x] Custom arguments (global & site-wide)
+- [x] spotdl integration
+- [x] Custom argument templates (global & site-wide)
 - [x] Settings import / export
 - [x] macOS Apple Silicon support
-- [ ] aria2 integration 
-- [x] spotdl integration
+- [ ] aria2 integration
+- [ ] Torrent streaming
 - [ ] AUR package
 
 </br>
