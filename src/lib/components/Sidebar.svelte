@@ -17,6 +17,12 @@
   let menuOpen = $state(false);
   let { isCollapsed = $bindable(), diskUsage, currentPlatform } = $props();
 
+  let sf = $state(0);
+  let tabindex = $derived(uiState.activeTab === "home" ? 0 : 1);
+  let pilloffset = $derived(
+    Math.max(0, Math.min(52, (tabindex + (sf as number)) * 52))
+  );
+
   let barVisible = $state(true);
   let barRestore: ReturnType<typeof setTimeout>;
 
@@ -87,11 +93,11 @@
   <Button
     variant="ghost"
     onclick={onClick}
-    class="w-12 sm:w-full h-14 sm:h-11 transition-all duration-200 cursor-pointer justify-center 
+    class="w-12 sm:w-full h-14 sm:h-11 transition-all duration-200 cursor-pointer justify-center relative z-10
       {mobileOnly ? 'sm:hidden flex' : ''} 
       {isCollapsed ? '' : 'sm:justify-start sm:gap-4 sm:px-4'}
       {active
-      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+      ? 'sm:bg-sidebar-accent text-sidebar-accent-foreground'
       : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'}"
   >
     <IconComponent class="size-5 text-sidebar-foreground/70 sm:!w-5 sm:!h-5" />
@@ -140,27 +146,36 @@
     <nav
       class="pointer-events-auto flex flex-row gap-1 sm:flex-col sm:space-y-1 w-full"
     >
-      {@render SidebarButton(
-        CirclePlus,
-        "New Link",
-        uiState.activeTab === "home",
-        () => (uiState.activeTab = "home"),
-        true,
-      )}
+      <div class="relative flex flex-row gap-1 sm:flex-col sm:space-y-1">
+        <div
+          class="sm:hidden absolute inset-y-1 w-12 rounded-xl bg-sidebar-accent pointer-events-none z-0"
+          style="transform: translateX({pilloffset}px); transition: transform {(sf as number) !== 0 ? '0ms' : '280ms'} cubic-bezier(0.25, 0.46, 0.45, 0.94);"
+        ></div>
 
-      {@render SidebarButton(
-        Download,
-        "Downloads",
-        uiState.activeTab === "downloads" ||
-          (!uiState.activeTab && uiState.innerWidth >= 640),
-        () => (uiState.activeTab = "downloads"),
-      )}
+        {@render SidebarButton(
+          CirclePlus,
+          "New Link",
+          uiState.activeTab === "home",
+          () => (uiState.activeTab = "home"),
+          true,
+        )}
+
+        {@render SidebarButton(
+          Download,
+          "Downloads",
+          uiState.activeTab === "downloads" ||
+            (!uiState.activeTab && uiState.innerWidth >= 640),
+          () => (uiState.activeTab = "downloads"),
+        )}
+      </div>
 
       <Separator class="hidden sm:block gap-1" />
 
-      {@render SidebarButton(FolderOpen, "Open folder", false, () =>
-        settingsStore.openDownloadDir(),
-      )}
+      {#if currentPlatform === "android"}
+        {@render SidebarButton(FolderOpen, "Open folder", false, () =>
+          settingsStore.openDownloadDir(),
+        )}
+      {/if}
 
       <SettingsDialog {isCollapsed} {menuOpen} {currentPlatform} />
     </nav>
