@@ -4,7 +4,14 @@
   import { Button } from "$lib/components/ui/button";
   import { writeText } from "@tauri-apps/plugin-clipboard-manager";
   import { toast } from "svelte-sonner";
-  import { Pause, Play, Trash2, CircleX, CircleCheck, CircleAlert } from "@lucide/svelte";
+  import {
+    Pause,
+    Play,
+    Trash2,
+    CircleX,
+    CircleCheck,
+    CircleAlert,
+  } from "@lucide/svelte";
 
   interface Task {
     id: string;
@@ -162,25 +169,32 @@
       {:else}
         <CircleAlert size={18} class="text-destructive shrink-0" />
       {/if}
+
       <div class="flex flex-col overflow-hidden min-w-0 flex-1">
-        <span class="text-sm truncate font-medium text-foreground block"
-          >{item.url}</span
-        >
+        <div class="flex items-baseline justify-between gap-4 w-full">
+          <span
+            class="text-sm truncate font-medium text-foreground min-w-0 flex-1"
+          >
+            {item.url}
+          </span>
+          <span class="text-xs text-muted-foreground shrink-0 font-medium">
+            {item.timestamp}
+          </span>
+        </div>
+
         {#if item.status === "error" && item.error}
           <span
-            class="text-xs text-destructive leading-normal break-words font-medium mt-0.5"
-            >{item.error}</span
+            class="text-xs text-destructive leading-normal break-words font-medium mt-1 w-full"
           >
+            {item.error}
+          </span>
         {/if}
       </div>
     </div>
-    <span class="text-xs text-muted-foreground shrink-0 font-medium ml-4"
-      >{item.timestamp}</span
-    >
   </button>
 {/snippet}
 
-<div class="space-y-6 w-full max-w-2xl mx-auto py-4 px-1">
+<div class="space-y-6 w-full max-w-full mx-auto py-1 px-4 sm:px-8 md:px-12">
   <section>
     <div class="flex items-center justify-between mb-3">
       <div class="flex items-center gap-2">
@@ -215,7 +229,7 @@
         </p>
       </div>
     {:else}
-      <div class="space-y-2.5">
+      <div class="grid grid-cols-1 gap-2.5">
         {#each tasks as task (task.id)}
           {@render downloadCard(task)}
         {/each}
@@ -243,7 +257,7 @@
     {#if history.length === 0}
       <div class="h-28 flex flex-col items-center justify-center"></div>
     {:else}
-      <div class="space-y-2 w-full">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 w-full">
         {#each history as item, index (index)}
           {@render historyCard(item)}
         {/each}
