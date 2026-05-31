@@ -13,6 +13,7 @@
 
   import Sidebar from "$lib/components/Sidebar.svelte";
   import Downloader from "$lib/components/Downloader.svelte";
+  import Settings from "$lib/components/Settings.svelte";
   import Titlebar from "$lib/components/Titlebar.svelte";
 
   import logo from "$lib/assets/favicon.png";
@@ -71,6 +72,9 @@
       case "home":
         return 0;
       case "downloads":
+        return 1;
+      case "settings":
+        return 2;
       default:
         return 1;
     }
@@ -482,6 +486,11 @@
                   cancelTask={cancelDownload}
                   {stopAllDownloads}
                 />
+              </div>
+            </div>
+            <div class="w-full h-full shrink-0 overflow-y-auto p-0">
+              <div class="flex flex-col h-full bg-background">
+                <Settings isCollapsed={true} {currentPlatform} />
               </div>
             </div>
           </div>

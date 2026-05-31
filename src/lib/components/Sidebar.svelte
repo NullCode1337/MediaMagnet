@@ -7,6 +7,7 @@
     FolderOpen,
     Download,
     CirclePlus,
+    Settings,
   } from "@lucide/svelte";
   import { settingsStore } from "$lib/settings.svelte";
   import { uiState } from "$lib/store.svelte";
@@ -18,9 +19,13 @@
   let { isCollapsed = $bindable(), diskUsage, currentPlatform } = $props();
 
   let sf = $state(0);
-  let tabindex = $derived(uiState.activeTab === "home" ? 0 : 1);
+  let tabindex = $derived(
+    uiState.activeTab === "home" 
+      ? 0
+      : uiState.activeTab === "downloads" ? 1 : 2,
+  );
   let pilloffset = $derived(
-    Math.max(0, Math.min(52, (tabindex + (sf as number)) * 52))
+    Math.max(0, Math.min(104, (tabindex + (sf as number)) * 52))
   );
 
   let barVisible = $state(true);
@@ -149,7 +154,10 @@
       <div class="relative flex flex-row gap-1 sm:flex-col sm:space-y-1">
         <div
           class="sm:hidden absolute inset-y-1 w-12 rounded-xl bg-sidebar-accent pointer-events-none z-0"
-          style="transform: translateX({pilloffset}px); transition: transform {(sf as number) !== 0 ? '0ms' : '280ms'} cubic-bezier(0.25, 0.46, 0.45, 0.94);"
+          style="transform: translateX({pilloffset}px);
+                 transition: transform {(sf as number) !== 0
+            ? '0ms'
+            : '280ms'} cubic-bezier(0.25, 0.46, 0.45, 0.94);"
         ></div>
 
         {@render SidebarButton(
@@ -163,10 +171,18 @@
         {@render SidebarButton(
           Download,
           "Downloads",
-          uiState.activeTab === "downloads" ||
-            (!uiState.activeTab && uiState.innerWidth >= 640),
+          uiState.activeTab === "downloads",
           () => (uiState.activeTab = "downloads"),
         )}
+
+        <div class="sm:hidden flex">
+          {@render SidebarButton(
+            Settings,
+            "Settings",
+            uiState.activeTab === "settings",
+            () => (uiState.activeTab = "settings"),
+          )}
+        </div>
       </div>
 
       <Separator class="hidden sm:block gap-1" />
@@ -177,7 +193,9 @@
         )}
       {/if}
 
-      <SettingsDialog {isCollapsed} {menuOpen} {currentPlatform} />
+      <div class="hidden sm:block">
+        <SettingsDialog {isCollapsed} bind:menuOpen {currentPlatform} />
+      </div>
     </nav>
   </div>
 
