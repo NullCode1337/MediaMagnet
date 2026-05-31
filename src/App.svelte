@@ -416,7 +416,7 @@
 
             <Button
               onclick={pasteOrDownload}
-              class="h-11 px-6 gap-2 cursor-pointer hover:bg-primary/80"
+              class="h-11 bg-primary px-6 gap-2 cursor-pointer hover:bg-primary/80"
             >
               {#if urlInput === ""}
                 <Clipboard size={16} />
@@ -460,7 +460,7 @@
                   <Button
                     variant="secondary"
                     onclick={pasteOrDownload}
-                    class="h-12 w-12 bg-primary-foreground shrink-0 rounded-xl shadow-md flex items-center justify-center"
+                    class="h-12 w-12 bg-primary shrink-0 rounded-xl shadow-md flex items-center justify-center"
                   >
                     {#if urlInput === ""}
                       <Clipboard size={18} />
@@ -489,7 +489,7 @@
           <div
             class="hidden sm:block w-full h-full p-8 overflow-y-auto overflow-x-hidden scrollbar-thin pb-12"
           >
-            <div class="max-w-5xl mx-auto w-full flex flex-col gap-8">
+            <div class="max-w-full w-full flex flex-col gap-8 mx-auto">
               <Downloader
                 {tasks}
                 bind:history
