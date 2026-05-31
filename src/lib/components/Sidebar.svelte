@@ -7,6 +7,7 @@
     FolderOpen,
     History,
     Download,
+    CirclePlus,
   } from "@lucide/svelte";
   import { settingsStore } from "$lib/settings.svelte";
   import { uiState } from "$lib/store.svelte";
@@ -81,12 +82,14 @@
   label: string,
   active: boolean,
   onClick: () => void,
+  mobileOnly = false,
 )}
   {@const IconComponent = icon}
   <Button
     variant="ghost"
     onclick={onClick}
     class="w-12 sm:w-full h-14 sm:h-11 transition-all duration-200 cursor-pointer justify-center 
+      {mobileOnly ? 'sm:hidden flex' : ''} 
       {isCollapsed ? '' : 'sm:justify-start sm:gap-4 sm:px-4'}
       {active
       ? 'bg-sidebar-accent text-sidebar-accent-foreground'
@@ -139,9 +142,18 @@
       class="pointer-events-auto flex flex-row gap-1 sm:flex-col sm:space-y-1 w-full"
     >
       {@render SidebarButton(
+        CirclePlus,
+        "New Link",
+        uiState.activeTab === "home",
+        () => (uiState.activeTab = "home"),
+        true,
+      )}
+
+      {@render SidebarButton(
         Download,
         "Downloads",
-        uiState.activeTab === "downloads",
+        uiState.activeTab === "downloads" ||
+          (!uiState.activeTab && uiState.innerWidth >= 640),
         () => (uiState.activeTab = "downloads"),
       )}
 
