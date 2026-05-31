@@ -5,7 +5,6 @@
     Menu,
     HardDrive,
     FolderOpen,
-    History,
     Download,
     CirclePlus,
   } from "@lucide/svelte";
@@ -155,13 +154,6 @@
         uiState.activeTab === "downloads" ||
           (!uiState.activeTab && uiState.innerWidth >= 640),
         () => (uiState.activeTab = "downloads"),
-      )}
-
-      {@render SidebarButton(
-        History,
-        "Recent History",
-        uiState.activeTab === "history",
-        () => (uiState.activeTab = "history"),
       )}
 
       <Separator class="hidden sm:block gap-1" />

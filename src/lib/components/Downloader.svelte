@@ -1,15 +1,10 @@
 <script lang="ts">
   import * as Card from "$lib/components/ui/card";
   import { Progress } from "$lib/components/ui/progress";
-  import {
-    LoaderCircle,
-    Pause,
-    Play,
-    Trash2,
-    CircleX,
-    CircleCheck,
-  } from "@lucide/svelte";
   import { Button } from "$lib/components/ui/button";
+  import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+  import { toast } from "svelte-sonner";
+  import { Pause, Play, Trash2, CircleX, CircleCheck, CircleAlert } from "@lucide/svelte";
 
   interface Task {
     id: string;
@@ -20,176 +15,239 @@
     isPaused: boolean;
     error: string | null;
   }
+  interface HistoryItem {
+    url: string;
+    name: string;
+    timestamp: string;
+    status: "success" | "error";
+    error?: string;
+  }
 
   let {
     tasks,
+    history = $bindable([]),
     pauseTask,
     resumeTask,
     cancelTask,
     stopAllDownloads,
   }: {
     tasks: Task[];
+    history: HistoryItem[];
     pauseTask: (id: string) => void;
     resumeTask: (id: string, url: string) => void;
     cancelTask: (id: string, url: string) => void;
     stopAllDownloads: () => void;
   } = $props();
 
-  let activeCount = $derived(tasks.filter((t) => t.isDownloading).length);
-  let hasAny = $derived(tasks.length > 0);
+  let active = $derived(tasks.filter((t) => t.isDownloading).length);
+  let historyActive = $derived(tasks.length > 0);
+
+  async function copyUrl(url: string) {
+    if (!url) return;
+    try {
+      await writeText(url);
+      toast("Copied to clipboard: " + url);
+    } catch (err) {
+      toast("Failed to copy: " + err);
+    }
+  }
 </script>
 
-<section>
-  <div class="flex items-center justify-between mb-4">
-    <h3
-      class="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.15em]"
-    >
-      Active Downloads
-      {#if activeCount > 0}
-        <span
-          class="ml-2 inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] font-bold"
-        >
-          {activeCount}
-        </span>
-      {/if}
-    </h3>
-
-    {#if activeCount > 1}
-      <Button
-        variant="ghost"
-        size="sm"
-        class="h-6 text-[10px] text-muted-foreground hover:text-destructive gap-1 cursor-pointer"
-        onclick={stopAllDownloads}
-      >
-        <CircleX size={12} />
-        Cancel all tasks
-      </Button>
-    {/if}
-  </div>
-
-  {#if !hasAny}
-    <div
-      class="h-32 flex flex-col items-center justify-center bg-muted/20 rounded-xl"
-    >
-      <p class="text-xs text-muted-foreground font-medium">
-        No active downloads
-      </p>
-    </div>
-  {:else}
-    <div class="space-y-2">
-      {#each tasks as task (task.id)}
-        <Card.Root
-          class="overflow-hidden border border-border bg-card shadow-sm relative rounded-xl
-            {task.error ? 'border-destructive/40 bg-destructive/5' : ''}
-            {task.isPaused ? 'border-amber-500/20 bg-amber-500/5' : ''}
-            {!task.isDownloading && !task.isPaused && !task.error
-            ? 'opacity-70'
-            : ''}"
-        >
-          <Card.Content class="p-4 flex items-center gap-4">
-            <div
-              class="h-10 w-10 flex items-center justify-center rounded-lg shrink-0 border
-                {task.error
-                ? 'bg-destructive/10 border-destructive/20'
-                : task.isPaused
-                  ? 'bg-amber-500/10 border-amber-500/20'
-                  : 'bg-primary/10 border-primary/20'}"
+{#snippet downloadCard(task: Task)}
+  <Card.Root
+    class="overflow-hidden border-0 shadow-none relative rounded-2xl transition-all duration-200
+    {task.error
+      ? 'bg-destructive/10'
+      : task.isPaused
+        ? 'bg-amber-500/10'
+        : 'bg-muted/40'}
+    {!task.isDownloading && !task.isPaused && !task.error ? 'opacity-60' : ''}"
+  >
+    <Card.Content class="py-4 px-2.5 flex items-center gap-3">
+      <div class="flex-1 min-w-0">
+        <div class="flex justify-between items-baseline mb-0.5 gap-2">
+          <p
+            class="text-xs font-medium truncate text-muted-foreground flex-1"
+            title={task.url}
+          >
+            {task.url}
+          </p>
+          {#if task.error}
+            <span
+              class="text-xs font-bold text-destructive tracking-wide shrink-0"
+              >Failed</span
             >
-              {#if task.error}
-                <CircleX size={20} class="text-destructive" />
-              {:else if task.isDownloading}
-                <LoaderCircle size={20} class="animate-spin text-primary" />
-              {:else if task.isPaused}
-                <Pause size={18} class="text-amber-600" />
-              {:else}
-                <CircleCheck size={20} class="text-primary" />
-              {/if}
-            </div>
+          {:else if task.isPaused}
+            <span
+              class="text-xs font-bold text-amber-700 tracking-wide shrink-0"
+              >Paused</span
+            >
+          {:else if !task.isDownloading}
+            <span class="text-xs font-bold text-primary tracking-wide shrink-0"
+              >Done</span
+            >
+          {:else}
+            <span class="text-xs font-bold text-foreground shrink-0"
+              >{Math.round(task.progress)}%</span
+            >
+          {/if}
+        </div>
 
-            <div class="flex-1 min-w-0">
-              <div class="flex justify-between items-start mb-1 gap-2">
-                <p
-                  class="text-[11px] font-medium truncate text-muted-foreground flex-1"
-                  title={task.url}
-                >
-                  {task.url}
-                </p>
+        <p
+          class="text-sm font-medium truncate mb-2.5 {task.error
+            ? 'text-destructive'
+            : 'text-foreground'}"
+          title={task.error ?? task.status}
+        >
+          {task.error ?? task.status}
+        </p>
 
-                {#if task.error}
-                  <span
-                    class="text-[11px] font-mono font-bold text-destructive shrink-0"
-                    >Failed</span
-                  >
-                {:else if task.isPaused}
-                  <span
-                    class="text-[11px] font-mono font-bold text-amber-600 shrink-0"
-                    >Paused</span
-                  >
-                {:else if !task.isDownloading}
-                  <span
-                    class="text-[11px] font-mono font-bold text-primary shrink-0"
-                    >Done</span
-                  >
-                {:else}
-                  <span
-                    class="text-[11px] font-mono font-bold text-muted-foreground shrink-0"
-                  >
-                    {Math.round(task.progress)}%
-                  </span>
-                {/if}
-              </div>
+        {#if !task.error}
+          <Progress value={task.progress} class="h-2 bg-muted rounded-full" />
+        {/if}
+      </div>
 
-              <p
-                class="text-xs font-semibold truncate mb-2
-                  {task.error ? 'text-destructive' : 'text-card-foreground'}"
-                title={task.error ?? task.status}
-              >
-                {task.error ?? task.status}
-              </p>
+      <div class="flex items-center gap-1.5">
+        {#if task.isDownloading}
+          <Button
+            variant="ghost"
+            size="icon"
+            class="h-9 w-9 rounded-full text-muted-foreground hover:bg-foreground/10"
+            onclick={() => pauseTask(task.id)}
+            title="Pause download"
+          >
+            <Pause size={16} />
+          </Button>
+        {:else if task.isPaused}
+          <Button
+            variant="ghost"
+            size="icon"
+            class="h-9 w-9 rounded-full text-primary hover:bg-primary/10"
+            onclick={() => resumeTask(task.id, task.url)}
+            title="Resume download"
+          >
+            <Play size={16} />
+          </Button>
+        {/if}
 
-              {#if !task.error}
-                <Progress value={task.progress} class="h-1.5 bg-secondary" />
-              {/if}
-            </div>
+        {#if task.isDownloading || task.isPaused || task.error}
+          <Button
+            variant="ghost"
+            size="icon"
+            class="h-9 w-9 rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+            onclick={() => cancelTask(task.id, task.url)}
+            title="Cancel and remove files"
+          >
+            <Trash2 size={16} />
+          </Button>
+        {/if}
+      </div>
+    </Card.Content>
+  </Card.Root>
+{/snippet}
 
-            <div class="flex items-center gap-1">
-              {#if task.isDownloading}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  class="h-7 w-7 shrink-0 text-muted-foreground hover:bg-accent transition-colors"
-                  onclick={() => pauseTask(task.id)}
-                  title="Pause download"
-                >
-                  <Pause size={14} />
-                </Button>
-              {:else if task.isPaused}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  class="h-7 w-7 shrink-0 text-primary hover:bg-primary/10 transition-colors"
-                  onclick={() => resumeTask(task.id, task.url)}
-                  title="Resume download"
-                >
-                  <Play size={14} />
-                </Button>
-              {/if}
-
-              {#if task.isDownloading || task.isPaused || task.error}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  class="h-7 w-7 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-                  onclick={() => cancelTask(task.id, task.url)}
-                  title="Cancel and completely remove files"
-                >
-                  <Trash2 size={14} />
-                </Button>
-              {/if}
-            </div>
-          </Card.Content>
-        </Card.Root>
-      {/each}
+{#snippet historyCard(item: HistoryItem)}
+  <button
+    type="button"
+    class="flex items-center justify-between py-3 px-2.5 rounded-2xl w-full min-w-0 transition-all cursor-pointer hover:bg-muted/60 text-left shrink-0 border-0
+    {item.status === 'error'
+      ? 'bg-destructive/10 hover:bg-destructive/15'
+      : 'bg-muted/30'}"
+    onclick={() => copyUrl(item.url)}
+    title="Click to copy URL"
+  >
+    <div class="flex items-center gap-3.5 overflow-hidden min-w-0 flex-1">
+      {#if item.status === "success"}
+        <CircleCheck size={18} class="text-primary shrink-0" />
+      {:else}
+        <CircleAlert size={18} class="text-destructive shrink-0" />
+      {/if}
+      <div class="flex flex-col overflow-hidden min-w-0 flex-1">
+        <span class="text-sm truncate font-medium text-foreground block"
+          >{item.url}</span
+        >
+        {#if item.status === "error" && item.error}
+          <span
+            class="text-xs text-destructive leading-normal break-words font-medium mt-0.5"
+            >{item.error}</span
+          >
+        {/if}
+      </div>
     </div>
-  {/if}
-</section>
+    <span class="text-xs text-muted-foreground shrink-0 font-medium ml-4"
+      >{item.timestamp}</span
+    >
+  </button>
+{/snippet}
+
+<div class="space-y-6 w-full max-w-2xl mx-auto py-4 px-1">
+  <section>
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <h3 class="text-sm font-semibold tracking-wide text-foreground">
+          Downloads
+        </h3>
+        {#if active > 0}
+          <span
+            class="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-xs font-medium"
+            >{active}</span
+          >
+        {/if}
+      </div>
+      {#if active > 1}
+        <Button
+          variant="ghost"
+          size="sm"
+          class="h-8 text-xs rounded-full text-destructive hover:bg-destructive/10 gap-1.5 cursor-pointer font-medium"
+          onclick={stopAllDownloads}
+        >
+          <CircleX size={14} /> Cancel all
+        </Button>
+      {/if}
+    </div>
+
+    {#if !historyActive}
+      <div
+        class="h-28 flex flex-col items-center justify-center bg-muted/20 rounded-3xl"
+      >
+        <p class="text-sm text-muted-foreground font-medium">
+          No active downloads
+        </p>
+      </div>
+    {:else}
+      <div class="space-y-2.5">
+        {#each tasks as task (task.id)}
+          {@render downloadCard(task)}
+        {/each}
+      </div>
+    {/if}
+  </section>
+
+  <section class="flex flex-col mt-2">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="text-sm font-semibold tracking-wide text-foreground">
+        History
+      </h3>
+      {#if history.length > 0}
+        <Button
+          variant="ghost"
+          size="sm"
+          class="text-xs h-8 px-3 rounded-full text-primary hover:bg-primary/10 cursor-pointer font-medium"
+          onclick={() => (history = [])}
+        >
+          Clear History
+        </Button>
+      {/if}
+    </div>
+
+    {#if history.length === 0}
+      <div class="h-28 flex flex-col items-center justify-center"></div>
+    {:else}
+      <div class="space-y-2 w-full">
+        {#each history as item, index (index)}
+          {@render historyCard(item)}
+        {/each}
+      </div>
+    {/if}
+  </section>
+</div>
