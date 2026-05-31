@@ -438,13 +438,21 @@
             class="sm:hidden w-full h-full flex transition-transform duration-300 ease-out"
             style="transform: translateX(-{mobileTabIndex() * 100}%);"
           >
-            <div class="w-full h-full shrink-0 overflow-y-auto p-6">
+            <div
+              class="w-full h-full shrink-0 overflow-y-auto px-6 pt-4 pb-32 flex flex-col justify-center"
+            >
               <div
-                class="max-w-md mx-auto w-full h-full flex flex-col items-center justify-center gap-2"
+                class="max-w-md mx-auto w-full flex flex-col items-center gap-3"
               >
-                <div class="flex flex-row items-center gap-3">
-                  <img src={logo} alt="logo" class="w-16 h-16" />
-                  <h2 class="text-2xl font-bold tracking-tight">MediaMagnet</h2>
+                <div
+                  class="flex flex-row items-center justify-center gap-3 w-full"
+                >
+                  <img src={logo} alt="logo" class="w-12 h-12 object-contain" />
+                  <h2
+                    class="text-2xl font-bold tracking-tight text-foreground leading-none"
+                  >
+                    MediaMagnet
+                  </h2>
                 </div>
 
                 <div class="w-full flex items-center gap-2">
@@ -475,9 +483,8 @@
                 </div>
               </div>
             </div>
-
-            <div class="w-full h-full shrink-0 overflow-y-auto p-6">
-              <div class="max-w-5xl mx-auto w-full pb-20">
+            <div class="w-full h-full shrink-0 overflow-y-auto p-6 pb-32">
+              <div class="max-w-5xl mx-auto w-full">
                 <Downloader
                   {tasks}
                   bind:history
@@ -488,8 +495,9 @@
                 />
               </div>
             </div>
-            <div class="w-full h-full shrink-0 overflow-y-auto p-0">
-              <div class="flex flex-col h-full bg-background">
+
+            <div class="w-full h-full shrink-0 overflow-y-auto p-0 pb-32">
+              <div class="flex flex-col min-h-full bg-background">
                 <Settings isCollapsed={true} {currentPlatform} />
               </div>
             </div>
