@@ -77,7 +77,7 @@ bun run tauri build
  
 ---
  
-## 🗺 Roadmap
+## Roadmap
  
 - [x] gallery-dl integration
 - [x] yt-dlp integration
@@ -89,8 +89,6 @@ bun run tauri build
 - [ ] Torrent streaming
 - [ ] AUR package
 
-</br>
-
 ## Contributing
 
 1. Fork the repository
@@ -98,9 +96,7 @@ bun run tauri build
 3. Commit your changes: `git commit -m 'Add my feature'`
 4. Push and open a Pull Request
 Please [open an issue](https://github.com/NullCode1337/MediaMagnet/issues) first for larger changes so we can discuss before you start working on the changes
- 
-</br>
- 
+
 ## DISCLAIMER
  
 MediaMagnet is a GUI frontend for numerous backends and does not itself host, cache, or redistribute any media, or provide any means to obtain said media. Users are responsible for ensuring their downloads comply with the terms of service of the sites they download from and applicable copyright law.
