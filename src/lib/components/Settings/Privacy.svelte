@@ -9,12 +9,12 @@
 
   const PRIVACY_SWITCHES = [
     {
-      id: "notifications",
+      id: "native_notifications",
       label: "Desktop Notifications",
       desc: "Alert when downloads finish or fail",
     },
     {
-      id: "clear_on_exit",
+      id: "clear_cookies_on_exit",
       label: "Clear Cookies on Exit",
       desc: "Wipe cookies and cache when closing",
     },

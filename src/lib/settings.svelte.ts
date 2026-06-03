@@ -9,15 +9,20 @@ import { readTextFile } from "@tauri-apps/plugin-fs";
 import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
 
 export interface Config {
-  download_path: string;
-  user_agent: string;
+  // app
   dark_mode: boolean;
   accent_hue: number;
   always_on_top: boolean;
-  show_custom: boolean;
-  custom_type: string;
-  notifications: boolean;
-  clear_on_exit: boolean;
+  custom_titlebar: boolean;
+  custom_titlebar_type: string;
+  native_notifications: boolean;
+  clear_cookies_on_exit: boolean;
+
+  // download 
+  download_path: string;
+  user_agent: string;
+  custom_python: boolean;
+  custom_python_path: string;
 
   // yt-dlp
   yt_format: string;

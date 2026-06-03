@@ -7,7 +7,7 @@ export const uiState = $state({
   activeTab: "home" as "downloads" | "home" | "settings",
 
   get showCustom() {
-    return settingsStore.config?.show_custom ?? true;
+    return settingsStore.config?.custom_titlebar ?? true;
   },
 
   get headless() {
