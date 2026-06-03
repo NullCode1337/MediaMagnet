@@ -2,7 +2,7 @@
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
-  import { settings } from "$lib/utils/settings.svelte";
+  import { settings } from "$lib/stores/settings.svelte";
   import SwitchRows from "$lib/components/Settings/SwitchRows.svelte";
 
   let {

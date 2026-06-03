@@ -17,8 +17,8 @@
   import Titlebar from "$lib/components/Titlebar.svelte";
 
   import logo from "$lib/assets/favicon.png";
-  import { uiState } from "$lib/utils/store.svelte";
-  import { settings } from "$lib/utils/settings.svelte";
+  import { uiState } from "$lib/stores/store.svelte";
+  import { settings } from "$lib/stores/settings.svelte";
   import { toast, Toaster } from "svelte-sonner";
 
   interface Task {

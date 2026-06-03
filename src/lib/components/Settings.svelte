@@ -5,8 +5,8 @@
   import { invoke } from "@tauri-apps/api/core";
   import { open, ask } from "@tauri-apps/plugin-dialog";
 
-  import { uiState } from "$lib/utils/store.svelte";
-  import { settings, type Config } from "$lib/utils/settings.svelte";
+  import { uiState } from "$lib/stores/store.svelte";
+  import { settings, type Config } from "$lib/stores/settings.svelte";
 
   import GeneralTab from "$lib/components/Settings/General.svelte";
   import DownloadsTab from "$lib/components/Settings/Download.svelte";

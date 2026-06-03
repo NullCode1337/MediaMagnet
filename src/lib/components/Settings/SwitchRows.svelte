@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Label } from "$lib/components/ui/label";
   import { Switch } from "$lib/components/ui/switch";
-  import { settings } from "$lib/utils/settings.svelte";
+  import { settings } from "$lib/stores/settings.svelte";
 
   let {
     items,
