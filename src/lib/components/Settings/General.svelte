@@ -1,9 +1,9 @@
 <script lang="ts">
-  /* eslint-disable no-useless-assignment */
+  import { hueToHex, hexToHue } from "$lib/utils/color";
   import { Label } from "$lib/components/ui/label";
-  import SwitchRows from "./SwitchRows.svelte";
-  import { settingsStore } from "$lib/settings.svelte";
+  import { settings } from "$lib/utils/settings.svelte";
   import { userPrefersMode } from "mode-watcher";
+  import SwitchRows from "./SwitchRows.svelte";
 
   let {
     switchClass,
@@ -21,100 +21,43 @@
     },
     {
       id: "custom_titlebar",
-      label: "Custom Decorations",
-      desc: "Show custom title bar with special features",
+      label: "Custom Titlebar",
+      desc: "Use custom title bar allowing headless mode",
     },
   ];
 
-  let showCustom = $derived(settingsStore.config?.custom_titlebar ?? false);
-  let customType = $derived(settingsStore.config?.custom_titlebar_type ?? "system");
-  let hue = $derived(settingsStore.config?.accent_hue ?? 260);
+  let showCustom = $derived(settings.config?.custom_titlebar ?? false);
+  let customType = $derived(
+    settings.config?.custom_titlebar_type ?? "system",
+  );
+  let hue = $derived(settings.config?.accent_hue ?? 260);
 
-  function onSliderInput(e: Event) {
-    settingsStore.update({
-      accent_hue: Number((e.target as HTMLInputElement).value),
-    });
-  }
-
-  function hueToHex(h: number): string {
-    const s = 1,
-      l = 0.5;
-    const c = (1 - Math.abs(2 * l - 1)) * s;
-    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
-    const m = l - c / 2;
-    let r = 0,
-      g = 0,
-      b = 0;
-    if (h < 60) {
-      r = c;
-      g = x;
-      b = 0;
-    } else if (h < 120) {
-      r = x;
-      g = c;
-      b = 0;
-    } else if (h < 180) {
-      r = 0;
-      g = c;
-      b = x;
-    } else if (h < 240) {
-      r = 0;
-      g = x;
-      b = c;
-    } else if (h < 300) {
-      r = x;
-      g = 0;
-      b = c;
-    } else {
-      r = c;
-      g = 0;
-      b = x;
-    }
-    const hex = (v: number) =>
-      Math.round((v + m) * 255)
-        .toString(16)
-        .padStart(2, "0");
-    return `#${hex(r)}${hex(g)}${hex(b)}`;
-  }
-
-  function hexToHue(hex: string): number | null {
-    const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim());
-    if (!m) return null;
-    const r = parseInt(m[1], 16) / 255;
-    const g = parseInt(m[2], 16) / 255;
-    const b = parseInt(m[3], 16) / 255;
-    const max = Math.max(r, g, b),
-      min = Math.min(r, g, b);
-    if (max === min) return 0;
-    const d = max - min;
-    let h = 0;
-    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
-    else if (max === g) h = ((b - r) / d + 2) / 6;
-    else h = ((r - g) / d + 4) / 6;
-    return Math.round(h * 360);
-  }
-
+  let primaryHex = $derived(hueToHex(hue));
   let hexInput = $state(hueToHex(260));
   let hexError = $state(false);
 
   $effect(() => {
-    hexInput = hueToHex(hue);
+    hexInput = primaryHex;
     hexError = false;
   });
+
+  function onSliderInput(e: Event) {
+    const target = e.target as HTMLInputElement;
+    settings.update({ accent_hue: Number(target.value) });
+  }
 
   function onHexChange(e: Event) {
     const val = (e.target as HTMLInputElement).value;
     hexInput = val;
+
     const h = hexToHue(val);
     if (h !== null) {
       hexError = false;
-      settingsStore.update({ accent_hue: h });
+      settings.update({ accent_hue: h });
     } else {
       hexError = val.length > 1;
     }
   }
-
-  let primaryHex = $derived(hueToHex(hue));
 </script>
 
 <div>
@@ -140,7 +83,7 @@
           ? 'bg-primary text-primary-foreground border-primary'
           : 'bg-background text-muted-foreground border-input hover:bg-muted'}"
         onclick={() =>
-          settingsStore.setTheme(opt.value as "system" | "dark" | "light")}
+          settings.setTheme(opt.value as "system" | "dark" | "light")}
       >
         {opt.label}
       </button>
@@ -161,7 +104,8 @@
             {customType === opt.value
             ? 'bg-primary text-primary-foreground border-primary'
             : 'bg-background text-muted-foreground border-input hover:bg-muted'}"
-          onclick={() => settingsStore.update({ custom_titlebar_type: opt.value })}
+          onclick={() =>
+            settings.update({ custom_titlebar_type: opt.value })}
         >
           {opt.label}
         </button>

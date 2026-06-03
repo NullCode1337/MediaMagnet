@@ -11,12 +11,12 @@
     {
       id: "native_notifications",
       label: "Desktop Notifications",
-      desc: "Alert when downloads finish or fail",
+      desc: "Alert when downloads finish or fail natively through the OS",
     },
     {
       id: "clear_cookies_on_exit",
-      label: "Clear Cookies on Exit",
-      desc: "Wipe cookies and cache when closing",
+      label: "Refresh Session",
+      desc: "Delete all cookies upon closing the app",
     },
   ];
 </script>

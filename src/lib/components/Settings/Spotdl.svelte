@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Label } from "$lib/components/ui/label";
   import { Input } from "$lib/components/ui/input";
-  import { settingsStore } from "$lib/settings.svelte";
+  import { settings } from "$lib/utils/settings.svelte";
 
   let {
     saveSettings,
@@ -46,7 +46,7 @@
       <select
         class="h-8 rounded-md border border-input bg-muted px-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary !cursor-pointer transition-colors"
         onchange={(e) => {
-          settingsStore.config!.spotdl_format = (
+          settings.config!.spotdl_format = (
             e.target as HTMLSelectElement
           ).value;
           saveSettings();
@@ -60,7 +60,7 @@
     </div>
     <Input
       id="spotdl_format"
-      bind:value={settingsStore.config!.spotdl_format}
+      bind:value={settings.config!.spotdl_format}
       onchange={saveSettings}
       placeholder="mp3"
       class="h-10 font-mono text-xs bg-muted/20 w-full"
@@ -81,7 +81,7 @@
       <select
         class="h-8 rounded-md border border-input bg-muted px-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary !cursor-pointer transition-colors"
         onchange={(e) => {
-          settingsStore.config!.spotdl_bitrate = (
+          settings.config!.spotdl_bitrate = (
             e.target as HTMLSelectElement
           ).value;
           saveSettings();
@@ -95,7 +95,7 @@
     </div>
     <Input
       id="spotdl_bitrate"
-      bind:value={settingsStore.config!.spotdl_bitrate}
+      bind:value={settings.config!.spotdl_bitrate}
       onchange={saveSettings}
       placeholder="auto"
       class="h-10 font-mono text-xs bg-muted/20 w-full"
@@ -114,7 +114,7 @@
     </div>
     <textarea
       id="spotdl_global_args"
-      bind:value={settingsStore.config!.spotdl_global_args}
+      bind:value={settings.config!.spotdl_global_args}
       onchange={saveSettings}
       placeholder="--threads 4"
       class={textareaClass}

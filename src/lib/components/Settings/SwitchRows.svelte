@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Label } from "$lib/components/ui/label";
   import { Switch } from "$lib/components/ui/switch";
-  import { settingsStore } from "$lib/settings.svelte";
+  import { settings } from "$lib/utils/settings.svelte";
 
   let {
     items,
@@ -20,11 +20,11 @@
     </div>
     <Switch
       id={item.id}
-      checked={settingsStore.config![
-        item.id as keyof typeof settingsStore.config
+      checked={settings.config![
+        item.id as keyof typeof settings.config
       ] as boolean}
       onCheckedChange={(val) => {
-        settingsStore.update({ [item.id]: val });
+        settings.update({ [item.id]: val });
       }}
       class={switchClass}
     />

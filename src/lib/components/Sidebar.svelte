@@ -9,8 +9,8 @@
     CirclePlus,
     Settings,
   } from "@lucide/svelte";
-  import { settingsStore } from "$lib/settings.svelte";
-  import { uiState } from "$lib/store.svelte";
+  import { settings } from "$lib/utils/settings.svelte";
+  import { uiState } from "$lib/utils/store.svelte";
 
   import SettingsDialog from "./Settings.svelte";
   import Separator from "./ui/separator/separator.svelte";
@@ -20,12 +20,12 @@
 
   let sf = $state(0);
   let tabindex = $derived(
-    uiState.activeTab === "home" 
+    uiState.activeTab === "home"
       ? 0
       : uiState.activeTab === "downloads" ? 1 : 2,
   );
   let pilloffset = $derived(
-    Math.max(0, Math.min(104, (tabindex + (sf as number)) * 52))
+    Math.max(0, Math.min(104, (tabindex + (sf as number)) * 52)),
   );
 
   let barVisible = $state(true);
@@ -189,7 +189,7 @@
 
       {#if currentPlatform !== "android"}
         {@render SidebarButton(FolderOpen, "Open folder", false, () =>
-          settingsStore.openDownloadDir(),
+          settings.openDownloadDir(),
         )}
       {/if}
 

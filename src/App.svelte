@@ -17,8 +17,8 @@
   import Titlebar from "$lib/components/Titlebar.svelte";
 
   import logo from "$lib/assets/favicon.png";
-  import { uiState } from "$lib/store.svelte";
-  import { settingsStore } from "$lib/settings.svelte";
+  import { uiState } from "$lib/utils/store.svelte";
+  import { settings } from "$lib/utils/settings.svelte";
   import { toast, Toaster } from "svelte-sonner";
 
   interface Task {
@@ -258,7 +258,7 @@
       await M3.setBarColor(targetTheme === "dark" ? "light" : "dark");
     });
 
-    void settingsStore.update({ dark_mode: targetTheme === "dark" });
+    void settings.update({ dark_mode: targetTheme === "dark" });
   });
 
   $effect(() => {

@@ -9,15 +9,17 @@
     Square,
     Maximize2,
   } from "@lucide/svelte";
-  import { uiState } from "$lib/store.svelte";
-  import { settingsStore } from "$lib/settings.svelte";
+  import { uiState } from "$lib/utils/store.svelte";
+  import { settings } from "$lib/utils/settings.svelte";
   import { onMount } from "svelte";
   import logo from "$lib/assets/favicon.png";
 
   let { currentPlatform = "windows" }: { currentPlatform?: string } = $props();
 
   const appWindow = getCurrentWindow();
-  const barType = $derived(settingsStore.config?.custom_titlebar_type || "system");
+  const barType = $derived(
+    settings.config?.custom_titlebar_type || "system",
+  );
   const isMac = $derived(
     barType === "mac" || (barType === "system" && currentPlatform === "macos"),
   );

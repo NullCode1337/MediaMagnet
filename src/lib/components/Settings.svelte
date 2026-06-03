@@ -5,8 +5,8 @@
   import { invoke } from "@tauri-apps/api/core";
   import { open, ask } from "@tauri-apps/plugin-dialog";
 
-  import { uiState } from "$lib/store.svelte";
-  import { settingsStore, type Config } from "$lib/settings.svelte";
+  import { uiState } from "$lib/utils/store.svelte";
+  import { settings, type Config } from "$lib/utils/settings.svelte";
 
   import GeneralTab from "$lib/components/Settings/General.svelte";
   import DownloadsTab from "$lib/components/Settings/Download.svelte";
@@ -56,10 +56,10 @@
   const nextTick = () => new Promise((res) => setTimeout(res, 0));
 
   async function saveSettings() {
-    if (!settingsStore.config) return;
+    if (!settings.config) return;
     await nextTick();
     await invoke("update_settings", {
-      settings: $state.snapshot(settingsStore.config),
+      settings: $state.snapshot(settings.config),
     });
     saveStatus = "saved";
     setTimeout(() => (saveStatus = "idle"), 2000);
@@ -76,7 +76,7 @@
       },
     );
     if (confirmed) {
-      settingsStore.config = (await invoke("settings", {
+      settings.config = (await invoke("settings", {
         action: "reset",
       })) as Config;
     }
@@ -87,10 +87,10 @@
       const selected = await open({
         directory: true,
         multiple: false,
-        defaultPath: settingsStore.config?.download_path,
+        defaultPath: settings.config?.download_path,
       });
-      if (selected && settingsStore.config) {
-        settingsStore.config.download_path = selected;
+      if (selected && settings.config) {
+        settings.config.download_path = selected;
         await saveSettings();
       }
     } catch (e) {
@@ -115,7 +115,8 @@
     >
       {#if isMobile}
         <div class="flex items-center gap-1 px-2 h-14 bg-muted/40 shrink-0">
-          <span class="font-semibold mx-2 my-2 text-lg text-base">Settings</span>
+          <span class="font-semibold mx-2 my-2 text-lg text-base">Settings</span
+          >
         </div>
 
         <div class="flex-1 overflow-y-auto bg-muted/40 px-4 py-5 space-y-6">
@@ -247,12 +248,12 @@
         {/if}
       </div>
 
-      {#if settingsStore.config}
+      {#if settings.config}
         <div class="w-full space-y-8 animate-in fade-in slide-in-from-bottom-2">
           {#if activeTab === "general"}
             <GeneralTab {switchClass} {currentPlatform} />
           {:else if activeTab === "downloads"}
-            <DownloadsTab {saveSettings} {selectDirectory} />
+            <DownloadsTab {saveSettings} {selectDirectory} {currentPlatform} {switchClass} />
           {:else if activeTab === "cookies"}
             <CookiesTab />
           {:else if activeTab === "privacy"}

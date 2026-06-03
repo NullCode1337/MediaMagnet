@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { settingsStore } from "$lib/settings.svelte";
+  import { settings } from "$lib/utils/settings.svelte";
   import { Button } from "$lib/components/ui/button";
   import * as Icons from "@lucide/svelte";
 
   let rawJsonString = $derived(
-    settingsStore.config
-      ? JSON.stringify($state.snapshot(settingsStore.config), null, 2)
+    settings.config
+      ? JSON.stringify($state.snapshot(settings.config), null, 2)
       : "{}",
   );
 
@@ -13,7 +13,7 @@
   let copied = $state(false);
 
   async function handleCopy() {
-    await settingsStore.copyToClipboard();
+    await settings.copyToClipboard();
     copied = true;
     setTimeout(() => (copied = false), 2000);
   }
@@ -30,7 +30,7 @@
         variant="ghost"
         size="sm"
         class="h-7 gap-1.5 rounded-md px-2.5 text-xs cursor-pointer font-medium hover:bg-background hover:shadow-sm transition-all"
-        onclick={() => settingsStore.importFromFile()}
+        onclick={() => settings.importFromFile()}
       >
         <Icons.FileUp size={13} class="text-muted-foreground" />
         Import File
@@ -40,7 +40,7 @@
         variant="ghost"
         size="sm"
         class="h-7 gap-1.5 rounded-md px-2.5 text-xs cursor-pointer font-medium hover:bg-background hover:shadow-sm transition-all"
-        onclick={() => settingsStore.importFromClipboard()}
+        onclick={() => settings.importFromClipboard()}
       >
         <Icons.ClipboardPaste size={13} class="text-muted-foreground" />
         Import JSON (clipboard)

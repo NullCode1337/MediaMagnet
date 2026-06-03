@@ -2,7 +2,7 @@
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
-  import { settingsStore } from "$lib/settings.svelte";
+  import { settings } from "$lib/utils/settings.svelte";
   import SwitchRows from "./SwitchRows.svelte";
 
   let {
@@ -67,18 +67,18 @@
   ];
 
   function addSiteArg() {
-    if (!settingsStore.config) return;
-    settingsStore.config.yt_site_args = [
-      ...settingsStore.config.yt_site_args,
+    if (!settings.config) return;
+    settings.config.yt_site_args = [
+      ...settings.config.yt_site_args,
       { id: crypto.randomUUID(), domain: "", args: "" },
     ];
     saveSettings();
   }
 
   function removeSiteArg(id: string) {
-    if (!settingsStore.config) return;
-    settingsStore.config.yt_site_args =
-      settingsStore.config.yt_site_args.filter((item) => item.id !== id);
+    if (!settings.config) return;
+    settings.config.yt_site_args =
+      settings.config.yt_site_args.filter((item) => item.id !== id);
     saveSettings();
   }
 
@@ -104,7 +104,7 @@
       <select
         class="h-8 rounded-md border border-input bg-muted px-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary !cursor-pointer transition-colors"
         onchange={(e) => {
-          settingsStore.config!.yt_format = (
+          settings.config!.yt_format = (
             e.target as HTMLSelectElement
           ).value;
           saveSettings();
@@ -118,7 +118,7 @@
     </div>
     <textarea
       id="yt_format"
-      bind:value={settingsStore.config!.yt_format}
+      bind:value={settings.config!.yt_format}
       onchange={saveSettings}
       placeholder="bestvideo+bestaudio/best"
       class={textareaClass}
@@ -143,7 +143,7 @@
       <select
         class="h-8 rounded-md border border-input bg-muted px-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary !cursor-pointer transition-colors"
         onchange={(e) => {
-          settingsStore.config!.yt_output_template = (
+          settings.config!.yt_output_template = (
             e.target as HTMLSelectElement
           ).value;
           saveSettings();
@@ -157,7 +157,7 @@
     </div>
     <textarea
       id="yt_output_template"
-      bind:value={settingsStore.config!.yt_output_template}
+      bind:value={settings.config!.yt_output_template}
       onchange={saveSettings}
       placeholder="%(title)s.%(ext)s"
       class={textareaClass}
@@ -176,7 +176,7 @@
     </div>
     <textarea
       id="yt_global_args"
-      bind:value={settingsStore.config!.yt_global_args}
+      bind:value={settings.config!.yt_global_args}
       onchange={saveSettings}
       placeholder="--cookies-from-browser chrome --no-mtime"
       class={textareaClass}
@@ -203,7 +203,7 @@
       </Button>
     </div>
 
-    {#if settingsStore.config!.yt_site_args.length === 0}
+    {#if settings.config!.yt_site_args.length === 0}
       <p
         class="text-xs text-muted-foreground/50 italic py-4 text-center bg-muted/10 rounded-lg border border-dashed"
       >
@@ -211,7 +211,7 @@
       </p>
     {:else}
       <div class="space-y-4 max-h-[400px] overflow-y-auto pr-1">
-        {#each settingsStore.config!.yt_site_args as item (item.id)}
+        {#each settings.config!.yt_site_args as item (item.id)}
           <div
             class="p-3 bg-popover rounded-lg space-y-2 relative group border border-muted/40"
           >
