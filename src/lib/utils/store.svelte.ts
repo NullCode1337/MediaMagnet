@@ -1,4 +1,4 @@
-import { settingsStore } from "$lib/settings.svelte";
+import { settings } from "$lib/utils/settings.svelte";
 
 export const uiState = $state({
   innerWidth: 0,
@@ -7,7 +7,7 @@ export const uiState = $state({
   activeTab: "home" as "downloads" | "home" | "settings",
 
   get showCustom() {
-    return settingsStore.config?.custom_titlebar ?? true;
+    return settings.config?.custom_titlebar ?? true;
   },
 
   get headless() {

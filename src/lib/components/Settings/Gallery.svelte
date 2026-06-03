@@ -2,7 +2,7 @@
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
-  import { settingsStore } from "$lib/settings.svelte";
+  import { settings } from "$lib/utils/settings.svelte";
 
   let {
     saveSettings,
@@ -11,18 +11,18 @@
   } = $props();
 
   function addSiteArg() {
-    if (!settingsStore.config) return;
-    settingsStore.config.gdl_site_args = [
-      ...settingsStore.config.gdl_site_args,
+    if (!settings.config) return;
+    settings.config.gdl_site_args = [
+      ...settings.config.gdl_site_args,
       { id: crypto.randomUUID(), domain: "", args: "" },
     ];
     saveSettings();
   }
 
   function removeSiteArg(id: string) {
-    if (!settingsStore.config) return;
-    settingsStore.config.gdl_site_args =
-      settingsStore.config.gdl_site_args.filter((item) => item.id !== id);
+    if (!settings.config) return;
+    settings.config.gdl_site_args =
+      settings.config.gdl_site_args.filter((item) => item.id !== id);
     saveSettings();
   }
 
@@ -45,7 +45,7 @@
     </div>
     <textarea
       id="gdl_global_args"
-      bind:value={settingsStore.config!.gdl_global_args}
+      bind:value={settings.config!.gdl_global_args}
       onchange={saveSettings}
       placeholder="--cookies cookies.txt --no-mtime"
       class={textareaClass}
@@ -72,7 +72,7 @@
       </Button>
     </div>
 
-    {#if settingsStore.config!.gdl_site_args.length === 0}
+    {#if settings.config!.gdl_site_args.length === 0}
       <p
         class="text-xs text-muted-foreground/50 italic py-4 text-center bg-muted/10 rounded-lg border border-dashed"
       >
@@ -80,7 +80,7 @@
       </p>
     {:else}
       <div class="space-y-4 max-h-[400px] overflow-y-auto pr-1">
-        {#each settingsStore.config!.gdl_site_args as item (item.id)}
+        {#each settings.config!.gdl_site_args as item (item.id)}
           <div
             class="p-3 bg-popover rounded-lg space-y-2 relative group border border-muted/40"
           >

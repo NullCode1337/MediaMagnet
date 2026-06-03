@@ -18,7 +18,7 @@ export interface Config {
   native_notifications: boolean;
   clear_cookies_on_exit: boolean;
 
-  // download 
+  // download
   download_path: string;
   user_agent: string;
   custom_python: boolean;
@@ -48,7 +48,7 @@ function applyAccentHue(hue: number) {
   document.documentElement.style.setProperty("--hue", String(hue));
 }
 
-class SettingsStore {
+class Settings {
   config = $state<Config | null>(null);
   isLoading = $state(true);
 
@@ -160,4 +160,4 @@ class SettingsStore {
   }
 }
 
-export const settingsStore = new SettingsStore();
+export const settings = new Settings();
