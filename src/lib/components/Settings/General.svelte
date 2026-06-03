@@ -20,14 +20,14 @@
       desc: "Prevent other windows from covering the app",
     },
     {
-      id: "show_custom",
+      id: "custom_titlebar",
       label: "Custom Decorations",
       desc: "Show custom title bar with special features",
     },
   ];
 
-  let showCustom = $derived(settingsStore.config?.show_custom ?? false);
-  let customType = $derived(settingsStore.config?.custom_type ?? "system");
+  let showCustom = $derived(settingsStore.config?.custom_titlebar ?? false);
+  let customType = $derived(settingsStore.config?.custom_titlebar_type ?? "system");
   let hue = $derived(settingsStore.config?.accent_hue ?? 260);
 
   function onSliderInput(e: Event) {
@@ -161,7 +161,7 @@
             {customType === opt.value
             ? 'bg-primary text-primary-foreground border-primary'
             : 'bg-background text-muted-foreground border-input hover:bg-muted'}"
-          onclick={() => settingsStore.update({ custom_type: opt.value })}
+          onclick={() => settingsStore.update({ custom_titlebar_type: opt.value })}
         >
           {opt.label}
         </button>

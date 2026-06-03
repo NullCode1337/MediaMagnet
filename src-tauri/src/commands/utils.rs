@@ -153,14 +153,11 @@ pub fn overwrite_json(app: tauri::AppHandle, links: Vec<String>) {
 
 // Set download path
 pub async fn set_download_path(app: tauri::AppHandle) -> std::path::PathBuf {
-    let config_path = app.path().app_config_dir().unwrap().join("settings.json");
-    let settings: Settings =
-        serde_json::from_str(&std::fs::read_to_string(&config_path).unwrap()).unwrap();
-
-    let default = dirs::download_dir().unwrap().join("MediaMagnet");
+    let settings = Settings::load(&app);
+    let default_dir = app.path().download_dir().unwrap().join("MediaMagnet");
 
     let downloads_path = match settings.download_path.as_str() {
-        "Default" => default.clone(),
+        "Default" => default_dir.clone(),
         custom_path if custom_path.to_lowercase().contains("mediamagnet") => {
             std::path::PathBuf::from(custom_path)
         }
@@ -178,8 +175,8 @@ pub async fn set_download_path(app: tauri::AppHandle) -> std::path::PathBuf {
                     "[MME] Failed to create directory, using default...",
                 )
                 .unwrap();
-                std::fs::create_dir_all(&default).unwrap();
-                default
+                std::fs::create_dir_all(&default_dir).unwrap();
+                default_dir
             })
     };
 
@@ -216,11 +213,9 @@ pub async fn get_free_space(app: tauri::AppHandle) -> Result<f64, String> {
 
 #[tauri::command]
 pub async fn notify(app: tauri::AppHandle, body: String) -> Result<(), String> {
-    let config_path = app.path().app_config_dir().unwrap().join("settings.json");
-    let settings: Settings =
-        serde_json::from_str(&std::fs::read_to_string(&config_path).unwrap()).unwrap();
+    let settings = Settings::load(&app);
 
-    if settings.notifications {
+    if settings.native_notifications {
         #[cfg(target_os = "linux")]
         {
             use std::process::Command;

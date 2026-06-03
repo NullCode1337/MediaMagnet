@@ -12,15 +12,20 @@ pub struct SiteArguments {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(default)]
 pub struct Settings {
-    pub download_path: String,
-    pub user_agent: String,
+    // app options
     pub dark_mode: bool,
     pub accent_hue: Number,
     pub always_on_top: bool,
-    pub show_custom: bool,
-    pub custom_type: String,
-    pub notifications: bool,
-    pub clear_on_exit: bool,
+    pub custom_titlebar: bool,
+    pub custom_titlebar_type: String,
+    pub native_notifications: bool,
+    pub clear_cookies_on_exit: bool,
+
+    // download options
+    pub download_path: String,
+    pub user_agent: String,
+    pub custom_python: bool,
+    pub custom_python_path: String,
 
     // yt-dlp backend options
     pub yt_format: String,
@@ -48,24 +53,28 @@ impl Default for Settings {
             user_agent: "None".to_string(),
             dark_mode: true,
             accent_hue: Number::from(260),
-            custom_type: "system".to_string(),
+            custom_titlebar_type: "system".to_string(),
             yt_format: "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best".to_string(),
             yt_output_template: "%(title)s.%(ext)s".to_string(),
 
             always_on_top: false,
-            show_custom: false,
-            notifications: false,
-            clear_on_exit: false,
+            custom_titlebar: false,
+            native_notifications: false,
+            custom_python: false,
+            clear_cookies_on_exit: false,
             yt_embed_thumbnail: false,
             yt_embed_subs: false,
             yt_restrict_filenames: false,
+
+            custom_python_path: String::new(),
+            yt_global_args: String::new(),
+            gdl_global_args: String::new(),
+            spotdl_global_args: String::new(),
             spotdl_bitrate: String::new(),
             spotdl_format: String::new(),
-            yt_global_args: String::new(),
+
             yt_site_args: Vec::new(),
-            gdl_global_args: String::new(),
             gdl_site_args: Vec::new(),
-            spotdl_global_args: String::new(),
         }
     }
 }
@@ -75,7 +84,7 @@ impl Settings {
         if let Some(window) = app.get_webview_window("main") {
             #[cfg(not(target_os = "android"))] {
                 let _ = window.set_always_on_top(self.always_on_top);
-                let _ = window.set_decorations(!self.show_custom);
+                let _ = window.set_decorations(!self.custom_titlebar);
             }
         }
     }
