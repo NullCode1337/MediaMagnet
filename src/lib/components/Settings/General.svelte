@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { hueToHex, hexToHue } from "$lib/utils/color";
+  import { hueToHex, hexToHue } from "$lib/color";
   import { Label } from "$lib/components/ui/label";
-  import { settings } from "$lib/utils/settings.svelte";
+  import { settings } from "$lib/stores/settings.svelte";
   import { userPrefersMode } from "mode-watcher";
   import SwitchRows from "./SwitchRows.svelte";
 

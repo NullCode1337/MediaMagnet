@@ -1,4 +1,4 @@
-import { settings } from "$lib/utils/settings.svelte";
+import { settings } from "$lib/stores/settings.svelte";
 
 export const uiState = $state({
   innerWidth: 0,

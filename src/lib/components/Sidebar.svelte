@@ -9,8 +9,8 @@
     CirclePlus,
     Settings,
   } from "@lucide/svelte";
-  import { settings } from "$lib/utils/settings.svelte";
-  import { uiState } from "$lib/utils/store.svelte";
+  import { settings } from "$lib/stores/settings.svelte";
+  import { uiState } from "$lib/stores/store.svelte";
 
   import SettingsDialog from "./Settings.svelte";
   import Separator from "./ui/separator/separator.svelte";

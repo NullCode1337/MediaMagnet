@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { settings } from "$lib/utils/settings.svelte";
+  import { settings } from "$lib/stores/settings.svelte";
   import { Button } from "$lib/components/ui/button";
   import * as Icons from "@lucide/svelte";
 
