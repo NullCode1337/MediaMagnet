@@ -3,7 +3,6 @@
  
 **A polished, cross-platform desktop app for downloading any media from any* website**
  
-[![Version](https://img.shields.io/github/v/release/NullCode1337/MediaMagnet?label=version&color=6366f1)](https://github.com/NullCode1337/MediaMagnet/releases)
 [![License](https://img.shields.io/github/license/NullCode1337/MediaMagnet?color=6366f1)](https://github.com/NullCode1337/MediaMagnet/blob/main/LICENSE)
 [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-6366f1)](https://tauri.app)
 [![Svelte](https://img.shields.io/badge/frontend-Svelte%205-ff3e00)](https://svelte.dev)
