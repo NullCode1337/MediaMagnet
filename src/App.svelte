@@ -445,7 +445,7 @@
                 class="max-w-md mx-auto w-full flex flex-col items-center gap-3"
               >
                 <div
-                  class="flex flex-row items-center justify-center gap-3 w-full"
+                  class="flex flex-row items-center justify-center gap-2 w-full"
                 >
                   <img src={logo} alt="logo" class="w-12 h-12 object-contain" />
                   <h2
@@ -472,7 +472,7 @@
                   <Button
                     variant="secondary"
                     onclick={pasteOrDownload}
-                    class="h-12 w-12 bg-primary shrink-0 rounded-xl shadow-md flex items-center justify-center"
+                    class="h-12 w-12 bg-primary text-primary-foreground shrink-0 rounded-xl shadow-md flex items-center justify-center"
                   >
                     {#if urlInput === ""}
                       <Clipboard size={18} />

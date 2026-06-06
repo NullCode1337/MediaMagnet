@@ -1,14 +1,13 @@
 <script lang="ts">
+  import Section from "$lib/components/Settings/SECTION.svelte";
   import { Button } from "$lib/components/ui/button";
-  import { Input } from "$lib/components/ui/input";
-  import { Label } from "$lib/components/ui/label";
-  import * as Icons from "@lucide/svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { openPath } from "@tauri-apps/plugin-opener";
   import { open, ask } from "@tauri-apps/plugin-dialog";
   import { readTextFile } from "@tauri-apps/plugin-fs";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
+  import * as Icons from "@lucide/svelte";
 
   let cookieDomain = $state("");
   let cookieRawContent = $state("");
@@ -30,16 +29,14 @@
           { name: "Cookie Files", extensions: ["txt", "json", "cookies"] },
         ],
       });
-
       if (selected && typeof selected === "string") {
-        const content = await readTextFile(selected);
-        const fileName = selected.split(/[\\/]/).pop()?.split(".")[0] || "";
-        cookieRawContent = content;
-        cookieDomain = fileName.toLowerCase();
+        cookieRawContent = await readTextFile(selected);
+        cookieDomain =
+          selected.split(/[\\/]/).pop()?.split(".")[0]?.toLowerCase() ?? "";
         toast("Added cookie information to editor");
       }
     } catch (e) {
-      toast(("Failed to import cookie:" + e) as string);
+      toast("Failed to import cookie: " + e);
     }
   }
 
@@ -47,7 +44,6 @@
     const trimmed = content.trim();
     if (!trimmed)
       return { valid: false, error: "Cookie content cannot be empty" };
-
     if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
       try {
         JSON.parse(trimmed);
@@ -56,16 +52,11 @@
         return { valid: false, error: e as string };
       }
     }
-
     const lines = trimmed.split("\n");
     if (
-      lines.some(
-        (line) => line.includes("# Netscape") || line.split("\t").length >= 7,
-      )
-    ) {
+      lines.some((l) => l.includes("# Netscape") || l.split("\t").length >= 7)
+    )
       return { valid: true };
-    }
-
     return {
       valid: false,
       error: "Content must be valid JSON or Netscape format",
@@ -73,15 +64,14 @@
   }
 
   async function saveCookies() {
-    const validation = isCookie(cookieRawContent);
-    if (!validation.valid) {
-      toast(("Failed to save cookie: " + validation.error) as string);
+    const v = isCookie(cookieRawContent);
+    if (!v.valid) {
+      toast("Failed to save cookie: " + v.error);
       return;
     }
-
     try {
       await invoke("save_cookie", {
-        domain: cookieDomain.toLowerCase().replace(".", "").replace("/", ""),
+        domain: cookieDomain.toLowerCase().replace(/[./]/g, ""),
         input: { type: "Content", value: cookieRawContent },
       });
       cookieDomain = "";
@@ -93,32 +83,26 @@
   }
 
   async function deleteCookie(domain: string, path: string) {
-    const confirmed = await ask(
-      `Are you sure you want to delete cookies for ${domain}?`,
-      {
-        title: "MediaMagnet",
-        kind: "warning",
-        okLabel: "Delete",
-        cancelLabel: "Cancel",
-      },
-    );
-    if (confirmed) {
+    const ok = await ask(`Delete cookies for ${domain}?`, {
+      title: "MediaMagnet",
+      kind: "warning",
+      okLabel: "Delete",
+      cancelLabel: "Cancel",
+    });
+    if (ok) {
       await invoke("delete_cookie", { path });
       await loadCookies();
     }
   }
 
   async function clearAllCookies() {
-    const confirmed = await ask(
-      `Are you sure you want to delete all cookies?`,
-      {
-        title: "WARNING",
-        kind: "warning",
-        okLabel: "Delete",
-        cancelLabel: "Cancel",
-      },
-    );
-    if (confirmed) {
+    const ok = await ask("Delete ALL cookies?", {
+      title: "WARNING",
+      kind: "warning",
+      okLabel: "Delete",
+      cancelLabel: "Cancel",
+    });
+    if (ok) {
       await invoke("clear_cookies");
       await loadCookies();
     }
@@ -127,73 +111,90 @@
   onMount(loadCookies);
 </script>
 
-<header class="flex items-center justify-between">
-  <h3 class="text-2xl font-extrabold">Cookies</h3>
-  <div class="flex items-center gap-2">
-    <Button
-      variant="outline"
-      size="sm"
-      class="!cursor-pointer"
-      onclick={importCookie}
-    >
-      <Icons.FileUp size={14} class="mr-1" /> Import File
-    </Button>
-    <Button
-      variant="destructive"
-      size="sm"
-      class="!cursor-pointer"
-      onclick={clearAllCookies}
-    >
-      <Icons.Trash2 size={14} class="mr-1" /> Delete All
-    </Button>
-  </div>
-</header>
+{#snippet importIcon()}<Icons.FileUp size={14} />{/snippet}
+{#snippet trashIcon()}<Icons.Trash2 size={14} />{/snippet}
+{#snippet cookieIcon()}<Icons.Cookie size={16} />{/snippet}
+{#snippet cookieEmptyIcon()}<Icons.Cookie size={28} />{/snippet}
 
-<div>
-  <Label class="text-xs font-bold uppercase pb-2 text-primary">
-    Add Cookie
-  </Label>
-  <div class="rounded-2xl border-solid space-y-4">
-    <Input bind:value={cookieDomain} placeholder="Domain (e.g. google)" />
+{#snippet cookieEditorNode()}
+  <div class="flex flex-col gap-2 px-4 py-3.5">
+    <label for="cookie_content" class="flex flex-col gap-0.5">
+      <span class="text-sm font-medium leading-5">Cookie Content</span>
+    </label>
     <textarea
+      id="cookie_content"
       bind:value={cookieRawContent}
-      class="w-full min-h-[100px] p-3 rounded-lg overscroll-contain bg-muted text-xs font-mono"
-      placeholder={"[ { 'domain': '.google.com', ... } ] or # Netscape format..."}
+      class="flex w-full resize-y rounded-lg border border-input bg-muted/20
+             px-3 py-2 font-mono text-xs leading-relaxed overscroll-contain
+             placeholder:text-muted-foreground/60 min-h-[100px]
+             focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring
+             focus-visible:ring-offset-2"
+      placeholder={"[ { 'domain': '.google.com', ... } ]  or  # Netscape format..."}
     ></textarea>
     <Button
-      class="w-full cursor-pointer"
+      class="w-full t-2 cursor-pointer"
       disabled={!cookieDomain || !cookieRawContent}
       onclick={saveCookies}
     >
-      Save
+      Save Cookie
     </Button>
   </div>
-</div>
+{/snippet}
 
-<div class="grid gap-2">
-  <Label class="text-xs font-bold uppercase pb-2 text-primary">
-    Active Cookies
-  </Label>
-  {#each Object.entries(savedCookies) as [domain, path] (domain)}
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div
-      class="flex items-center justify-between p-3 rounded-xl border bg-muted/30 transition-all cursor-pointer hover:bg-muted/50 hover:border-primary/30 hover:shadow-sm active:scale-[0.98]"
-      onclick={() => openPath(path)}
-    >
-      <Icons.Cookie size={16} />
-      <span class="text-sm font-medium uppercase">{domain}</span>
-      <Button
-        variant="destructive"
-        size="icon"
-        onclick={(e) => {
-          e.stopPropagation();
-          deleteCookie(domain, path);
-        }}
-        class="cursor-pointer"
-      >
-        <Icons.Trash2 size={16} />
-      </Button>
-    </div>
-  {/each}
-</div>
+<Section
+  config={{
+    title: "Cookies",
+
+    headerActions: [
+      {
+        label: "Import",
+        variant: "outline",
+        onclick: importCookie,
+        icon: importIcon,
+      },
+      {
+        label: "Clear",
+        variant: "destructive",
+        onclick: clearAllCookies,
+        icon: trashIcon,
+      },
+    ],
+
+    sections: [
+      {
+        label: "Add Cookie",
+        items: [
+          {
+            type: "input",
+            id: "cookie_domain",
+            label: "Domain",
+            description: "Base domain of the website (e.g. google, youtube)",
+            value: cookieDomain,
+            onchange: (v: string) => (cookieDomain = v),
+            placeholder: "google",
+            monospace: true,
+          },
+          { type: "custom", node: cookieEditorNode },
+        ],
+      },
+
+      {
+        label: "Active Cookies",
+        items: [
+          {
+            type: "list",
+            emptyMessage: "No cookies saved",
+            emptyIcon: cookieEmptyIcon,
+            entries: Object.entries(savedCookies).map(([domain, path]) => ({
+              id: domain,
+              label: domain.toUpperCase(),
+              leading: cookieIcon,
+              onclick: () => openPath(path),
+              ondelete: () => deleteCookie(domain, path),
+            })),
+          },
+        ],
+      },
+    ],
+  }}
+/>

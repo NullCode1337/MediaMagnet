@@ -48,8 +48,6 @@
     { id: "spotdl", label: "spotdl", icon: Icons.Music },
   ];
 
-  const switchClass =
-    "data-[state=checked]:bg-primary data-[state=unchecked]:bg-input border-2 border-transparent cursor-pointer";
   const btnClass =
     "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground relative justify-start";
 
@@ -114,12 +112,11 @@
         : 'flex flex-col w-[240px] border-r border-sidebar-border p-6 gap-1 h-full'}"
     >
       {#if isMobile}
-        <div class="flex items-center gap-1 px-2 h-14 bg-muted/40 shrink-0">
-          <span class="font-semibold mx-2 my-2 text-lg text-base">Settings</span
-          >
+        <div class="flex items-center h-19 bg-muted/40 shrink-0">
+          <span class="font-semibold mx-6 text-lg text-base">Settings</span>
         </div>
 
-        <div class="flex-1 overflow-y-auto bg-muted/40 px-4 py-5 space-y-6">
+        <div class="flex-1 overflow-y-auto bg-muted/40 px-4 py-1 space-y-6">
           <div>
             <p class="text-xs text-muted-foreground font-bold px-1 ml-2 mb-4">
               Configuration
@@ -220,16 +217,16 @@
       class="flex-1 w-full min-w-0 overflow-y-auto bg-background scrollbar-thin relative transition-all
           {isMobile
         ? mobileView === 'content'
-          ? 'block w-full h-full p-6 pt-20'
+          ? 'block w-full h-full p-6 pt-1'
           : 'hidden'
         : 'p-6 sm:p-10'}"
     >
       {#if isMobile && mobileView === "content"}
-        <div class="absolute top-4 left-4 z-50">
+        <div class="absolute top-5.5 left-4 z-50">
           <Button
-            variant="outline"
+            variant="ghost"
             size="icon"
-            class="rounded-full shadow-sm cursor-pointer bg-background"
+            class="cursor-pointer"
             onclick={() => (mobileView = "list")}
           >
             <Icons.ArrowLeft size={18} />
@@ -251,17 +248,17 @@
       {#if settings.config}
         <div class="w-full space-y-8 animate-in fade-in slide-in-from-bottom-2">
           {#if activeTab === "general"}
-            <GeneralTab {switchClass} {currentPlatform} />
+            <GeneralTab {currentPlatform} />
           {:else if activeTab === "downloads"}
-            <DownloadsTab {saveSettings} {selectDirectory} {currentPlatform} {switchClass} />
+            <DownloadsTab {saveSettings} {selectDirectory} {currentPlatform} />
           {:else if activeTab === "cookies"}
             <CookiesTab />
           {:else if activeTab === "privacy"}
-            <PrivacyTab {switchClass} />
+            <PrivacyTab />
           {:else if activeTab === "import_export"}
             <ImportExportTab />
           {:else if activeTab === "youtube"}
-            <YouTubeTab {saveSettings} {switchClass} />
+            <YouTubeTab {saveSettings} />
           {:else if activeTab === "gallery"}
             <GalleryTab {saveSettings} />
           {:else if activeTab === "spotdl"}

@@ -17,9 +17,7 @@
   let { currentPlatform = "windows" }: { currentPlatform?: string } = $props();
 
   const appWindow = getCurrentWindow();
-  const barType = $derived(
-    settings.config?.custom_titlebar_type || "system",
-  );
+  const barType = $derived(settings.config?.custom_titlebar_type || "system");
   const isMac = $derived(
     barType === "mac" || (barType === "system" && currentPlatform === "macos"),
   );
