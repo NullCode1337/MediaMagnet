@@ -1,25 +1,35 @@
 <script lang="ts">
-  import SwitchRows from "./SwitchRows.svelte";
-
-  let {
-    switchClass,
-  }: {
-    switchClass: string;
-  } = $props();
-
-  const PRIVACY_SWITCHES = [
-    {
-      id: "native_notifications",
-      label: "Desktop Notifications",
-      desc: "Alert when downloads finish or fail natively through the OS",
-    },
-    {
-      id: "clear_cookies_on_exit",
-      label: "Refresh Session",
-      desc: "Delete all cookies upon closing the app",
-    },
-  ];
+  import { settings } from "$lib/stores/settings.svelte";
+  import Section from "$lib/components/Settings/SECTION.svelte";
 </script>
 
-<h3 class="text-2xl font-extrabold">Privacy</h3>
-<SwitchRows items={PRIVACY_SWITCHES} {switchClass} />
+<Section
+  config={{
+    title: "Privacy",
+    sections: [
+      {
+        items: [
+          {
+            type: "switch" as const,
+            id: "native_notifications",
+            label: "Desktop Notifications",
+            description:
+              "Alert when downloads finish or fail natively through the OS",
+            value: settings.config?.native_notifications ?? false,
+            onchange: (val: boolean) =>
+              settings.update({ native_notifications: val }),
+          },
+          {
+            type: "switch" as const,
+            id: "clear_cookies_on_exit",
+            label: "Refresh Session",
+            description: "Delete all cookies upon closing the app",
+            value: settings.config?.clear_cookies_on_exit ?? false,
+            onchange: (val: boolean) =>
+              settings.update({ clear_cookies_on_exit: val }),
+          },
+        ],
+      },
+    ],
+  }}
+/>
