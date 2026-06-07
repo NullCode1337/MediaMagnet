@@ -466,11 +466,12 @@ async fn download_url(
     let err_handle = tokio::spawn(async move {
         while let Ok(Some(line)) = err_reader.next_line().await {
             println!("{:#}", line);
-            let event = if line.contains("[error") {
+            let line = line.to_lowercase();
+            let event = if line.contains("[error") || line.contains("error:") {
                 "download-error"
             } else if !(backend == Backend::YtDlp)
-                || line.to_lowercase().contains("downloaded")
-                || line.to_lowercase().contains("merged")
+                || line.contains("downloaded")
+                || line.contains("merged")
             {
                 "download-status"
             } else {
