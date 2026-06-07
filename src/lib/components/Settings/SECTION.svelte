@@ -479,7 +479,7 @@
                             size="icon"
                             onclick={() => {
                               item.onchange(
-                                item.value.filter((i) => i.id !== siteArg.id),
+                                item.value.filter((i: GlobalArg) => i.id !== siteArg.id),
                               );
                             }}
                             class="h-8 w-8 cursor-pointer shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
@@ -494,7 +494,7 @@
                           onchange={(e) => {
                             const val = (e.target as HTMLInputElement).value;
                             item.onchange(
-                              item.value.map((i) =>
+                              item.value.map((i: GlobalArg) =>
                                 i.id === siteArg.id ? { ...i, domain: val } : i,
                               ),
                             );
@@ -514,7 +514,7 @@
                           onchange={(e) => {
                             const val = (e.target as HTMLTextAreaElement).value;
                             item.onchange(
-                              item.value.map((i) =>
+                              item.value.map((i: GlobalArg) =>
                                 i.id === siteArg.id ? { ...i, args: val } : i,
                               ),
                             );

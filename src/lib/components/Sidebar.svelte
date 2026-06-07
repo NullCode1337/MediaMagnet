@@ -8,6 +8,7 @@
     Download,
     CirclePlus,
     Settings,
+    type LucideIcon,
   } from "@lucide/svelte";
   import { settings } from "$lib/stores/settings.svelte";
   import { uiState } from "$lib/stores/store.svelte";
@@ -87,8 +88,8 @@
   });
 </script>
 
-<!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -->
-{#snippet SidebarButton(icon: any,
+{#snippet SidebarButton(
+  icon: LucideIcon,
   label: string,
   active: boolean,
   onClick: () => void,
