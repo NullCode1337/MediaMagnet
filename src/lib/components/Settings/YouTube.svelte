@@ -161,7 +161,7 @@
             type: "site-args",
             id: "yt_site_args",
             value: settings.config?.yt_site_args ?? [],
-            onchange: (v) => {
+            onchange: (v: Array<{ id: string; domain: string; args: string }>) => {
               settings.config!.yt_site_args = v;
               saveSettings();
             },
