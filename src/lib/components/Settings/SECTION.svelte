@@ -479,7 +479,9 @@
                             size="icon"
                             onclick={() => {
                               item.onchange(
-                                item.value.filter((i: GlobalArg) => i.id !== siteArg.id),
+                                item.value.filter(
+                                  (i: GlobalArg) => i.id !== siteArg.id,
+                                ),
                               );
                             }}
                             class="h-8 w-8 cursor-pointer shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
