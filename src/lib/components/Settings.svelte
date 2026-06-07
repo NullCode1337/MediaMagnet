@@ -4,6 +4,7 @@
   import * as Icons from "@lucide/svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { open, ask } from "@tauri-apps/plugin-dialog";
+  import { onBackButtonPress } from "@tauri-apps/api/app";
 
   import { uiState } from "$lib/stores/store.svelte";
   import { settings, type Config } from "$lib/stores/settings.svelte";
@@ -32,6 +33,25 @@
   });
 
   const isMobile = $derived(windowWidth < 640);
+
+  $effect(() => {
+    if (!isMobile) return;
+
+    let unlisten: Awaited<ReturnType<typeof onBackButtonPress>> | undefined;
+
+    onBackButtonPress(() => {
+      if (mobileView === "content") {
+        mobileView = "list";
+      }
+    }).then((listener) => {
+      unlisten = listener;
+    });
+
+    return () => {
+      unlisten?.unregister();
+    };
+  });
+
   const isFullscreen = $derived(windowWidth < 1000);
 
   const CONFIG_TABS = [
