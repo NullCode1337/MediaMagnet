@@ -694,20 +694,22 @@ pub async fn downloader(app: tauri::AppHandle, url: String, download_id: String)
                 "--newline",
             ]);
 
-            if !settings.yt_format.is_empty() {
-                cmd.args(["-f", &settings.yt_format]);
-            }
+            if lc.contains("youtu") {
+                if !settings.yt_format.is_empty() {
+                    cmd.args(["-f", &settings.yt_format]);
+                }
 
-            if settings.yt_embed_thumbnail {
-                cmd.arg("--embed-thumbnail");
-            }
+                if settings.yt_embed_thumbnail {
+                    cmd.arg("--embed-thumbnail");
+                }
 
-            if settings.yt_embed_subs {
-                cmd.args(["--write-subs", "--write-auto-sub", "--embed-subs"]);
-            }
+                if settings.yt_embed_subs {
+                    cmd.args(["--write-subs", "--write-auto-sub", "--embed-subs"]);
+                }
 
-            if settings.yt_restrict_filenames {
-                cmd.arg("--restrict-filenames");
+                if settings.yt_restrict_filenames {
+                    cmd.arg("--restrict-filenames");
+                }
             }
 
             if let Err(e) = apply_args(
@@ -720,6 +722,7 @@ pub async fn downloader(app: tauri::AppHandle, url: String, download_id: String)
                 let _ = app.emit("download-finished", IdPayload { id: download_id });
                 return;
             }
+
             if settings.user_agent != "None" {
                 cmd.args(["--user-agent", &settings.user_agent]);
             }
