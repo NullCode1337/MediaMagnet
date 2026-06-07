@@ -14,7 +14,6 @@
   import { uiState } from "$lib/stores/store.svelte";
 
   import SettingsDialog from "./Settings.svelte";
-  import Separator from "./ui/separator/separator.svelte";
 
   let menuOpen = $state(false);
   let { isCollapsed = $bindable(), diskUsage, currentPlatform } = $props();
@@ -99,9 +98,9 @@
   <Button
     variant="ghost"
     onclick={onClick}
-    class="w-12 sm:w-full h-14 sm:h-11 transition-all duration-200 cursor-pointer justify-center relative z-10
+    class="w-12 sm:w-full h-14 sm:h-11 sm:px-4 transition-all duration-200 cursor-pointer justify-center relative z-10
       {mobileOnly ? 'sm:hidden flex' : ''} 
-      {isCollapsed ? '' : 'sm:justify-start sm:gap-4 sm:px-4'}
+      {isCollapsed ? '' : 'sm:justify-start sm:gap-4'}
       {active
       ? 'sm:bg-sidebar-accent text-sidebar-accent-foreground'
       : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'}"
@@ -185,8 +184,6 @@
           )}
         </div>
       </div>
-
-      <Separator class="hidden sm:block gap-1" />
 
       {#if currentPlatform !== "android"}
         {@render SidebarButton(FolderOpen, "Open folder", false, () =>
