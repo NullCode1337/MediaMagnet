@@ -3,22 +3,18 @@ use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let builder = tauri::Builder::default()
-        .plugin(tauri_plugin_fs::init());
+    let builder = tauri::Builder::default().plugin(tauri_plugin_fs::init());
 
     #[cfg(not(target_os = "android"))]
-    let builder = builder
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
         if let Some(window) = app.get_webview_window("main") {
             let _ = window.unminimize();
             let _ = window.set_focus();
         }
     }));
 
-
     #[cfg(target_os = "android")]
-    let builder = builder
-        .plugin(tauri_plugin_m3::init());
+    let builder = builder.plugin(tauri_plugin_m3::init());
 
     builder
         .plugin(tauri_plugin_os::init())
