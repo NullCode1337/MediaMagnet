@@ -94,11 +94,11 @@ fn apply_cookies(
     app: &tauri::AppHandle,
     link: &str,
     backend: Backend,
-) -> Result<()> {
+) -> Result<bool> {
     let cookies_dir = app.path().app_data_dir().unwrap().join("cookies");
     if !cookies_dir.exists() {
         println!("[MediaMagnet][Download] No cookies directory found, ignoring...");
-        return Ok(());
+        return Ok(false);
     }
 
     if let Ok(entries) = std::fs::read_dir(&cookies_dir) {
@@ -114,14 +114,14 @@ fn apply_cookies(
                                 cmd.args(["--cookies", path_str]);
                             }
                             println!("[MediaMagnet] Applied cookies from: {}", path_str);
-                            return Ok(());
+                            return Ok(true);
                         }
                     }
                 }
             }
         }
     }
-    Ok(())
+    Ok(false)
 }
 
 async fn base_command(app: &tauri::AppHandle, command: &str) -> Result<Command> {
@@ -238,6 +238,93 @@ fn apply_args(
     }
 
     Ok(())
+}
+
+async fn apply_download_args(
+    app: &tauri::AppHandle,
+    url: &str,
+    backend: Backend,
+    settings: &Settings,
+) -> std::result::Result<Command, String> {
+    let mut cmd = base_command(app, backend.as_str())
+        .await
+        .map_err(|e| format!("{} backend error: {}", backend.as_str(), e))?;
+
+    let lc = url.to_lowercase();
+
+    match backend {
+        Backend::SpotDL => {
+            cmd.args([
+                "--simple-tui",
+                "--log-level",
+                "INFO",
+                "--output",
+                "{list-name}/",
+            ]);
+
+            if !settings.spotdl_format.is_empty() {
+                cmd.args(["--format", &settings.spotdl_format]);
+            }
+
+            if !settings.spotdl_bitrate.is_empty() {
+                cmd.args(["--bitrate", &settings.spotdl_bitrate]);
+            }
+
+            apply_args(&mut cmd, url, &settings.spotdl_global_args, &Vec::new())?;
+        }
+        Backend::YtDlp => {
+            cmd.args([
+                "-o",
+                &settings.yt_output_template,
+                "--progress-template",
+                "%(progress)j",
+                "--newline",
+            ]);
+
+            if lc.contains("youtu") || lc.contains("yt.be") {
+                if !settings.yt_format.is_empty() {
+                    cmd.args(["-f", &settings.yt_format]);
+                }
+
+                if settings.yt_embed_thumbnail {
+                    cmd.arg("--embed-thumbnail");
+                }
+
+                if settings.yt_embed_subs {
+                    cmd.args(["--write-subs", "--write-auto-sub", "--embed-subs"]);
+                }
+
+                if settings.yt_restrict_filenames {
+                    cmd.arg("--restrict-filenames");
+                }
+            }
+
+            apply_args(
+                &mut cmd,
+                url,
+                &settings.yt_global_args,
+                &settings.yt_site_args,
+            )?;
+
+            if settings.user_agent != "None" {
+                cmd.args(["--user-agent", &settings.user_agent]);
+            }
+        }
+        Backend::GalleryDl => {
+            cmd.args(["-d", "."]);
+            apply_args(
+                &mut cmd,
+                url,
+                &settings.gdl_global_args,
+                &settings.gdl_site_args,
+            )?;
+            if settings.user_agent != "None" {
+                cmd.args(["-a", &settings.user_agent]);
+            }
+        }
+    }
+
+    Ok(cmd)
 }
 
 async fn download_url(
@@ -487,6 +574,8 @@ async fn download_url(
         }
     });
 
+    let mut exit_status: Option<std::process::ExitStatus> = None;
+
     loop {
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
         let mut guard = get_downloads().lock().map_err(|_| "Lock failed")?;
@@ -496,7 +585,11 @@ async fn download_url(
         }
 
         let done = match guard.get_mut(&id).unwrap().child.try_wait() {
-            Ok(Some(_)) | Err(_) => true,
+            Ok(Some(status)) => {
+                exit_status = Some(status);
+                true
+            }
+            Err(_) => true,
             Ok(None) => false,
         };
 
@@ -531,6 +624,17 @@ async fn download_url(
             if dl_path.read_dir()?.next().is_none() {
                 std::fs::remove_dir(dl_path)?;
             }
+        }
+    }
+
+    if let Some(status) = exit_status {
+        if !status.success() {
+            return Err(format!(
+                "{} process exited with error ({})",
+                backend.as_str(),
+                status
+            )
+            .into());
         }
     }
 
@@ -652,105 +756,50 @@ pub async fn downloader(app: tauri::AppHandle, url: String, download_id: String)
         },
     );
 
-    let mut cmd = match base_command(&app, backend.as_str()).await {
+    let mut cmd = match apply_download_args(&app, &url, backend, &settings).await {
         Ok(c) => c,
         Err(e) => {
-            let err_msg = format!("{} backend error: {}", backend.as_str(), e);
-            emit_status("download-error", err_msg);
+            emit_status("download-error", e);
             return;
         }
     };
 
-    match backend {
-        Backend::SpotDL => {
-            cmd.args([
-                "--simple-tui",
-                "--log-level",
-                "INFO",
-                "--output",
-                "{list-name}/",
-            ]);
-
-            if !settings.spotdl_format.is_empty() {
-                cmd.args(["--format", &settings.spotdl_format]);
-            }
-
-            if !settings.spotdl_bitrate.is_empty() {
-                cmd.args(["--bitrate", &settings.spotdl_bitrate]);
-            }
-
-            if let Err(e) = apply_args(&mut cmd, &url, &settings.spotdl_global_args, &Vec::new()) {
-                emit_status("download-error", e);
-                let _ = app.emit("download-finished", IdPayload { id: download_id });
-                return;
-            }
-        }
-        Backend::YtDlp => {
-            cmd.args([
-                "-o",
-                &settings.yt_output_template,
-                "--progress-template",
-                "%(progress)j",
-                "--newline",
-            ]);
-
-            if lc.contains("youtu") {
-                if !settings.yt_format.is_empty() {
-                    cmd.args(["-f", &settings.yt_format]);
-                }
-
-                if settings.yt_embed_thumbnail {
-                    cmd.arg("--embed-thumbnail");
-                }
-
-                if settings.yt_embed_subs {
-                    cmd.args(["--write-subs", "--write-auto-sub", "--embed-subs"]);
-                }
-
-                if settings.yt_restrict_filenames {
-                    cmd.arg("--restrict-filenames");
-                }
-            }
-
-            if let Err(e) = apply_args(
-                &mut cmd,
-                &url,
-                &settings.yt_global_args,
-                &settings.yt_site_args,
-            ) {
-                emit_status("download-error", e);
-                let _ = app.emit("download-finished", IdPayload { id: download_id });
-                return;
-            }
-
-            if settings.user_agent != "None" {
-                cmd.args(["--user-agent", &settings.user_agent]);
-            }
-        }
-        Backend::GalleryDl => {
-            cmd.args(["-d", "."]);
-            if let Err(e) = apply_args(
-                &mut cmd,
-                &url,
-                &settings.gdl_global_args,
-                &settings.gdl_site_args,
-            ) {
-                emit_status("download-error", e);
-                let _ = app.emit("download-finished", IdPayload { id: download_id });
-                return;
-            }
-            if settings.user_agent != "None" {
-                cmd.args(["-a", &settings.user_agent]);
-            }
-        }
-    }
-
-    let _ = apply_cookies(&mut cmd, &app, &url, backend);
+    let cookies_applied = apply_cookies(&mut cmd, &app, &url, backend).unwrap_or(false);
     cmd.arg(&url);
 
     if let Err(e) = download_url(app.clone(), cmd, &url, backend, download_id.clone()).await {
-        println!("[MediaMagnet] Download failed ({}): {}", download_id, e);
-        emit_status("download-error", format!("Download failed: {}", e));
+        if cookies_applied {
+            println!(
+                "[MediaMagnet] Download failed ({}), retrying without cookies...",
+                download_id
+            );
+            emit_status(
+                "download-status",
+                "FAILED: Retrying without cookies...".into(),
+            );
+
+            match apply_download_args(&app, &url, backend, &settings).await {
+                Ok(mut retry_cmd) => {
+                    retry_cmd.arg(&url);
+                    if let Err(e) =
+                        download_url(app.clone(), retry_cmd, &url, backend, download_id.clone())
+                            .await
+                    {
+                        println!(
+                            "[MediaMagnet] Download failed without cookies ({}): {}",
+                            download_id, e
+                        );
+                        emit_status("download-error", format!("Download failed: {}", e));
+                    }
+                }
+                Err(e) => {
+                    emit_status("download-error", e);
+                }
+            }
+        } else {
+            println!("[MediaMagnet] Download failed ({}): {}", download_id, e);
+            emit_status("download-error", format!("Download failed: {}", e));
+        }
     }
 
     let _ = app.emit("download-finished", IdPayload { id: download_id });
