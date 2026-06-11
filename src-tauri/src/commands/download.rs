@@ -330,7 +330,7 @@ async fn apply_download_args(
                 &settings.yt_site_args,
             )?;
 
-            if settings.user_agent != "None" {
+            if !settings.user_agent.is_empty() {
                 cmd.args(["--user-agent", &settings.user_agent]);
             }
         }
@@ -342,7 +342,7 @@ async fn apply_download_args(
                 &settings.gdl_global_args,
                 &settings.gdl_site_args,
             )?;
-            if settings.user_agent != "None" {
+            if !settings.user_agent.is_empty() {
                 cmd.args(["-a", &settings.user_agent]);
             }
         }

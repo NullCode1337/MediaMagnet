@@ -50,7 +50,7 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             download_path: "Default".to_string(),
-            user_agent: "None".to_string(),
+            user_agent: String::new(),
             dark_mode: true,
             accent_hue: Number::from(260),
             custom_titlebar_type: "system".to_string(),
