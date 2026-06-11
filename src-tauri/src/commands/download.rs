@@ -551,14 +551,19 @@ async fn download_url(
     });
 
     let err_handle = tokio::spawn(async move {
+        let mut error = String::new();
+
         while let Ok(Some(line)) = err_reader.next_line().await {
             println!("{:#}", line);
-            let line = line.to_lowercase();
-            let event = if line.contains("[error") || line.contains("error:") {
-                "download-error"
-            } else if !(backend == Backend::YtDlp)
-                || line.contains("downloaded")
-                || line.contains("merged")
+            let line_l = line.to_lowercase();
+            
+            if line_l.contains("[error") || line_l.contains("error:") {
+                error = line.clone();
+            }
+
+            let event = if !(backend == Backend::YtDlp)
+                || line_l.contains("downloaded")
+                || line_l.contains("merged")
             {
                 "download-status"
             } else {
@@ -572,6 +577,7 @@ async fn download_url(
                 },
             );
         }
+        error
     });
 
     let mut exit_status: Option<std::process::ExitStatus> = None;
@@ -599,7 +605,8 @@ async fn download_url(
         }
     }
 
-    let _ = tokio::join!(out_handle, err_handle);
+    let (_, err) = tokio::join!(out_handle, err_handle);
+    let error = err.unwrap_or_default();
 
     if backend == Backend::GalleryDl {
         // === create folder from directlink domain name ===
@@ -629,12 +636,16 @@ async fn download_url(
 
     if let Some(status) = exit_status {
         if !status.success() {
-            return Err(format!(
-                "{} process exited with error ({})",
-                backend.as_str(),
-                status
-            )
-            .into());
+            if !error.trim().is_empty() {
+                return Err(error.into());
+            } else {
+                return Err(format!(
+                    "{} process exited with error ({})",
+                    backend.as_str(),
+                    status
+                )
+                .into());
+            }
         }
     }
 
