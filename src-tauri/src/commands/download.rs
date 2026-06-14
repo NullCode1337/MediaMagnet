@@ -401,6 +401,10 @@ async fn download_url(
         );
     }
 
+    // already downloaded
+    let ad = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let ad_out = ad.clone();
+
     let out_handle = tokio::spawn(async move {
         match backend {
             Backend::SpotDL => {
@@ -476,6 +480,9 @@ async fn download_url(
                 while let Ok(Some(line)) = out_reader.next_line().await {
                     if !line.contains('{') {
                         println!("{:#}", line);
+                    }
+                    if line.contains("has already been downloaded") {
+                        ad_out.store(true, std::sync::atomic::Ordering::Relaxed);
                     }
                     if let Ok(json) = serde_json::from_str::<serde_json::Value>(&line) {
                         if let (Some("downloading"), Some(percent)) = (
@@ -653,7 +660,7 @@ async fn download_url(
     }
 
     if let Some(status) = exit_status {
-        if !status.success() {
+        if !status.success() && !ad.load(std::sync::atomic::Ordering::Relaxed) {
             if !error.trim().is_empty() {
                 return Err(error.into());
             } else {
