@@ -157,7 +157,7 @@ pub async fn set_download_path(app: tauri::AppHandle) -> std::path::PathBuf {
     let default_dir = app.path().download_dir().unwrap().join("MediaMagnet");
 
     let downloads_path = match settings.download_path.as_str() {
-        "Default" => default_dir.clone(),
+        "" => default_dir.clone(),
         custom_path if custom_path.to_lowercase().contains("mediamagnet") => {
             std::path::PathBuf::from(custom_path)
         }
@@ -188,7 +188,7 @@ pub async fn set_download_path(app: tauri::AppHandle) -> std::path::PathBuf {
 #[tauri::command]
 pub async fn get_free_space(app: tauri::AppHandle) -> Result<f64, String> {
     let settings = Settings::load(&app);
-    let download_path = if settings.download_path == "Default" {
+    let download_path = if settings.download_path.is_empty() {
         app.path().download_dir().unwrap_or_default()
     } else {
         Path::new(&settings.download_path).to_path_buf()
