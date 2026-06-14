@@ -402,7 +402,9 @@
         <header
           class="hidden sm:flex h-20 items-center px-8 bg-background/50 sticky top-0 z-10 gap-4 shrink-0"
         >
-          <div class="flex-1 max-w-full mx-auto flex items-center gap-2 px-2 sm:max-w-5xl">
+          <div
+            class="flex-1 max-w-full mx-auto flex items-center gap-2 px-2 sm:max-w-5xl"
+          >
             <div class="relative flex-1">
               <form
                 onsubmit={(e) => {
@@ -495,6 +497,7 @@
                   resumeTask={resumeDownload}
                   cancelTask={cancelDownload}
                   {stopAllDownloads}
+                  retryDownload={startDownload}
                 />
               </div>
             </div>
@@ -517,6 +520,7 @@
                 resumeTask={resumeDownload}
                 cancelTask={cancelDownload}
                 {stopAllDownloads}
+                retryDownload={startDownload}
               />
             </div>
           </div>
