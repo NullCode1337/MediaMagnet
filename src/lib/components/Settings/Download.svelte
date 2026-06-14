@@ -24,6 +24,7 @@
       <Input
         bind:value={settings.config!.download_path}
         onchange={saveSettings}
+        placeholder="Default"
         class="h-10 border-input bg-background text-sm text-foreground focus-visible:ring-ring"
       />
       <Button

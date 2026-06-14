@@ -88,7 +88,7 @@ class Settings {
     if (!this.config?.download_path) return;
 
     let basePath = this.config.download_path;
-    if (this.config.download_path === "Default") {
+    if (this.config.download_path === "") {
       basePath = await downloadDir();
     }
 

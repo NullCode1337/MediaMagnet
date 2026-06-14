@@ -49,7 +49,7 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            download_path: "Default".to_string(),
+            download_path: String::new(),
             user_agent: String::new(),
             dark_mode: true,
             accent_hue: Number::from(260),
