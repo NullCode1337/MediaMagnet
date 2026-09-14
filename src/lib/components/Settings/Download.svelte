@@ -7,14 +7,10 @@
   let {
     saveSettings,
     selectDirectory,
-    currentPlatform,
   }: {
     saveSettings: () => Promise<void>;
     selectDirectory: () => Promise<void>;
-    currentPlatform?: string;
   } = $props();
-
-  let customPython = $derived(settings.config?.custom_python ?? false);
 </script>
 
 {#snippet downloadPathRow()}
@@ -42,24 +38,6 @@
   config={{
     title: "Downloads",
     sections: [
-      ...(currentPlatform !== "android"
-        ? [
-            {
-              items: [
-                {
-                  type: "switch" as const,
-                  id: "custom_python",
-                  label: "Use Custom Python",
-                  description:
-                    "Only select this option if you have Python with all required modules installed",
-                  value: customPython,
-                  onchange: (val: boolean) =>
-                    settings.update({ custom_python: val }),
-                },
-              ],
-            },
-          ]
-        : []),
       {
         items: [
           {
@@ -77,21 +55,6 @@
             },
             monospace: true,
           },
-          ...(customPython
-            ? [
-                {
-                  type: "input" as const,
-                  id: "custom_python_path",
-                  label: "Custom Python Path",
-                  value: settings.config?.custom_python_path ?? "",
-                  onchange: (val: string) => {
-                    settings.config!.custom_python_path = val;
-                    saveSettings();
-                  },
-                  monospace: true,
-                },
-              ]
-            : []),
         ],
       },
     ],
