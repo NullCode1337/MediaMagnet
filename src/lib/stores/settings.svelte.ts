@@ -21,8 +21,6 @@ export interface Config {
   // download
   download_path: string;
   user_agent: string;
-  custom_python: boolean;
-  custom_python_path: string;
 
   // yt-dlp
   yt_format: string;

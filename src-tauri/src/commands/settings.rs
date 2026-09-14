@@ -24,8 +24,6 @@ pub struct Settings {
     // download options
     pub download_path: String,
     pub user_agent: String,
-    pub custom_python: bool,
-    pub custom_python_path: String,
 
     // yt-dlp backend options
     pub yt_format: String,
@@ -60,13 +58,11 @@ impl Default for Settings {
             always_on_top: false,
             custom_titlebar: false,
             native_notifications: false,
-            custom_python: false,
             clear_cookies_on_exit: false,
             yt_embed_thumbnail: false,
             yt_embed_subs: false,
             yt_restrict_filenames: false,
 
-            custom_python_path: String::new(),
             yt_global_args: String::new(),
             gdl_global_args: String::new(),
             spotdl_global_args: String::new(),
