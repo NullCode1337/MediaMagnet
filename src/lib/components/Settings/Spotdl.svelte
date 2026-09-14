@@ -2,12 +2,6 @@
   import Section from "$lib/components/Settings/SECTION.svelte";
   import { settings } from "$lib/stores/settings.svelte";
 
-  let {
-    saveSettings,
-  }: {
-    saveSettings: () => Promise<void>;
-  } = $props();
-
   const SPOTDL_FORMAT_PRESETS = [
     { label: "MP3", value: "mp3" },
     { label: "M4A", value: "m4a" },
@@ -41,10 +35,7 @@
             description: "Output track format",
             presets: SPOTDL_FORMAT_PRESETS,
             value: settings.config?.spotdl_format ?? "",
-            onchange: (v: string) => {
-              settings.config!.spotdl_format = v;
-              saveSettings();
-            },
+            onchange: (v: string) => settings.update({ spotdl_format: v }),
             placeholder: "mp3",
             minRows: 1,
           },
@@ -55,10 +46,7 @@
             description: "Output track conversion quality",
             presets: SPOTDL_BITRATE_PRESETS,
             value: settings.config?.spotdl_bitrate ?? "",
-            onchange: (v: string) => {
-              settings.config!.spotdl_bitrate = v;
-              saveSettings();
-            },
+            onchange: (v: string) => settings.update({ spotdl_bitrate: v }),
             placeholder: "auto",
             minRows: 1,
           },
@@ -73,10 +61,7 @@
             label: "Global Arguments",
             description: "Pass custom arguments directly to the spotdl CLI.",
             value: settings.config?.spotdl_global_args ?? "",
-            onchange: (v: string) => {
-              settings.config!.spotdl_global_args = v;
-              saveSettings();
-            },
+            onchange: (v: string) => settings.update({ spotdl_global_args: v }),
             placeholder: "--threads 4",
           },
         ],

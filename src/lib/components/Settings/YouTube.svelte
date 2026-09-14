@@ -1,12 +1,7 @@
 <script lang="ts">
   import Section from "$lib/components/Settings/SECTION.svelte";
   import { settings } from "$lib/stores/settings.svelte";
-
-  let {
-    saveSettings,
-  }: {
-    saveSettings: () => Promise<void>;
-  } = $props();
+  import type { GlobalArg } from "$lib/components/Settings/SECTION.svelte";
 </script>
 
 {#snippet outputTemplateDesc()}
@@ -87,10 +82,7 @@
               { label: "Worst (smallest)", value: "worst" },
             ],
             value: settings.config?.yt_format ?? "",
-            onchange: (v: string) => {
-              settings.config!.yt_format = v;
-              saveSettings();
-            },
+            onchange: (v: string) => settings.update({ yt_format: v }),
             placeholder: "bestvideo+bestaudio/best",
           },
           {
@@ -117,10 +109,7 @@
               { label: "Video ID Only", value: "%(id)s.%(ext)s" },
             ],
             value: settings.config?.yt_output_template ?? "",
-            onchange: (v: string) => {
-              settings.config!.yt_output_template = v;
-              saveSettings();
-            },
+            onchange: (v: string) => settings.update({ yt_output_template: v }),
             placeholder: "%(title)s.%(ext)s",
           },
         ],
@@ -134,10 +123,7 @@
             label: "Global Arguments",
             description: "Pass custom arguments directly to the yt-dlp CLI.",
             value: settings.config?.yt_global_args ?? "",
-            onchange: (v: string) => {
-              settings.config!.yt_global_args = v;
-              saveSettings();
-            },
+            onchange: (v: string) => settings.update({ yt_global_args: v }),
             placeholder: "--cookies-from-browser chrome --no-mtime",
           },
         ],
@@ -148,12 +134,12 @@
         headerAction: {
           label: "Add Site",
           onclick: () => {
-            if (!settings.config) return;
-            settings.config.yt_site_args = [
-              ...(settings.config.yt_site_args || []),
-              { id: crypto.randomUUID(), domain: "", args: "" },
-            ];
-            saveSettings();
+            settings.update({
+              yt_site_args: [
+                ...(settings.config?.yt_site_args ?? []),
+                { id: crypto.randomUUID(), domain: "", args: "" },
+              ],
+            });
           },
         },
         items: [
@@ -161,11 +147,8 @@
             type: "site-args",
             id: "yt_site_args",
             value: settings.config?.yt_site_args ?? [],
-            onchange: (
-              v: Array<{ id: string; domain: string; args: string }>,
-            ) => {
-              settings.config!.yt_site_args = v;
-              saveSettings();
+            onchange: (v: GlobalArg[]) => {
+              settings.update({ yt_site_args: v });
             },
             domainPlaceholder: "example.com",
             argsPlaceholder: "--api-key=xyz",

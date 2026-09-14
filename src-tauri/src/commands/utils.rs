@@ -151,13 +151,43 @@ pub fn overwrite_json(app: tauri::AppHandle, links: Vec<String>) {
         .unwrap();
 }
 
+#[tauri::command]
+pub fn check_download_path(path: String) -> Result<(), String> {
+    if path.trim().is_empty() || path.trim().eq_ignore_ascii_case("default") {
+        return Ok(());
+    }
+
+    let dir = std::path::PathBuf::from(&path);
+
+    if let Err(e) = std::fs::create_dir_all(&dir) {
+        return Err(format!("cannot create directory: {e}"));
+    }
+
+    let meta = std::fs::metadata(&dir)
+        .map_err(|e| format!("cannot access path: {e}"))?;
+    
+    if !meta.is_dir() {
+        return Err("path is not a directory".to_string());
+    }
+
+    let write = dir.join(".mediamagnet-write-test");
+    match std::fs::File::create(&write) {
+        Ok(file) => {
+            drop(file);
+            let _ = std::fs::remove_file(&write);
+            Ok(())
+        }
+        Err(e) => Err(format!("no write permission: {e}")),
+    }
+}
+
 // Set download path
 pub async fn set_download_path(app: tauri::AppHandle) -> std::path::PathBuf {
     let settings = Settings::load(&app);
     let default_dir = app.path().download_dir().unwrap().join("MediaMagnet");
 
     let downloads_path = match settings.download_path.as_str() {
-        "" => default_dir.clone(),
+        p if p.trim().is_empty() || p.trim().eq_ignore_ascii_case("default") => default_dir.clone(),
         custom_path if custom_path.to_lowercase().contains("mediamagnet") => {
             std::path::PathBuf::from(custom_path)
         }

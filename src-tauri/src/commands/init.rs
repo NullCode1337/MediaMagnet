@@ -56,7 +56,9 @@ pub fn init_config(app: tauri::AppHandle) {
     }
 
     let settings = Settings::load(&app);
-    settings.save(&app);
+    if let Err(e) = settings.save(&app) {
+        eprintln!("[MediaMagnet][Init] Failed to persist settings: {e}");
+    }
 
     if settings_json.exists() {
         println!("[MediaMagnet][Init] Settings verified OK");

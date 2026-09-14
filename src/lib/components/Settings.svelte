@@ -2,12 +2,12 @@
   import * as Dialog from "$lib/components/ui/dialog";
   import { Button } from "$lib/components/ui/button";
   import * as Icons from "@lucide/svelte";
-  import { invoke } from "@tauri-apps/api/core";
   import { open, ask } from "@tauri-apps/plugin-dialog";
+  import { toast } from "svelte-sonner";
   import { onBackButtonPress } from "@tauri-apps/api/app";
 
   import { uiState } from "$lib/stores/store.svelte";
-  import { settings, type Config } from "$lib/stores/settings.svelte";
+  import { settings } from "$lib/stores/settings.svelte";
 
   import GeneralTab from "$lib/components/Settings/General.svelte";
   import DownloadsTab from "$lib/components/Settings/Download.svelte";
@@ -20,7 +20,6 @@
 
   let { menuOpen = $bindable(false), isCollapsed, currentPlatform } = $props();
   let activeTab = $state("general");
-  let saveStatus = $state<"idle" | "saved">("idle");
   let windowWidth = $state(
     typeof window !== "undefined" ? window.innerWidth : 1200,
   );
@@ -71,18 +70,6 @@
   const btnClass =
     "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground relative justify-start";
 
-  const nextTick = () => new Promise((res) => setTimeout(res, 0));
-
-  async function saveSettings() {
-    if (!settings.config) return;
-    await nextTick();
-    await invoke("update_settings", {
-      settings: $state.snapshot(settings.config),
-    });
-    saveStatus = "saved";
-    setTimeout(() => (saveStatus = "idle"), 2000);
-  }
-
   const resetSettings = async () => {
     const confirmed = await ask(
       `Are you sure you want to reset all settings?`,
@@ -93,10 +80,12 @@
         cancelLabel: "Cancel",
       },
     );
-    if (confirmed) {
-      settings.config = (await invoke("settings", {
-        action: "reset",
-      })) as Config;
+    if (!confirmed) return;
+    try {
+      await settings.reset();
+      toast.success("Settings reset to defaults");
+    } catch (err) {
+      toast.error("Reset failed: " + err);
     }
   };
 
@@ -107,9 +96,8 @@
         multiple: false,
         defaultPath: settings.config?.download_path,
       });
-      if (selected && settings.config) {
-        settings.config.download_path = selected;
-        await saveSettings();
+      if (selected && typeof selected === "string") {
+        await settings.setDownloadPath(selected);
       }
     } catch (e) {
       console.error("Failed to open directory picker:", e);
@@ -254,23 +242,32 @@
         </div>
       {/if}
 
-      <div class="absolute top-6 right-6 z-50 pointer-events-none">
-        {#if saveStatus === "saved"}
-          <div
-            class="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full border border-primary/20 text-xs shadow-sm"
-          >
-            <Icons.Check size={12} />
-            Changes saved
-          </div>
-        {/if}
-      </div>
+      {#if !isMobile}
+        <div class="absolute top-6 right-6 z-50 pointer-events-none">
+          {#if settings.saveState === "saved"}
+            <div
+              class="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full border border-primary/20 text-xs shadow-sm"
+            >
+              <Icons.Check size={12} />
+              Changes saved
+            </div>
+          {:else if settings.saveState === "error"}
+            <div
+              class="flex items-center gap-2 px-3 py-1.5 bg-destructive/10 text-destructive rounded-full border border-destructive/20 text-xs shadow-sm"
+            >
+              <Icons.Info size={12} />
+              Save failed
+            </div>
+          {/if}
+        </div>
+      {/if}
 
       {#if settings.config}
         <div class="w-full space-y-8 animate-in fade-in slide-in-from-bottom-2">
           {#if activeTab === "general"}
             <GeneralTab {currentPlatform} />
           {:else if activeTab === "downloads"}
-            <DownloadsTab {saveSettings} {selectDirectory} {currentPlatform} />
+            <DownloadsTab {selectDirectory} />
           {:else if activeTab === "cookies"}
             <CookiesTab />
           {:else if activeTab === "privacy"}
@@ -278,12 +275,29 @@
           {:else if activeTab === "import_export"}
             <ImportExportTab />
           {:else if activeTab === "youtube"}
-            <YouTubeTab {saveSettings} />
+            <YouTubeTab />
           {:else if activeTab === "gallery"}
-            <GalleryTab {saveSettings} />
+            <GalleryTab />
           {:else if activeTab === "spotdl"}
-            <SpotdlTab {saveSettings} />
+            <SpotdlTab />
           {/if}
+        </div>
+      {:else if settings.loadError}
+        <div
+          class="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground text-sm px-6 text-center"
+        >
+          <Icons.AlertTriangle size={28} class="text-destructive" />
+          <p class="text-destructive">Failed to load settings</p>
+          <p class="text-xs max-w-md wrap-break-word">{settings.loadError}</p>
+          <Button
+            variant="secondary"
+            size="sm"
+            class="cursor-pointer"
+            onclick={() => settings.retryLoad()}
+          >
+            <Icons.RotateCcw size={14} />
+            Retry
+          </Button>
         </div>
       {:else}
         <div
@@ -322,7 +336,7 @@
           }}
         >
           <Icons.Settings
-            class="text-sidebar-foreground/70 size-5 sm:!size-5 shrink-0"
+            class="text-sidebar-foreground/70 size-5 sm:size-5! shrink-0"
           />
           {#if !isCollapsed}
             <span
@@ -344,7 +358,7 @@
       {isFullscreen
         ? `w-screen! max-w-none! max-h-none! rounded-none! left-0! translate-x-0! translate-y-0!
            ${uiState.showCustom ? 'top-10! h-[calc(100vh-2.5rem)]!' : 'top-0! h-screen!'}`
-        : `max-w-[1000px]! w-full! h-[89vh]! rounded-2xl! backdrop:backdrop-blur-md
+        : `max-w-250! w-full! h-[89vh]! rounded-2xl! backdrop:backdrop-blur-md
            ${uiState.showCustom ? 'top-[calc(50%+20px)]!' : 'top-[50%]!'}`}"
       style="padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right);"
     >
