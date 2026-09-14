@@ -129,11 +129,11 @@
         ? mobileView === 'list'
           ? 'flex flex-col w-full h-full overflow-hidden'
           : 'hidden'
-        : 'flex flex-col w-[240px] border-r border-sidebar-border p-6 gap-1 h-full'}"
+        : 'flex flex-col w-60 border-r border-sidebar-border p-6 gap-1 h-full'}"
     >
       {#if isMobile}
         <div class="flex items-center h-19 bg-muted/40 shrink-0">
-          <span class="font-semibold mx-6 text-lg text-base">Settings</span>
+          <span class="font-semibold mx-6 text-lg">Settings</span>
         </div>
 
         <div class="flex-1 overflow-y-auto bg-muted/40 px-4 py-1 space-y-6">
@@ -183,7 +183,7 @@
         </div>
       {:else}
         <h2
-          class="text-[11px] font-bold uppercase tracking-[0.2em] text-sidebar-foreground/50 mb-4 px-2"
+          class="text-sm font-bold font-[Verdana] text-sidebar-foreground/50 mb-4 px-2"
         >
           Configuration
         </h2>
@@ -203,7 +203,7 @@
         {/each}
 
         <h2
-          class="text-[11px] font-bold uppercase tracking-[0.2em] text-sidebar-foreground/50 mt-6 mb-4 px-2"
+          class="text-sm font-bold font-[Verdana] text-sidebar-foreground/50 mt-6 mb-4 px-2"
         >
           Backend
         </h2>
