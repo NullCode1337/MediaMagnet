@@ -1,4 +1,12 @@
 /* eslint-disable no-useless-assignment */
+
+export type AccentKind = "hue" | "black" | "white";
+
+export type Accent = {
+  kind: AccentKind;
+  hue: number;
+};
+
 export function hueToHex(h: number): string {
   const s = 1,
     l = 0.5;
@@ -42,7 +50,13 @@ export function hueToHex(h: number): string {
   return `#${hex(r)}${hex(g)}${hex(b)}`;
 }
 
-export function hexToHue(hex: string): number | null {
+export function accentToHex(accent: Accent): string {
+  if (accent.kind === "black") return "#000000";
+  if (accent.kind === "white") return "#ffffff";
+  return hueToHex(accent.hue);
+}
+
+export function hexToAccent(hex: string): Accent | null {
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim());
   if (!m) return null;
 
@@ -52,7 +66,12 @@ export function hexToHue(hex: string): number | null {
 
   const max = Math.max(r, g, b),
     min = Math.min(r, g, b);
-  if (max === min) return 0;
+
+  if (max === min) {
+    if (max <= 0.1) return { kind: "black", hue: 0 };
+    if (max >= 0.9) return { kind: "white", hue: 0 };
+    return null;
+  }
 
   const d = max - min;
   let h = 0;
@@ -60,5 +79,5 @@ export function hexToHue(hex: string): number | null {
   else if (max === g) h = ((b - r) / d + 2) / 6;
   else h = ((r - g) / d + 4) / 6;
 
-  return Math.round(h * 360);
+  return { kind: "hue", hue: Math.round(h * 360) };
 }
