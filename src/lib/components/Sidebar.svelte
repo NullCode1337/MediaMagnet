@@ -105,7 +105,7 @@
       ? 'sm:bg-sidebar-accent text-sidebar-accent-foreground'
       : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'}"
   >
-    <IconComponent class="size-5 text-sidebar-foreground/70 sm:!w-5 sm:!h-5" />
+    <IconComponent class="size-5 text-sidebar-foreground/70 sm:w-5! sm:h-5!" />
     {#if !isCollapsed}
       <span
         class="hidden sm:inline font-medium text-[15px] text-sidebar-foreground"

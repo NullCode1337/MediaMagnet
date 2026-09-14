@@ -5,10 +5,8 @@
   import Section from "$lib/components/Settings/SECTION.svelte";
 
   let {
-    saveSettings,
     selectDirectory,
   }: {
-    saveSettings: () => Promise<void>;
     selectDirectory: () => Promise<void>;
   } = $props();
 </script>
@@ -18,8 +16,9 @@
     <span class="text-[15px] font-normal text-foreground">Download Path</span>
     <div class="flex gap-2">
       <Input
-        bind:value={settings.config!.download_path}
-        onchange={saveSettings}
+        value={settings.config?.download_path ?? ""}
+        onchange={(e) =>
+          settings.setDownloadPath((e.target as HTMLInputElement).value)}
         placeholder="Default"
         class="h-10 border-input bg-background text-sm text-foreground focus-visible:ring-ring"
       />
@@ -49,10 +48,7 @@
             id: "user_agent",
             label: "User Agent",
             value: settings.config?.user_agent ?? "",
-            onchange: (val: string) => {
-              settings.config!.user_agent = val;
-              saveSettings();
-            },
+            onchange: (val: string) => settings.update({ user_agent: val }),
             monospace: true,
           },
         ],

@@ -7,6 +7,7 @@
     Copy,
     Check,
     FileBraces,
+    FileDown,
   } from "@lucide/svelte";
   import Section from "$lib/components/Settings/SECTION.svelte";
 
@@ -20,7 +21,7 @@
   let copied = $state(false);
 
   async function handleCopy() {
-    await settings.copyToClipboard();
+    await settings.exportToClipboard();
     copied = true;
     setTimeout(() => (copied = false), 2000);
   }
@@ -50,20 +51,34 @@
       </Button>
     </div>
 
-    <Button
-      variant="secondary"
-      size="sm"
-      class="h-7 gap-1.5 rounded-md px-2.5 text-xs font-medium cursor-pointer hover:bg-background hover:shadow-sm transition-all sm:ml-auto"
-      onclick={handleCopy}
+    <div
+      class="flex items-center gap-1.5 rounded-lg border bg-muted/30 p-1 sm:ml-auto"
     >
-      {#if copied}
-        <Check size={13} class="shrink-0 text-emerald-500" />
-        <span class="text-emerald-500">Copied!</span>
-      {:else}
-        <Copy size={13} class="shrink-0" />
-        Export JSON
-      {/if}
-    </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        class="h-7 flex-1 gap-1.5 rounded-md px-2.5 text-xs font-medium cursor-pointer hover:bg-background hover:shadow-sm transition-all"
+        onclick={handleCopy}
+      >
+        {#if copied}
+          <Check size={13} class="shrink-0 text-emerald-500" />
+          <span class="text-emerald-500">Copied!</span>
+        {:else}
+          <Copy size={13} class="shrink-0 text-muted-foreground" />
+          Export JSON
+        {/if}
+      </Button>
+      <div class="h-4 w-px shrink-0 bg-border"></div>
+      <Button
+        variant="ghost"
+        size="sm"
+        class="h-7 flex-1 gap-1.5 rounded-md px-2.5 text-xs font-medium cursor-pointer hover:bg-background hover:shadow-sm transition-all"
+        onclick={() => settings.exportToFile()}
+      >
+        <FileDown size={13} class="shrink-0 text-muted-foreground" />
+        Export File
+      </Button>
+    </div>
   </div>
 {/snippet}
 
