@@ -121,7 +121,7 @@
     fixed bottom-4 left-1/2 -translate-x-1/2
     sm:relative sm:bottom-0 sm:left-0 sm:translate-x-0 sm:flex-col sm:h-full sm:rounded-none sm:border-r sm:shadow-none sm:p-0
     transition-all duration-300 ease-in-out
-    {isCollapsed ? 'sm:w-20' : 'sm:w-70'}
+    {isCollapsed ? 'sm:w-20' : 'sm:w-60'}
     {barVisible
     ? 'translate-y-0 opacity-100'
     : 'max-sm:translate-y-[calc(100%+2rem)] max-sm:opacity-0 max-sm:pointer-events-none'}"
