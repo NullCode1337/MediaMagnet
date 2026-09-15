@@ -803,6 +803,8 @@ pub async fn downloader(app: tauri::AppHandle, url: String, download_id: String)
     let cookies_applied = apply_cookies(&mut cmd, &app, &url, backend).unwrap_or(false);
     cmd.arg(&url);
 
+    let mut succeeded = true;
+
     if let Err(e) = download_url(app.clone(), cmd, &url, backend, download_id.clone()).await {
         if cookies_applied {
             println!(
@@ -826,19 +828,24 @@ pub async fn downloader(app: tauri::AppHandle, url: String, download_id: String)
                             download_id, e
                         );
                         emit_status("download-error", format!("Download failed: {}", e));
+                        succeeded = false;
                     }
                 }
                 Err(e) => {
                     emit_status("download-error", e);
+                    succeeded = false;
                 }
             }
         } else {
             println!("[MediaMagnet] Download failed ({}): {}", download_id, e);
             emit_status("download-error", format!("Download failed: {}", e));
+            succeeded = false;
         }
     }
 
-    let _ = app.emit("download-finished", IdPayload { id: download_id });
+    if succeeded {
+        let _ = app.emit("download-finished", IdPayload { id: download_id });
+    }
 }
 
 #[tauri::command]
