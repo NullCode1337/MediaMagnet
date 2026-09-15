@@ -239,9 +239,8 @@
   });
 
   $effect(() => {
-    const unlisten = listen<{ message: string }>("notification", (event) => {
-      let message = event.payload as unknown as string;
-      toast(message);
+    const unlisten = listen<StatusPayload>("notification", (event) => {
+      toast(event.payload.value);
     });
 
     return () => {
@@ -301,12 +300,8 @@
 
       listen<IdPayload>("download-finished", (e) => {
         const task = tasks.find((t) => t.id === e.payload.id);
-
-        if (task?.isPaused) return;
-
-        if (task && !task.error) {
-          addToHistory(task.url, "success");
-        }
+        if (task?.isPaused || task?.error) return;
+        if (task) addToHistory(task.url, "success");
         updateTask(e.payload.id, {
           isDownloading: false,
           status: "Complete",
