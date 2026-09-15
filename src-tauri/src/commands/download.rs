@@ -919,13 +919,13 @@ pub async fn cancel_all_downloads(app: tauri::AppHandle) -> std::result::Result<
             .drain()
             .collect()
     };
-
+ 
     for (id, mut entry) in children {
         if let Err(e) = entry.child.kill().await {
             eprintln!("[MediaMagnet] Failed to kill {}: {}", id, e);
         }
         let _ = entry.child.wait().await;
-
+ 
         let _ = app.emit(
             "download-error",
             StatusPayload {
@@ -934,7 +934,6 @@ pub async fn cancel_all_downloads(app: tauri::AppHandle) -> std::result::Result<
             },
         );
     }
-
-    get_semaphore().close();
+ 
     Ok(())
 }
