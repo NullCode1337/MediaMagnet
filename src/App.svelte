@@ -104,6 +104,12 @@
         continue;
       }
 
+      if (!existingId) {
+        tasks = tasks.filter(
+          (t) => t.url !== url || t.isDownloading || t.isPaused,
+        );
+      }
+
       const id = existingId || crypto.randomUUID();
 
       if (existingId) {
@@ -300,8 +306,12 @@
 
       listen<IdPayload>("download-finished", (e) => {
         const task = tasks.find((t) => t.id === e.payload.id);
-        if (task?.isPaused || task?.error) return;
-        if (task) addToHistory(task.url, "success");
+
+        if (task?.isPaused) return;
+
+        if (task) {
+          addToHistory(task.url, "success");
+        }
         updateTask(e.payload.id, {
           isDownloading: false,
           status: "Complete",
