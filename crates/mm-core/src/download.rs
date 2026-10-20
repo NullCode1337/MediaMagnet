@@ -71,6 +71,7 @@ struct ActiveDownload {
     backend: Backend,
     base_dir: PathBuf,
     url: String,
+    with_cookies: bool,
 }
 
 pub struct Engine {
@@ -143,25 +144,59 @@ impl Engine {
         Ok(cmd)
     }
 
-    async fn identify(&self, url: &str) -> Option<Backend> {
+    /// Returns the backend and, when yt-dlp was rejected, why. The reason is kept
+    /// for the error message if the fallback also fails; a normal gallery-dl link
+    /// ("no dedicated extractor") is expected and must not surface as a warning.
+    async fn identify(&self, url: &str, settings: &Settings) -> (Backend, Option<String>) {
         if url.to_lowercase().contains("spotify.com") {
-            return Some(Backend::SpotDl);
+            return (Backend::SpotDl, None);
         }
 
-        if let Ok(mut check_cmd) = self.base_command(Tool::YtDlp).await {
-            check_cmd
-                .args(["--print", "title", "--no-download", url])
-                .stderr(Stdio::piped());
-
-            if let Ok(output) = check_cmd.output().await {
-                let stderr = String::from_utf8_lossy(&output.stderr);
-                if output.status.success() && !stderr.contains("Falling back on generic") {
-                    return Some(Backend::YtDlp);
-                }
+        match self.probe_ytdlp(url, settings).await {
+            Ok(()) => (Backend::YtDlp, None),
+            Err(reason) => {
+                println!(
+                    "[MediaMagnet] yt-dlp probe failed ({}), falling back to gallery-dl",
+                    reason
+                );
+                (Backend::GalleryDl, Some(reason))
             }
         }
+    }
 
-        Some(Backend::GalleryDl)
+    /// Probes yt-dlp with the same arguments (and cookies) the real download
+    /// would use, so the probe cannot fail for a reason the download would not hit.
+    async fn probe_ytdlp(&self, url: &str, settings: &Settings) -> std::result::Result<(), String> {
+        let (mut cmd, _) = self
+            .apply_download_args(url, Backend::YtDlp, settings, true)
+            .await
+            .map_err(|e| e.to_string())?;
+        cmd.args(["--print", "title", "--no-download"])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+
+        let output = cmd
+            .output()
+            .await
+            .map_err(|e| format!("could not run yt-dlp: {}", e))?;
+        let stderr = String::from_utf8_lossy(&output.stderr);
+
+        if stderr.contains("Falling back on generic") {
+            return Err("no dedicated extractor".into());
+        }
+
+        if output.status.success() {
+            return Ok(());
+        }
+
+        let reason = stderr
+            .lines()
+            .rev()
+            .map(str::trim)
+            .find(|line| !line.is_empty())
+            .unwrap_or("unknown error")
+            .to_string();
+        Err(reason)
     }
 
     fn cookie_dir_apply(&self, cmd: &mut Command, link: &str, backend: Backend) -> bool {
@@ -365,14 +400,19 @@ impl Engine {
         };
         self.status(&id, "Starting...");
 
-        let backend = match request.backend {
-            Some(backend) => backend,
-            None => self
-                .identify(&request.url)
-                .await
-                .unwrap_or(Backend::GalleryDl),
-        };
         let settings = self.settings();
+
+        let (backend, probe_failure) = match request.backend {
+            Some(backend) => (backend, None),
+            None => self.identify(&request.url, &settings).await,
+        };
+
+        // yt-dlp rejected the link; if gallery-dl cannot handle it either, the
+        // yt-dlp reason is the one worth showing.
+        let with_probe_reason = |e: String| match &probe_failure {
+            Some(reason) => format!("{} (yt-dlp: {})", e, reason),
+            None => e,
+        };
 
         self.emit(CoreEvent::DownloadStarted { id: id.clone() });
 
@@ -393,7 +433,14 @@ impl Engine {
         let mut succeeded = true;
 
         if let Err(e) = self
-            .download_url(prepared.0, &request.url, backend, &request.base_dir, &id)
+            .download_url(
+                prepared.0,
+                &request.url,
+                backend,
+                &request.base_dir,
+                &id,
+                prepared.1,
+            )
             .await
         {
             if prepared.1 {
@@ -409,7 +456,14 @@ impl Engine {
                 {
                     Ok((retry_cmd, _)) => {
                         if let Err(e) = self
-                            .download_url(retry_cmd, &request.url, backend, &request.base_dir, &id)
+                            .download_url(
+                                retry_cmd,
+                                &request.url,
+                                backend,
+                                &request.base_dir,
+                                &id,
+                                false,
+                            )
                             .await
                         {
                             println!(
@@ -418,7 +472,10 @@ impl Engine {
                             );
                             self.emit(CoreEvent::DownloadError {
                                 id: id.clone(),
-                                value: format!("Download failed: {}", e),
+                                value: format!(
+                                    "Download failed: {}",
+                                    with_probe_reason(e.to_string())
+                                ),
                             });
                             succeeded = false;
                         }
@@ -435,7 +492,7 @@ impl Engine {
                 println!("[MediaMagnet] Download failed ({}): {}", id, e);
                 self.emit(CoreEvent::DownloadError {
                     id: id.clone(),
-                    value: format!("Download failed: {}", e),
+                    value: format!("Download failed: {}", with_probe_reason(e.to_string())),
                 });
                 succeeded = false;
             }
@@ -453,6 +510,7 @@ impl Engine {
         backend: Backend,
         base_dir: &Path,
         id: &str,
+        with_cookies: bool,
     ) -> Result<()> {
         let id = id.to_string();
         std::fs::create_dir_all(base_dir)?;
@@ -461,7 +519,9 @@ impl Engine {
         let total_urls = if backend == Backend::GalleryDl {
             println!("\n[MediaMagnet][gallery-dl] Counting total urls...");
             let mut count_cmd = self.base_command(Tool::GalleryDl).await?;
-            self.cookie_dir_apply(&mut count_cmd, link, backend);
+            if with_cookies {
+                self.cookie_dir_apply(&mut count_cmd, link, backend);
+            }
             count_cmd.current_dir(base_dir);
 
             let out = count_cmd.args(["-g", link]).output().await?;
@@ -485,6 +545,7 @@ impl Engine {
                 backend,
                 base_dir: base_dir.to_path_buf(),
                 url: link.to_string(),
+                with_cookies,
             },
         );
 
@@ -661,8 +722,15 @@ impl Engine {
                         value: line,
                     });
                 } else {
+                    let level = if line_l.starts_with("error") {
+                        NotificationLevel::Error
+                    } else if line_l.starts_with("warning") {
+                        NotificationLevel::Warning
+                    } else {
+                        NotificationLevel::Info
+                    };
                     sink_err.emit(CoreEvent::Notification {
-                        level: NotificationLevel::Info,
+                        level,
                         message: line,
                     });
                 }
@@ -743,13 +811,21 @@ impl Engine {
         Ok(())
     }
 
-    async fn clean_tempfiles(&self, base: &Path, url: &str, backend: Backend) -> Result<()> {
+    async fn clean_tempfiles(
+        &self,
+        base: &Path,
+        url: &str,
+        backend: Backend,
+        with_cookies: bool,
+    ) -> Result<()> {
         match backend {
             Backend::SpotDl => return Ok(()),
             Backend::YtDlp => {
-                let settings = self.settings();
-                let template = self.output_template(&settings);
                 let mut cmd = self.base_command(Tool::YtDlp).await?;
+                if with_cookies {
+                    self.cookie_dir_apply(&mut cmd, url, backend);
+                }
+                let template = self.output_template(&self.settings());
                 cmd.args(["-o", &template, "--print", "filename", "--no-download", url])
                     .current_dir(base);
 
@@ -777,6 +853,9 @@ impl Engine {
             }
             Backend::GalleryDl => {
                 let mut cmd = self.base_command(Tool::GalleryDl).await?;
+                if with_cookies {
+                    self.cookie_dir_apply(&mut cmd, url, backend);
+                }
                 cmd.args(["-s", "-d", ".", "--print", "{_directory}", url])
                     .current_dir(base);
 
@@ -841,7 +920,12 @@ impl Engine {
             let _ = entry.child.wait().await;
 
             if let Err(e) = self
-                .clean_tempfiles(&entry.base_dir, &entry.url, entry.backend)
+                .clean_tempfiles(
+                    &entry.base_dir,
+                    &entry.url,
+                    entry.backend,
+                    entry.with_cookies,
+                )
                 .await
             {
                 println!("[MediaMagnet] Cleanup failed during cancellation: {}", e);

@@ -33,7 +33,9 @@ says what changed and why.
    ignored) so the existing frontend call keeps working.
 7. **Cookies now retried correctly.** OLD's "retry without cookies" rebuilt the
    command through `apply_download_args`, which re-applied the same cookie file;
-   the retry now really omits cookies.
+   the retry now really omits cookies. This includes the gallery-dl `-g` pre-count
+   and the cancellation cleanup, which used to apply the cookie file regardless of
+   the attempt (they now follow the `with_cookies` flag of the running attempt).
 8. **URL is appended by core.** OLD appended `url` in two places around the
    cookie retry; `apply_download_args` now always appends it exactly once.
 9. **The `didg` + `ls.i` skip predicate is copied verbatim** (including its
@@ -41,8 +43,14 @@ says what changed and why.
 10. **Tool discovery cache is per-`ToolRuntime`**, not process-global, so tests and
     future server/multi-engine embeddings do not share state.
 11. **`identify()` no longer needs an `AppHandle`**; it resolves tools through
-    `ToolRuntime`. Behaviour (spotify host → spotdl, yt-dlp probe, gallery-dl
-    fallback) is unchanged.
+    `ToolRuntime`. The yt-dlp probe now runs with the same arguments and cookies
+    the real download uses (OLD probed with none, so a cookie-protected or
+    format-restricted link could still pass the probe and then fail). A failed
+    probe is logged with its reason (yt-dlp's last stderr line, or "no dedicated
+    extractor" for the generic fallback) instead of falling back silently. The
+    reason is not shown as a warning by itself — gallery-dl sites fail the probe
+    by design — it is appended to the error if gallery-dl also fails
+    (`... (yt-dlp: <reason>)`), so a YouTube bot-check is visible as such.
 
 ### Notifications
 
