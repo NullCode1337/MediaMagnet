@@ -186,8 +186,12 @@ These are preserved where harmless; each intentional fix is recorded in `docs/de
 10. **Site-arg IDs** are regenerated with `crypto.randomUUID()` in the frontend on every load;
     Rust preserves an existing string `id`. Decision: core assigns stable IDs when missing and
     the frontend no longer rewrites them.
-11. **`Backend::identify` costs a full yt-dlp extraction** per URL and ignores cookies and
-    custom args. Preserved (it is part of observable behaviour); documented as slow.
+11. **`Backend::identify` costs a full yt-dlp extraction** per URL (still does) and ignored
+    cookies and custom args — so a YouTube link that only works with a cookie file (bot
+    check) or a custom arg was probed without them, reported as "not yt-dlp", and handed to
+    gallery-dl, which has no YouTube extractor ("Unsupported URL"). Decision: probe with the
+    real download arguments plus cookies, and report the probe's failure reason instead of
+    falling back silently.
 12. **Pause is really "kill"**, resume is a new process. Preserved.
 13. **gallery-dl `-g` pre-count doubles requests** and can fail on extractors that do not
     support listing; on failure the process output is ignored and progress stays at 0.
