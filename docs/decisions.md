@@ -152,3 +152,52 @@ says what changed and why.
     transport wraps both in a `pending()` helper that returns a synchronous
     unsubscribe, unregisters immediately if already disposed, and gates event
     delivery so a handler cannot fire after `unsubscribe()`.
+
+## Phase 3 — server binary and HTTP transport
+
+33. **One engine, two hosts.** `mm-server` builds the same `Engine` as the
+    desktop crate and swaps only the `Host`/`Policy`. Everything the desktop
+    does to a file (tempfile cleanup, cancellation, cookie matching) therefore
+    behaves identically on the server; the server adds no download logic.
+34. **`safe_join` produced a path with a trailing separator.** Joining an empty
+    residual `PathBuf` appends `/`, so `/root/hello.txt` resolved to
+    `/root/hello.txt/` and `metadata` failed with `NotADirectory` (errno 20) on
+    Unix. Every file download 404'd while the directory listing worked. The tail
+    is now joined only when it is non-empty; `safe_join_has_no_trailing_separator`
+    asserts it. Phase 1's tests missed it because `Path` equality ignores the
+    trailing separator.
+35. **`download-state` travels as `value`.** `CoreEvent::DownloadState` serialises
+    its state as `state`, while the UI expects `{ id, value }` like every other
+    value event. `events::to_transport_event` renames it on the wire so both
+    transports deliver an identical `TransportEvent`. A test pins the key.
+36. **Unknown download ids are 404 for cancel as well as pause.** Core's
+    `cancel()` returns `Ok` and broadcasts a cancellation for ids it never
+    tracked, which would make `DELETE /downloads/<id>` claim success and push a
+    spurious event to every SSE client. The route checks `active_ids()` first.
+    Core is unchanged because the desktop app relies on cancel being
+    idempotent.
+37. **The SPA is served from `MM_STATIC_DIR`, defaulting to `public/` beside the
+    binary.** Unknown paths return `index.html` so a hard reload works, except
+    paths containing `..` and paths that look like assets (`assets/…` or a
+    dotted segment), which 404 — otherwise a broken build is indistinguishable
+    from a valid page.
+38. **Transport selection happens at runtime, not at build time.** `main.ts`
+    tests for `__TAURI_INTERNALS__` and dynamically imports the matching
+    transport, so `apps/web/dist` is a single artefact used by both targets.
+    The HTTP module is only fetched in a browser and the Tauri module only in
+    the webview.
+39. **Token entry is a prompt, and a 401 retries once.** The server may be
+    started with `MM_TOKEN`; the first 401 offers a token prompt, stores it, and
+    replays the request. `?token=` on a link is read, stripped from the URL and
+    remembered, because `EventSource` cannot set an `Authorization` header — the
+    SSE endpoint accepts both.
+40. **Browser-only limitations are explicit, not hidden.** The server owns the
+    download root, so `checkDownloadPath` is a no-op. `openPath` throws with a
+    reason instead of silently doing nothing, the Cookies list only keeps its
+    delete action, and the sidebar's "Open folder" is hidden. Local picks are
+    tracked in memory by a synthetic `file://` id, and exports become a Blob
+    download because the browser has no save-picker path to hand back.
+41. **Vite serves `static/`, not `public/`.** The app's files lived in `static/`
+    while Vite's default `publicDir` is `public/`, so `favicon.png` was never
+    copied into `dist`. `publicDir: 'static'` fixes it and `index.html` points at
+    the real icon rather than OLD's `vite.svg` reference.
