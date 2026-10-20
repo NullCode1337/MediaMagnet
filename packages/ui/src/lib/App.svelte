@@ -1,10 +1,11 @@
 <script lang="ts">
-  import { listen } from "@tauri-apps/api/event";
-  import { invoke } from "@tauri-apps/api/core";
-  import { readText } from "@tauri-apps/plugin-clipboard-manager";
-  import { platform } from "@tauri-apps/plugin-os";
   import { onMount } from "svelte";
   import { ModeWatcher, mode } from "mode-watcher";
+  import type {
+    DownloadTask,
+    HistoryItem,
+    TransportEvent,
+  } from "@mediamagnet/api";
 
   import { Button } from "$lib/components/ui/button";
   import Input from "$lib/components/ui/input/input.svelte";
@@ -19,33 +20,8 @@
   import logo from "$lib/assets/favicon.png";
   import { uiState } from "$lib/stores/store.svelte";
   import { settings } from "$lib/stores/settings.svelte";
+  import { transport } from "$lib/stores/transport.svelte";
   import { toast, Toaster } from "svelte-sonner";
-
-  interface Task {
-    id: string;
-    url: string;
-    status: string;
-    progress: number;
-    isDownloading: boolean;
-    isPaused: boolean;
-    error: string | null;
-  }
-
-  interface ProgressPayload {
-    id: string;
-    value: number;
-  }
-  interface StatusPayload {
-    id: string;
-    value: string;
-  }
-  interface NotificationPayload {
-    level: "info" | "success" | "warning" | "error";
-    message: string;
-  }
-  interface IdPayload {
-    id: string;
-  }
 
   // eslint-disable-next-line svelte/prefer-writable-derived
   let isCollapsed = $state(false);
@@ -53,16 +29,8 @@
   let diskUsage = $state(0);
   let currentPlatform = $state("");
 
-  let tasks = $state<Task[]>([]);
-  let history = $state<
-    {
-      url: string;
-      name: string;
-      timestamp: string;
-      status: "success" | "error";
-      error?: string;
-    }[]
-  >([]);
+  let tasks = $state<DownloadTask[]>([]);
+  let history = $state<HistoryItem[]>([]);
 
   let anyDownloading = $derived(tasks.some((t) => t.isDownloading));
   let headlessProgress = $derived(
@@ -84,7 +52,7 @@
     }
   });
 
-  function updateTask(id: string, patch: Partial<Task>) {
+  function updateTask(id: string, patch: Partial<DownloadTask>) {
     tasks = tasks.map((t) => (t.id === id ? { ...t, ...patch } : t));
   }
 
@@ -97,14 +65,14 @@
     const matches = input.trim().match(urlRegex);
 
     if (!matches || matches.length === 0) {
-      await invoke("notify", { body: "No valid URLs found in input" });
+      await transport.notify("No valid URLs found in input");
       return;
     }
 
     for (const url of matches) {
       const isDuplicate = tasks.some((t) => t.url === url && t.isDownloading);
       if (isDuplicate) {
-        await invoke("notify", { body: `Already downloading: ${url}` });
+        await transport.notify(`Already downloading: ${url}`);
         continue;
       }
 
@@ -138,7 +106,7 @@
         ];
       }
 
-      invoke("downloader", { url: url, downloadId: id }).catch((e: unknown) => {
+      transport.download(url, id).catch((e: unknown) => {
         updateTask(id, {
           error: String(e),
           isDownloading: false,
@@ -153,11 +121,11 @@
   async function pasteOrDownload() {
     if (!urlInput) {
       try {
-        const clipboardText = (await readText())?.trim();
+        const clipboardText = (await transport.readClipboard())?.trim();
         await startDownload(clipboardText);
         urlInput = "";
       } catch (err) {
-        await invoke("notify", { body: err });
+        await transport.notify(String(err));
       }
     } else {
       await startDownload(urlInput);
@@ -172,9 +140,9 @@
         isDownloading: false,
         status: "Paused",
       });
-      await invoke("pause_download", { downloadId: id });
+      await transport.pause(id);
     } catch (err) {
-      await invoke("notify", { body: "Failed to pause: " + err });
+      await transport.notify("Failed to pause: " + err);
     }
   }
 
@@ -187,9 +155,9 @@
 
   async function cancelDownload(id: string, url: string) {
     try {
-      await invoke("cancel_download", { downloadId: id, url: url });
+      await transport.cancel(id, url);
     } catch (err) {
-      await invoke("notify", { body: "Failed to cancel: " + err });
+      await transport.notify("Failed to cancel: " + err);
     } finally {
       removeTask(id);
     }
@@ -197,12 +165,12 @@
 
   async function stopAllDownloads() {
     try {
-      await invoke("cancel_all_downloads");
+      await transport.cancelAll();
       tasks.forEach((t) => {
         if (t.isDownloading) removeTask(t.id);
       });
     } catch (err) {
-      await invoke("notify", { body: "Failed to stop all: " + err });
+      await transport.notify("Failed to stop all: " + err);
     }
   }
 
@@ -223,9 +191,72 @@
     ].slice(0, 20);
   }
 
+  function handleEvent(event: TransportEvent) {
+    switch (event.type) {
+      case "notification":
+        toast(event.message);
+        break;
+
+      case "download-started":
+        updateTask(event.id, {
+          isDownloading: true,
+          isPaused: false,
+          error: null,
+        });
+        break;
+
+      case "download-progress":
+        updateTask(event.id, { progress: event.value });
+        break;
+
+      case "download-status":
+        if (!tasks.find((t) => t.id === event.id)?.isPaused) {
+          updateTask(event.id, { status: event.value });
+        }
+        break;
+
+      case "download-error": {
+        const task = tasks.find((t) => t.id === event.id);
+        if (task?.isPaused) return;
+        if (event.value.includes("cancelled")) {
+          removeTask(event.id);
+          return;
+        }
+        updateTask(event.id, {
+          error: event.value,
+          isDownloading: false,
+          status: "Error",
+        });
+        addToHistory(task?.url ?? event.id, "error", event.value);
+        break;
+      }
+
+      case "download-finished": {
+        const task = tasks.find((t) => t.id === event.id);
+        if (task?.isPaused) return;
+        if (task) {
+          addToHistory(task.url, "success");
+        }
+        updateTask(event.id, {
+          isDownloading: false,
+          status: "Complete",
+          progress: 100,
+        });
+        removeTask(event.id);
+        break;
+      }
+
+      case "download-state":
+        if (event.value === "paused") {
+          updateTask(event.id, { isDownloading: false, isPaused: true });
+        }
+        break;
+    }
+  }
+
   async function updateDiskSpace() {
     try {
-      diskUsage = await invoke("get_free_space");
+      diskUsage = await transport.freeSpace();
     } catch (err) {
       toast("Disk fetch failed: " + err);
     }
@@ -233,7 +264,7 @@
 
   onMount(() => {
     updateDiskSpace();
-    currentPlatform = platform();
+    currentPlatform = transport.platform();
     const interval = setInterval(updateDiskSpace, 60000);
     return () => clearInterval(interval);
   });
@@ -248,15 +279,7 @@
     }
   });
 
-  $effect(() => {
-    const unlisten = listen<NotificationPayload>("notification", (event) => {
-      toast(event.payload.message);
-    });
-
-    return () => {
-      unlisten.then((f) => f());
-    };
-  });
+  $effect(() => transport.subscribe(handleEvent));
 
   $effect(() => {
     const targetTheme = mode.current;
@@ -264,66 +287,6 @@
     if (!targetTheme) return;
 
     void settings.update({ dark_mode: targetTheme === "dark" });
-  });
-
-  $effect(() => {
-    const unlistens = [
-      listen<number>("disk-update", (e) => (diskUsage = e.payload)),
-
-      listen<ProgressPayload>("download-progress", (e) => {
-        updateTask(e.payload.id, { progress: e.payload.value });
-      }),
-
-      listen<StatusPayload>("download-status", (e) => {
-        const task = tasks.find((t) => t.id === e.payload.id);
-        if (!task?.isPaused) {
-          updateTask(e.payload.id, { status: e.payload.value });
-        }
-      }),
-
-      listen<StatusPayload>("download-error", (e) => {
-        const task = tasks.find((t) => t.id === e.payload.id);
-        if (task?.isPaused) return;
-        if (e.payload.value.includes("cancelled")) {
-          removeTask(e.payload.id);
-          return;
-        }
-        updateTask(e.payload.id, {
-          error: e.payload.value,
-          isDownloading: false,
-          status: "Error",
-        });
-        addToHistory(task?.url ?? e.payload.id, "error", e.payload.value);
-      }),
-
-      listen<IdPayload>("download-started", (e) => {
-        updateTask(e.payload.id, {
-          isDownloading: true,
-          isPaused: false,
-          error: null,
-        });
-      }),
-
-      listen<IdPayload>("download-finished", (e) => {
-        const task = tasks.find((t) => t.id === e.payload.id);
-
-        if (task?.isPaused) return;
-
-        if (task) {
-          addToHistory(task.url, "success");
-        }
-        updateTask(e.payload.id, {
-          isDownloading: false,
-          status: "Complete",
-          progress: 100,
-        });
-        removeTask(e.payload.id);
-      }),
-    ];
-
-    return () => {
-      unlistens.forEach(async (u) => (await u)());
-    };
   });
 </script>
 
@@ -348,7 +311,7 @@
   class="flex flex-col h-screen w-full bg-background text-foreground overflow-hidden"
   style="padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right);"
 >
-  {#if currentPlatform !== "android"}
+  {#if transport.kind === "desktop"}
     <div class="relative z-100">
       <Titlebar {currentPlatform} />
     </div>

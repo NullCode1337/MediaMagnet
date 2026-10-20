@@ -1,10 +1,7 @@
 <script lang="ts">
   import Section from "$lib/components/Settings/SECTION.svelte";
   import { Button } from "$lib/components/ui/button";
-  import { invoke } from "@tauri-apps/api/core";
-  import { openPath } from "@tauri-apps/plugin-opener";
-  import { open, ask } from "@tauri-apps/plugin-dialog";
-  import { readTextFile } from "@tauri-apps/plugin-fs";
+  import { transport } from "$lib/stores/transport.svelte";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
   import * as Icons from "@lucide/svelte";
@@ -15,7 +12,7 @@
 
   async function loadCookies() {
     try {
-      savedCookies = await invoke("get_cookies");
+      savedCookies = await transport.getCookies();
     } catch (e) {
       console.error(e);
     }
@@ -23,14 +20,14 @@
 
   async function importCookie() {
     try {
-      const selected = await open({
+      const selected = await transport.open({
         multiple: false,
         filters: [
           { name: "Cookie Files", extensions: ["txt", "json", "cookies"] },
         ],
       });
-      if (selected && typeof selected === "string") {
-        cookieRawContent = await readTextFile(selected);
+      if (selected) {
+        cookieRawContent = await transport.readTextFile(selected);
         cookieDomain =
           selected.split(/[\\/]/).pop()?.split(".")[0]?.toLowerCase() ?? "";
         toast("Added cookie information to editor");
@@ -76,9 +73,9 @@
       return;
     }
     try {
-      await invoke("save_cookie", {
-        domain: saveCookieDomain(cookieDomain),
-        input: { type: "Content", value: cookieRawContent },
+      await transport.saveCookie(saveCookieDomain(cookieDomain), {
+        type: "Content",
+        value: cookieRawContent,
       });
       cookieDomain = "";
       cookieRawContent = "";
@@ -89,27 +86,27 @@
   }
 
   async function deleteCookie(domain: string, path: string) {
-    const ok = await ask(`Delete cookies for ${domain}?`, {
+    const ok = await transport.ask(`Delete cookies for ${domain}?`, {
       title: "MediaMagnet",
       kind: "warning",
       okLabel: "Delete",
       cancelLabel: "Cancel",
     });
     if (ok) {
-      await invoke("delete_cookie", { path });
+      await transport.deleteCookie(path);
       await loadCookies();
     }
   }
 
   async function clearAllCookies() {
-    const ok = await ask("Delete ALL cookies?", {
+    const ok = await transport.ask("Delete ALL cookies?", {
       title: "WARNING",
       kind: "warning",
       okLabel: "Delete",
       cancelLabel: "Cancel",
     });
     if (ok) {
-      await invoke("clear_cookies");
+      await transport.clearCookies();
       await loadCookies();
     }
   }
@@ -195,7 +192,7 @@
               id: domain,
               label: domain.toUpperCase(),
               leading: cookieIcon,
-              onclick: () => openPath(path),
+              onclick: () => transport.openPath(path),
               ondelete: () => deleteCookie(domain, path),
             })),
           },

@@ -108,3 +108,47 @@ says what changed and why.
     a mobile-only import in the desktop crate.
 23. **Frontend copied verbatim in Phase 1**, except the two changes above and the
     notification payload type. Rewrite happens in Phase 2.
+
+## Phase 2 — frontend split into api / ui / web
+
+24. **Three packages, one direction of dependency.** `packages/api` holds only
+    types (`Config`, `Transport`, `TransportEvent`, …) and no runtime dependency
+    beyond itself. `packages/ui` holds components and stores and imports
+    `@mediamagnet/api`. `apps/web` is the shell: it owns the CSS entry, picks a
+    transport, calls `bindTransport()` and mounts `App`. `packages/ui` imports
+    no `@tauri-apps/*` and issues no HTTP, so the server shell (Phase 3) reuses
+    it unchanged.
+25. **`transport` is a Proxy, not a factory argument.** Components import the
+    `transport` object directly, as they imported `invoke` before. The shell
+    binds the real implementation before `mount()`. Using it unbound throws, so a
+    missing `bindTransport()` fails loudly instead of silently no-op'ing.
+26. **`App` is exported from `@mediamagnet/ui`; the titlebar is conditional on
+    the transport.** OLD hid it with `currentPlatform !== "android"`. It is now
+    `transport.kind === "desktop"`, which is also correct for the browser build.
+    Same for the window/desktop sections in General, Download and Privacy.
+27. **`settings.init()` is called by the shell, not in a constructor.** OLD
+    started loading in `Settings`'s constructor, which fired an `invoke` before
+    the transport could be bound. The shell now awaits it before mounting.
+28. **`$lib` is an alias into the UI package.** Components keep OLD's `$lib/...`
+    import style; `apps/web` maps `$lib` to `../../packages/ui/src/lib` in both
+    Vite and tsconfig. Tailwind needs `@source "../../../packages/ui/src"` in
+    `apps/web/src/app.css`, otherwise no utility used only in the package is
+    emitted.
+29. **Tauri JS packages moved from the workspace root into `apps/web`.** Only the
+    desktop shell uses them. They are pinned to the Rust crate versions resolved
+    in `Cargo.lock` (2.12.4 / 2.8.3 / …) because `tauri dev` refuses to start on a
+    major/minor mismatch — the previous `~2` ranges resolved to older minors.
+30. **`settings-schema` keeps Rust-assigned site-arg ids.** OLD regenerated a
+    `crypto.randomUUID()` for every entry on every normalize, so ids changed on
+    each load and the UI's `{#each}` keys churned. An existing `id` is now
+    preserved; one is only invented when the source has none.
+31. **Desktop-only keys are dropped on save for HTTP.** `settings.outgoing()`
+    strips `DESKTOP_ONLY_KEYS` when `transport.kind !== "desktop"`, matching
+    `Settings::server_view()`. The UI still edits a full `Config`; missing fields
+    from a server answer are filled with defaults by `hydrate()`.
+32. **Unsubscription is settled in one place.** Tauri's `listen()` and
+    `onBackButtonPress()` return promises that resolve late, and two of them
+    resolve to different shapes (`UnlistenFn` vs `PluginListener`). The desktop
+    transport wraps both in a `pending()` helper that returns a synchronous
+    unsubscribe, unregisters immediately if already disposed, and gates event
+    delivery so a handler cannot fire after `unsubscribe()`.

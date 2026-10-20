@@ -1,19 +1,24 @@
-// settings.svelte.ts
-import { invoke } from "@tauri-apps/api/core";
-import { setMode } from "mode-watcher";
-import { openPath } from "@tauri-apps/plugin-opener";
 import { toast } from "svelte-sonner";
-import { sep, downloadDir } from "@tauri-apps/api/path";
-import { ask, open, save } from "@tauri-apps/plugin-dialog";
-import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
-import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { setMode } from "mode-watcher";
 
-import { normalizeConfig, type Config } from "./settings-schema";
+import {
+  DEFAULT_CONFIG,
+  isDesktopKey,
+  type AnyConfig,
+  type Config as FullConfig,
+} from "@mediamagnet/api";
+import { normalizeConfig } from "./settings-schema";
+import { transport } from "./transport.svelte";
 
-export type { Config, FieldIssue } from "./settings-schema";
+export type { FieldIssue } from "./settings-schema";
+
+/** The UI always edits a full `Config`; a partial HTTP answer is filled with defaults. */
+function hydrate(raw: AnyConfig): FullConfig {
+  return { ...DEFAULT_CONFIG, ...raw } as FullConfig;
+}
 
 export function applyAccent(
-  config: Pick<Config, "accent_hue" | "accent_kind" | "amoled_mode">,
+  config: Pick<FullConfig, "accent_hue" | "accent_kind" | "amoled_mode">,
 ) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
@@ -33,28 +38,35 @@ export function applyAccent(
 type SaveState = "idle" | "saving" | "saved" | "error";
 
 class Settings {
-  config = $state<Config | null>(null);
+  config = $state<FullConfig | null>(null);
   isLoading = $state(true);
   loadError = $state<string | null>(null);
   saveState = $state<SaveState>("idle");
 
   private lastPersisted: string | null = null;
+  private started = false;
   private inFlight = false;
   private chain: Promise<void> = Promise.resolve();
   private saveStatusTimer: ReturnType<typeof setTimeout> | undefined;
-  
   private silentNextSave = false;
 
-  constructor() {
-    void this.init();
+  /** Whether this transport stores desktop-only settings (path, titlebar, …). */
+  get desktop(): boolean {
+    return transport.kind === "desktop";
+  }
+
+  /** Fields the current transport controls; the rest are hidden or disabled. */
+  canEdit(key: keyof FullConfig): boolean {
+    return this.desktop || !isDesktopKey(key as string);
   }
 
   async init() {
+    if (this.started) return;
+    this.started = true;
     this.isLoading = true;
     this.loadError = null;
     try {
-      const raw = await invoke<Config>("settings", { action: "check" });
-      const { config, issues } = normalizeConfig(raw);
+      const { config, issues } = normalizeConfig(hydrate(await transport.settings()));
       if (issues.length > 0) {
         console.warn(
           "[MediaMagnet][Settings] normalized backend config:",
@@ -73,6 +85,7 @@ class Settings {
   }
 
   retryLoad() {
+    this.started = false;
     return this.init();
   }
 
@@ -86,6 +99,16 @@ class Settings {
     }
   }
 
+  /** Desktop-only keys are not sent when the server does not accept them. */
+  private outgoing(config: FullConfig): AnyConfig {
+    if (this.desktop) return $state.snapshot(config) as FullConfig;
+    const snapshot = $state.snapshot(config) as Record<string, unknown>;
+    for (const key of Object.keys(snapshot)) {
+      if (isDesktopKey(key)) delete snapshot[key];
+    }
+    return snapshot as AnyConfig;
+  }
+
   private async persist(): Promise<void> {
     if (this.inFlight) {
       return this.chain;
@@ -95,16 +118,16 @@ class Settings {
       if (!this.config) throw new Error("Settings are not loaded yet");
       this.inFlight = true;
       try {
-        let snapshot = $state.snapshot(this.config) as Config;
+        let snapshot = $state.snapshot(this.config) as FullConfig;
         let stable = false;
         while (!stable) {
           this.markSaveState("saving");
-          const canonical = await invoke<Config>("update_settings", {
-            settings: snapshot,
-          });
-          this.lastPersisted = JSON.stringify(canonical);
-          
-          const next = $state.snapshot(this.config) as Config;
+          const canonical = await transport.updateSettings(
+            this.outgoing(snapshot),
+          );
+          this.lastPersisted = JSON.stringify(hydrate(canonical));
+
+          const next = $state.snapshot(this.config) as FullConfig;
           stable = JSON.stringify(next) === JSON.stringify(snapshot);
           if (!stable) snapshot = next;
         }
@@ -117,7 +140,7 @@ class Settings {
       } catch (err) {
         if (this.lastPersisted) {
           try {
-            this.config = JSON.parse(this.lastPersisted) as Config;
+            this.config = JSON.parse(this.lastPersisted) as FullConfig;
             applyAccent(this.config);
           } catch {
             // catch
@@ -137,7 +160,7 @@ class Settings {
     return this.chain;
   }
 
-  async update(patch: Partial<Config>, opts?: { silent?: boolean }) {
+  async update(patch: Partial<FullConfig>, opts?: { silent?: boolean }) {
     if (!this.config) {
       if (this.loadError) await this.init();
       if (!this.config) return;
@@ -154,16 +177,14 @@ class Settings {
     }
   }
 
-  
-  async replaceAll(next: Config) {
+  async replaceAll(next: FullConfig) {
     this.config = next;
     applyAccent(next);
     await this.persist();
   }
 
   async reset() {
-    const raw = await invoke<Config>("settings", { action: "reset" });
-    const { config } = normalizeConfig(raw);
+    const { config } = normalizeConfig(hydrate(await transport.resetSettings()));
     this.config = config;
     this.lastPersisted = JSON.stringify(config);
     applyAccent(config);
@@ -194,20 +215,22 @@ class Settings {
     }
 
     const { config, issues } = normalizeConfig(parsed);
-    
-    if (config.download_path.trim().toLowerCase() === "default") {
-      config.download_path = "";
-    }
-    if (config.download_path) {
-      try {
-        await invoke("check_download_path", { path: config.download_path });
-      } catch (err) {
+
+    if (this.desktop) {
+      if (config.download_path.trim().toLowerCase() === "default") {
         config.download_path = "";
-        issues.push({
-          key: "download_path",
-          problem: "bad_entry",
-          message: `download_path: no write permission (${String(err)}) — reset to default`,
-        });
+      }
+      if (config.download_path) {
+        try {
+          await transport.checkDownloadPath(config.download_path);
+        } catch (err) {
+          config.download_path = "";
+          issues.push({
+            key: "download_path",
+            problem: "bad_entry",
+            message: `download_path: no write permission (${String(err)}) — reset to default`,
+          });
+        }
       }
     }
 
@@ -218,7 +241,7 @@ class Settings {
         .slice(0, 6)
         .map((i) => `• ${i.message}`)
         .join("\n");
-      const ok = await ask(
+      const ok = await transport.ask(
         `${corrections.length} field(s) in this import are invalid or missing and will be reset to defaults.\n\n${preview}${corrections.length > 6 ? "\n…" : ""}`,
         {
           title: "Import settings",
@@ -233,7 +256,7 @@ class Settings {
     try {
       await this.replaceAll(config);
     } catch {
-      return; 
+      return;
     }
 
     if (issues.length === 0) {
@@ -254,7 +277,7 @@ class Settings {
 
   async importFromClipboard() {
     try {
-      const text = await readText();
+      const text = await transport.readClipboard();
       await this.applyImport(text ?? "", "clipboard");
     } catch (err) {
       toast.error("Failed to read clipboard: " + err);
@@ -263,12 +286,12 @@ class Settings {
 
   async importFromFile() {
     try {
-      const selected = await open({
+      const selected = await transport.open({
         multiple: false,
         filters: [{ name: "JSON Configuration", extensions: ["json"] }],
       });
-      if (!selected || typeof selected !== "string") return; 
-      const contents = await readTextFile(selected);
+      if (!selected) return;
+      const contents = await transport.readTextFile(selected);
       await this.applyImport(contents, "file");
     } catch (err) {
       toast.error("Failed to import from file: " + err);
@@ -281,7 +304,9 @@ class Settings {
       return;
     }
     try {
-      await writeText(JSON.stringify($state.snapshot(this.config), null, 2));
+      await transport.writeClipboard(
+        JSON.stringify($state.snapshot(this.config), null, 2),
+      );
       toast.success("Settings copied to clipboard!");
     } catch (err) {
       toast.error("Failed to copy: " + err);
@@ -296,7 +321,7 @@ class Settings {
 
     let path: string | null;
     try {
-      path = await save({
+      path = await transport.save({
         title: "Export settings",
         defaultPath: "mediamagnet-settings.json",
         filters: [{ name: "JSON Configuration", extensions: ["json"] }],
@@ -305,10 +330,10 @@ class Settings {
       toast.error("Failed to open save dialog: " + err);
       return;
     }
-    if (!path) return; 
+    if (!path) return;
 
     try {
-      await writeTextFile(
+      await transport.writeTextFile(
         path,
         JSON.stringify($state.snapshot(this.config), null, 2),
       );
@@ -319,14 +344,13 @@ class Settings {
   }
 
   async setDownloadPath(path: string) {
-    
     const trimmed = path.trim();
     if (trimmed.toLowerCase() === "default") {
       await this.update({ download_path: "" });
       return;
     }
     try {
-      await invoke("check_download_path", { path: trimmed });
+      await transport.checkDownloadPath(trimmed);
     } catch (err) {
       toast.error("Cannot use that download path — reset to default", {
         description: String(err),
@@ -338,15 +362,17 @@ class Settings {
   }
 
   async openDownloadDir() {
-    if (!this.config?.download_path) return;
+    if (!this.config) return;
 
     let basePath = this.config.download_path;
-    if (this.config.download_path === "") {
-      basePath = await downloadDir();
+    if (basePath === "") {
+      basePath = await transport.downloadDir();
     }
 
     try {
-      await openPath(basePath + sep() + "MediaMagnet");
+      await transport.openPath(
+        basePath + transport.pathSeparator() + "MediaMagnet",
+      );
     } catch (err) {
       toast.error("Failed to open folder: " + err);
     }

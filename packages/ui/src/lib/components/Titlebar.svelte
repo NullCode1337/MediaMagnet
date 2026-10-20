@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
   import {
     X,
     Minus,
@@ -11,12 +10,13 @@
   } from "@lucide/svelte";
   import { uiState } from "$lib/stores/store.svelte";
   import { settings } from "$lib/stores/settings.svelte";
+  import { transport } from "$lib/stores/transport.svelte";
   import { onMount } from "svelte";
   import logo from "$lib/assets/favicon.png";
 
   let { currentPlatform = "windows" }: { currentPlatform?: string } = $props();
 
-  const appWindow = getCurrentWindow();
+  const appWindow = transport.window;
   const barType = $derived(settings.config?.custom_titlebar_type || "system");
   const isMac = $derived(
     barType === "mac" || (barType === "system" && currentPlatform === "macos"),
@@ -30,10 +30,10 @@
     if (!uiState.headless) {
       if (uiState.isMaximized) await appWindow.unmaximize();
       await appWindow.setAlwaysOnTop(true);
-      await appWindow.setSize(new LogicalSize(200, 200));
+      await appWindow.setSize(200, 200);
     } else {
       await appWindow.setAlwaysOnTop(false);
-      await appWindow.setSize(new LogicalSize(800, 650));
+      await appWindow.setSize(800, 650);
       await appWindow.center();
     }
   }
@@ -41,7 +41,7 @@
   onMount(() => {
     const unlisten = appWindow.onResized(() => syncWindowState());
     syncWindowState();
-    return () => unlisten.then((u) => u());
+    return unlisten;
   });
 </script>
 

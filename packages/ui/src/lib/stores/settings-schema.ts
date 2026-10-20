@@ -1,83 +1,5 @@
-// mirror of rust settings
+import { DEFAULT_CONFIG, type Config } from "@mediamagnet/api";
 import type { AccentKind } from "$lib/color";
-
-export interface SiteArg {
-  id: string;
-  domain: string;
-  args: string;
-}
-
-export interface Config {
-  // schema
-  settings_version: number;
-
-  // app
-  dark_mode: boolean;
-  amoled_mode: boolean;
-  accent_hue: number;
-  accent_kind: AccentKind;
-  always_on_top: boolean;
-  custom_titlebar: boolean;
-  custom_titlebar_type: string;
-  native_notifications: boolean;
-  clear_cookies_on_exit: boolean;
-
-  // download
-  download_path: string;
-  user_agent: string;
-
-  // yt-dlp
-  yt_format: string;
-  yt_output_template: string;
-  yt_embed_thumbnail: boolean;
-  yt_embed_subs: boolean;
-  yt_restrict_filenames: boolean;
-  yt_global_args: string;
-  yt_site_args: SiteArg[];
-
-  // gallery-dl
-  gdl_global_args: string;
-  gdl_site_args: SiteArg[];
-
-  // spotdl
-  spotdl_format: string;
-  spotdl_bitrate: string;
-  spotdl_global_args: string;
-}
-
-export const SETTINGS_VERSION = 1;
-
-export const DEFAULT_CONFIG: Config = {
-  settings_version: SETTINGS_VERSION,
-
-  dark_mode: true,
-  amoled_mode: false,
-  accent_hue: 260,
-  accent_kind: "hue",
-  always_on_top: false,
-  custom_titlebar: false,
-  custom_titlebar_type: "system",
-  native_notifications: false,
-  clear_cookies_on_exit: false,
-
-  download_path: "",
-  user_agent: "",
-
-  yt_format: "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
-  yt_output_template: "%(title)s.%(ext)s",
-  yt_embed_thumbnail: false,
-  yt_embed_subs: false,
-  yt_restrict_filenames: false,
-  yt_global_args: "",
-  yt_site_args: [],
-
-  gdl_global_args: "",
-  gdl_site_args: [],
-
-  spotdl_format: "",
-  spotdl_bitrate: "",
-  spotdl_global_args: "",
-};
 
 export type FieldProblem =
   | "missing"
@@ -139,6 +61,15 @@ function describeType(value: unknown): string {
   return typeof value;
 }
 
+function isAccentKind(value: unknown): value is AccentKind {
+  return value === "hue" || value === "black" || value === "white";
+}
+
+/**
+ * Coerces whatever the backend sent into a complete `Config`. A server answer omits
+ * desktop-only keys; those surface as `missing` issues, which the caller can tell
+ * apart from a genuine corruption via `isDesktopKey`.
+ */
 export function normalizeConfig(raw: unknown): {
   config: Config;
   issues: FieldIssue[];
@@ -219,7 +150,7 @@ export function normalizeConfig(raw: unknown): {
       }
 
       case "accent_kind": {
-        if (value === "hue" || value === "black" || value === "white") {
+        if (isAccentKind(value)) {
           config.accent_kind = value;
         } else {
           issues.push({
@@ -232,13 +163,9 @@ export function normalizeConfig(raw: unknown): {
       }
 
       case "version": {
-        if (
-          typeof value === "number" &&
-          Number.isInteger(value) &&
-          value >= 1
-        ) {
+        if (typeof value === "number" && Number.isInteger(value) && value >= 1) {
           config.settings_version = value;
-          if (value > SETTINGS_VERSION) {
+          if (value > DEFAULT_CONFIG.settings_version) {
             issues.push({
               key,
               problem: "future_version",
@@ -264,7 +191,7 @@ export function normalizeConfig(raw: unknown): {
           });
           break;
         }
-        const list: SiteArg[] = [];
+        const list: { id: string; domain: string; args: string }[] = [];
         value.forEach((entry, index) => {
           const obj = entry as Record<string, unknown> | null;
           if (
@@ -273,11 +200,12 @@ export function normalizeConfig(raw: unknown): {
             typeof obj.domain === "string" &&
             typeof obj.args === "string"
           ) {
-            list.push({
-              id: crypto.randomUUID(),
-              domain: obj.domain,
-              args: obj.args,
-            });
+            // Rust assigns stable ids; only invent one when the source has none.
+            const id =
+              typeof obj.id === "string" && obj.id.length > 0
+                ? obj.id
+                : crypto.randomUUID();
+            list.push({ id, domain: obj.domain, args: obj.args });
           } else {
             issues.push({
               key: `${key}[${index}]`,

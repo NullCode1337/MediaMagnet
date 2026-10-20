@@ -2,9 +2,13 @@
   import Section from "$lib/components/Settings/SECTION.svelte";
   import { accentToHex, hexToAccent, type Accent } from "$lib/color";
   import { applyAccent, settings } from "$lib/stores/settings.svelte";
+  import { transport } from "$lib/stores/transport.svelte";
   import { userPrefersMode } from "mode-watcher";
 
   let { currentPlatform }: { currentPlatform: string } = $props();
+
+  // Window controls only exist in the desktop app; the server has no window.
+  const isDesktop = transport.kind === "desktop";
 
   let pendingAccent = $state<Accent | null>(null);
   let currentAccent = $derived<Accent>({
@@ -183,7 +187,7 @@
     title: "Appearance",
 
     sections: [
-      ...(currentPlatform !== "android"
+      ...(isDesktop
         ? [
             {
               label: "Window",
@@ -237,7 +241,7 @@
         ],
       },
 
-      ...(settings.config?.custom_titlebar
+      ...(isDesktop && settings.config?.custom_titlebar
         ? [
             {
               label: "Title Bar Style",
