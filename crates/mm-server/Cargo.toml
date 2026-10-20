@@ -1,0 +1,23 @@
+[package]
+name = "mm-server"
+description = "MediaMagnet HTTP server: /api/v1, SSE events and the static SPA"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "mediamagnet-server"
+path = "src/main.rs"
+
+[dependencies]
+mm-core = { path = "../mm-core" }
+axum = { workspace = true }
+tower-http = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+futures-util = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+mime_guess = { workspace = true }

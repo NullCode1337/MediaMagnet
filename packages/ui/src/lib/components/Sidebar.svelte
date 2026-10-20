@@ -11,6 +11,7 @@
     type LucideIcon,
   } from "@lucide/svelte";
   import { settings } from "$lib/stores/settings.svelte";
+  import { transport } from "$lib/stores/transport.svelte";
   import { uiState } from "$lib/stores/store.svelte";
 
   import SettingsDialog from "./Settings.svelte";
@@ -185,7 +186,7 @@
         </div>
       </div>
 
-      {#if currentPlatform !== "android"}
+      {#if transport.kind === "desktop" && currentPlatform !== "android"}
         {@render SidebarButton(FolderOpen, "Open folder", false, () =>
           settings.openDownloadDir(),
         )}

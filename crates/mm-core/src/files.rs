@@ -43,7 +43,14 @@ pub fn safe_join(root: &Path, relative: &str) -> Result<PathBuf> {
     let mut missing = Vec::new();
     let resolved = loop {
         if let Ok(existing) = probe.canonicalize() {
-            break existing.join(missing.iter().rev().collect::<PathBuf>());
+            // Joining an empty path appends a separator, and `/a/file/` is not the
+            // file: `metadata` fails with NotADirectory on Unix.
+            let tail: PathBuf = missing.iter().rev().collect();
+            break if tail.as_os_str().is_empty() {
+                existing
+            } else {
+                existing.join(tail)
+            };
         }
         match (probe.parent(), probe.file_name()) {
             (Some(parent), Some(name)) => {
@@ -208,6 +215,19 @@ mod tests {
             root.join("sub/b.txt")
         );
         assert_eq!(safe_join(&root, "").unwrap(), root);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn safe_join_has_no_trailing_separator() {
+        let dir = root();
+        let root = dir.canonicalize().unwrap();
+        for relative in ["a.txt", "sub", "sub/b.txt"] {
+            let path = safe_join(&root, relative).unwrap();
+            let text = path.to_string_lossy();
+            assert!(!text.ends_with('/'), "{relative} -> {text}");
+            assert!(path.is_file() || path.is_dir(), "{relative} -> {text}");
+        }
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

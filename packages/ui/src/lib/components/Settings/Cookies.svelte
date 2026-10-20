@@ -6,6 +6,9 @@
   import { toast } from "svelte-sonner";
   import * as Icons from "@lucide/svelte";
 
+  // Cookie files live on the server's disk; only the desktop app can open them.
+  const isDesktop = transport.kind === "desktop";
+
   let cookieDomain = $state("");
   let cookieRawContent = $state("");
   let savedCookies = $state<Record<string, string>>({});
@@ -192,7 +195,7 @@
               id: domain,
               label: domain.toUpperCase(),
               leading: cookieIcon,
-              onclick: () => transport.openPath(path),
+              onclick: isDesktop ? () => transport.openPath(path) : undefined,
               ondelete: () => deleteCookie(domain, path),
             })),
           },

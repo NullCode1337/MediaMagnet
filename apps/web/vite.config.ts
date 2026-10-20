@@ -22,8 +22,17 @@ export default defineConfig({
 		hmr: host ? { protocol: 'ws', host, port: 1421 } : undefined,
 		watch: {
 			ignored: ['**/src-tauri/**']
+		},
+		// Only `bun run dev:web` uses this; the desktop webview makes no fetch calls.
+		proxy: {
+			'/api': {
+				target: process.env.MM_SERVER_URL || 'http://127.0.0.1:8080',
+				changeOrigin: true
+			}
 		}
 	},
+	// Vite's default is `public/`; this app keeps its files in `static/`.
+	publicDir: 'static',
 	envPrefix: ['VITE_', 'TAURI_ENV_*'],
 	build: {
 		target: process.env.TAURI_ENV_PLATFORM == 'windows' ? 'chrome105' : 'safari13',
