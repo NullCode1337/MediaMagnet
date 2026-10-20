@@ -8,9 +8,12 @@ const host = process.env.TAURI_DEV_HOST;
 export default defineConfig({
 	plugins: [svelte({ compilerOptions: { runes: true } }), tailwindcss()],
 	resolve: {
+		// `$lib` is the import prefix used inside @mediamagnet/ui. The shell keeps
+		// no components of its own, so the alias points at the UI package.
 		alias: {
-			$lib: path.resolve('./src/lib')
-		}
+			$lib: path.resolve('../../packages/ui/src/lib')
+		},
+		dedupe: ['svelte']
 	},
 	server: {
 		port: 1420,

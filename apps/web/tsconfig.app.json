@@ -3,13 +3,13 @@
 	"compilerOptions": {
 		"baseUrl": ".",
 		"paths": {
-			"$lib": ["./src/lib"],
-			"$lib/*": ["./src/lib/*"]
+			"$lib": ["../../packages/ui/src/lib"],
+			"$lib/*": ["../../packages/ui/src/lib/*"]
 		},
 		"target": "ESNext",
 		"useDefineForClassFields": true,
-		"ignoreDeprecations": "6.0",
 		"module": "ESNext",
+		"moduleResolution": "bundler",
 		"resolveJsonModule": true,
 		"allowJs": true,
 		"checkJs": true,

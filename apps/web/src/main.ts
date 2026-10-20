@@ -1,9 +1,14 @@
 import { mount } from "svelte";
+import { App, bindTransport, settings } from "@mediamagnet/ui";
+import { createDesktopTransport } from "./transports/desktop";
 import "./app.css";
-import App from "./App.svelte";
 
-const app = mount(App, {
-  target: document.getElementById("app")!,
-});
+async function boot() {
+  const transport = createDesktopTransport();
+  bindTransport(transport);
+  await settings.init();
 
-export default app;
+  mount(App, { target: document.getElementById("app")! });
+}
+
+void boot();

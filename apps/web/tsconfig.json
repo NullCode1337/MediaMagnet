@@ -10,8 +10,8 @@
 	],
 	"compilerOptions": {
 		"paths": {
-			"$lib": ["./src/lib"],
-			"$lib/*": ["./src/lib/*"]
+			"$lib": ["../../packages/ui/src/lib"],
+			"$lib/*": ["../../packages/ui/src/lib/*"]
 		}
 	}
 }

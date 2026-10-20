@@ -3,7 +3,8 @@
   import * as Dialog from "$lib/components/ui/dialog";
   import { Progress } from "$lib/components/ui/progress";
   import { Button } from "$lib/components/ui/button";
-  import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+  import type { DownloadTask, HistoryItem } from "@mediamagnet/api";
+  import { transport } from "$lib/stores/transport.svelte";
   import { toast } from "svelte-sonner";
   import {
     Pause,
@@ -17,23 +18,6 @@
     Copy,
   } from "@lucide/svelte";
 
-  interface Task {
-    id: string;
-    url: string;
-    status: string;
-    progress: number;
-    isDownloading: boolean;
-    isPaused: boolean;
-    error: string | null;
-  }
-  interface HistoryItem {
-    url: string;
-    name: string;
-    timestamp: string;
-    status: "success" | "error";
-    error?: string;
-  }
-
   let {
     tasks,
     history = $bindable([]),
@@ -43,7 +27,7 @@
     stopAllDownloads,
     retryDownload,
   }: {
-    tasks: Task[];
+    tasks: DownloadTask[];
     history: HistoryItem[];
     pauseTask: (id: string) => void;
     resumeTask: (id: string, url: string) => void;
@@ -93,7 +77,7 @@
   async function copyUrl(url: string) {
     if (!url) return;
     try {
-      await writeText(url);
+      await transport.writeClipboard(url);
       toast("Copied to clipboard: " + url);
     } catch (err) {
       toast("Failed to copy: " + err);
@@ -101,7 +85,7 @@
   }
 </script>
 
-{#snippet downloadCard(task: Task)}
+{#snippet downloadCard(task: DownloadTask)}
   <Card.Root
     class="relative overflow-hidden rounded-xl border shadow-sm transition-all duration-300
       {task.error

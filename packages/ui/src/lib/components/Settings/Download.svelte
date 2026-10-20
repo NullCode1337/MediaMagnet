@@ -2,6 +2,7 @@
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
   import { settings } from "$lib/stores/settings.svelte";
+  import { transport } from "$lib/stores/transport.svelte";
   import Section from "$lib/components/Settings/SECTION.svelte";
 
   let {
@@ -9,6 +10,9 @@
   }: {
     selectDirectory: () => Promise<void>;
   } = $props();
+
+  // The server chooses the download root; the client cannot set a path.
+  const isDesktop = transport.kind === "desktop";
 </script>
 
 {#snippet downloadPathRow()}
@@ -39,10 +43,9 @@
     sections: [
       {
         items: [
-          {
-            type: "custom" as const,
-            node: downloadPathRow,
-          },
+          ...(isDesktop
+            ? [{ type: "custom" as const, node: downloadPathRow }]
+            : []),
           {
             type: "input" as const,
             id: "user_agent",

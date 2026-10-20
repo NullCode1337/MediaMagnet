@@ -2,12 +2,11 @@
   import * as Dialog from "$lib/components/ui/dialog";
   import { Button } from "$lib/components/ui/button";
   import * as Icons from "@lucide/svelte";
-  import { open, ask } from "@tauri-apps/plugin-dialog";
   import { toast } from "svelte-sonner";
-  import { onBackButtonPress } from "@tauri-apps/api/app";
 
   import { uiState } from "$lib/stores/store.svelte";
   import { settings } from "$lib/stores/settings.svelte";
+  import { transport } from "$lib/stores/transport.svelte";
 
   import GeneralTab from "$lib/components/Settings/General.svelte";
   import DownloadsTab from "$lib/components/Settings/Download.svelte";
@@ -36,19 +35,11 @@
   $effect(() => {
     if (!isMobile) return;
 
-    let unlisten: Awaited<ReturnType<typeof onBackButtonPress>> | undefined;
-
-    onBackButtonPress(() => {
+    return transport.window.onBackButtonPress(() => {
       if (mobileView === "content") {
         mobileView = "list";
       }
-    }).then((listener) => {
-      unlisten = listener;
     });
-
-    return () => {
-      unlisten?.unregister();
-    };
   });
 
   const isFullscreen = $derived(windowWidth < 1000);
@@ -71,7 +62,7 @@
     "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground relative justify-start";
 
   const resetSettings = async () => {
-    const confirmed = await ask(
+    const confirmed = await transport.ask(
       `Are you sure you want to reset all settings?`,
       {
         title: "WARNING",
@@ -91,12 +82,12 @@
 
   async function selectDirectory() {
     try {
-      const selected = await open({
+      const selected = await transport.open({
         directory: true,
         multiple: false,
         defaultPath: settings.config?.download_path,
       });
-      if (selected && typeof selected === "string") {
+      if (selected) {
         await settings.setDownloadPath(selected);
       }
     } catch (e) {

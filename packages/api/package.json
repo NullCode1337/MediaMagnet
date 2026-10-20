@@ -1,0 +1,10 @@
+{
+  "name": "@mediamagnet/api",
+  "private": true,
+  "version": "0.5.3",
+  "description": "Shared MediaMagnet types and the Transport contract (desktop IPC and HTTP)",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}
