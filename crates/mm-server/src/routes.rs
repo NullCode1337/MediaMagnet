@@ -14,7 +14,7 @@ use serde_json::{json, Value};
 
 use mm_core::cookies::CookieInput;
 use mm_core::host::disk_usage;
-use mm_core::{DownloadRequest, Settings};
+use mm_core::{DownloadRequest, JobCookie, Settings};
 
 use crate::auth::require_token;
 use crate::files;
@@ -65,6 +65,12 @@ async fn health() -> Json<Value> {
 pub struct DownloadBody {
     pub url: String,
     pub id: Option<String>,
+    /// Settings from a client that keeps its own store; absent uses the server's.
+    #[serde(default)]
+    pub settings: Option<Value>,
+    /// Cookies from that client's store; absent uses the server's cookie store.
+    #[serde(default)]
+    pub cookies: Option<Vec<JobCookie>>,
 }
 
 /// Job ids come from the client so the desktop and browser flows stay identical.
@@ -85,6 +91,18 @@ async fn start_download(
         );
     }
 
+    let settings = match body.settings.as_ref().map(Settings::from_value).transpose() {
+        Ok(settings) => settings,
+        Err(e) => return error(StatusCode::BAD_REQUEST, "invalid_settings", e),
+    };
+    if let Some(cookies) = &body.cookies {
+        for cookie in cookies {
+            if let Err(e) = mm_core::cookies::validate_domain(&cookie.domain) {
+                return error(StatusCode::BAD_REQUEST, "invalid_cookie", e.to_string());
+            }
+        }
+    }
+
     let id = body
         .id
         .filter(|id| !id.trim().is_empty())
@@ -93,6 +111,8 @@ async fn start_download(
     let engine = state.engine.clone();
     let base_dir = state.download_root.clone();
     let job_id = id.clone();
+    let job_settings = settings;
+    let job_cookies = body.cookies;
     tokio::spawn(async move {
         engine
             .run_job(DownloadRequest {
@@ -100,6 +120,8 @@ async fn start_download(
                 url,
                 backend: None,
                 base_dir,
+                settings: job_settings,
+                cookies: job_cookies,
             })
             .await;
     });

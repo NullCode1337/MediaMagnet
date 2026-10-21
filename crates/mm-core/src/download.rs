@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
-use crate::cookies::match_cookie;
+use crate::cookies::{match_cookie, netscape_from_json, validate_domain};
 use crate::error::{Error, Result};
 use crate::events::{CoreEvent, DownloadState, NotificationLevel, SharedEventSink};
 use crate::policy::{ArgTool, Policy};
@@ -56,6 +56,14 @@ impl Backend {
     }
 }
 
+/// Cookies supplied with a job, so a client can keep its own cookie store
+/// without writing into the host's.
+#[derive(Debug, Clone, Deserialize)]
+pub struct JobCookie {
+    pub domain: String,
+    pub content: String,
+}
+
 #[derive(Debug, Clone)]
 pub struct DownloadRequest {
     pub id: String,
@@ -64,6 +72,36 @@ pub struct DownloadRequest {
     /// Directory this job writes into. Chosen by the host (settings on desktop,
     /// account/job root on the server); core never reads a client path itself.
     pub base_dir: PathBuf,
+    /// Client-supplied settings for this job; `None` uses the host's settings.
+    pub settings: Option<Settings>,
+    /// Client-supplied cookies for this job; `None` uses the host's cookie store.
+    /// `Some` never falls back to the host's cookies.
+    pub cookies: Option<Vec<JobCookie>>,
+}
+
+/// Where a job's cookies come from: the host's cookie directory, or a file
+/// materialised from the client's own store.
+#[derive(Clone, Default)]
+struct CookieSource {
+    explicit: bool,
+    file: Option<Arc<CookieFile>>,
+}
+
+struct CookieFile(PathBuf);
+
+impl Drop for CookieFile {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.0);
+    }
+}
+
+/// Everything a job needs beyond the URL, shared by the probe, the download and
+/// the cancellation cleanup.
+#[derive(Clone)]
+struct JobSpec {
+    settings: Settings,
+    cookies: CookieSource,
+    with_cookies: bool,
 }
 
 struct ActiveDownload {
@@ -71,7 +109,7 @@ struct ActiveDownload {
     backend: Backend,
     base_dir: PathBuf,
     url: String,
-    with_cookies: bool,
+    spec: JobSpec,
 }
 
 pub struct Engine {
@@ -119,6 +157,32 @@ impl Engine {
         self.app_data_dir.join("cookies")
     }
 
+    /// Materialises the client's cookie for this URL into a temp file. The
+    /// longest matching domain wins so `youtube.com` beats a `youtube` entry.
+    fn write_job_cookies(
+        &self,
+        cookies: &[JobCookie],
+        link: &str,
+    ) -> Result<Option<Arc<CookieFile>>> {
+        let Some(cookie) = matching_cookie(cookies, link) else {
+            return Ok(None);
+        };
+
+        let domain = validate_domain(&cookie.domain)?;
+        let content = cookie.content.trim_start();
+        let body = if content.starts_with('{') || content.starts_with('[') {
+            netscape_from_json(&cookie.content)?
+        } else {
+            cookie.content.clone()
+        };
+
+        let dir = self.app_data_dir.join("job-cookies");
+        std::fs::create_dir_all(&dir)?;
+        let path = dir.join(format!("{domain}-{}.txt", unique_suffix()));
+        std::fs::write(&path, body)?;
+        Ok(Some(Arc::new(CookieFile(path))))
+    }
+
     fn emit(&self, event: CoreEvent) {
         self.sink.emit(event);
     }
@@ -151,12 +215,12 @@ impl Engine {
     /// Returns the backend and, when yt-dlp was rejected, why. The reason is kept
     /// for the error message if the fallback also fails; a normal gallery-dl link
     /// ("no dedicated extractor") is expected and must not surface as a warning.
-    async fn identify(&self, url: &str, settings: &Settings) -> (Backend, Option<String>) {
+    async fn identify(&self, url: &str, spec: &JobSpec) -> (Backend, Option<String>) {
         if url.to_lowercase().contains("spotify.com") {
             return (Backend::SpotDl, None);
         }
 
-        match self.probe_ytdlp(url, settings).await {
+        match self.probe_ytdlp(url, spec).await {
             Ok(()) => (Backend::YtDlp, None),
             Err(reason) => {
                 println!(
@@ -170,9 +234,9 @@ impl Engine {
 
     /// Probes yt-dlp with the same arguments (and cookies) the real download
     /// would use, so the probe cannot fail for a reason the download would not hit.
-    async fn probe_ytdlp(&self, url: &str, settings: &Settings) -> std::result::Result<(), String> {
+    async fn probe_ytdlp(&self, url: &str, spec: &JobSpec) -> std::result::Result<(), String> {
         let (mut cmd, _) = self
-            .apply_download_args(url, Backend::YtDlp, settings, true)
+            .apply_download_args(url, Backend::YtDlp, spec)
             .await
             .map_err(|e| e.to_string())?;
         cmd.args(["--print", "title", "--no-download"])
@@ -203,10 +267,20 @@ impl Engine {
         Err(reason)
     }
 
-    fn cookie_dir_apply(&self, cmd: &mut Command, link: &str, backend: Backend) -> bool {
-        let cookies_dir = self.cookies_dir();
-        let Some(path) = match_cookie(&cookies_dir, link) else {
-            println!("[MediaMagnet][Download] No cookies directory found, ignoring...");
+    fn apply_cookie(
+        &self,
+        cmd: &mut Command,
+        link: &str,
+        backend: Backend,
+        source: &CookieSource,
+    ) -> bool {
+        let path = if source.explicit {
+            source.file.as_ref().map(|file| file.0.clone())
+        } else {
+            match_cookie(&self.cookies_dir(), link)
+        };
+        let Some(path) = path else {
+            println!("[MediaMagnet][Download] No cookies matched, ignoring...");
             return false;
         };
         let Some(path_str) = path.to_str() else {
@@ -276,9 +350,9 @@ impl Engine {
         &self,
         url: &str,
         backend: Backend,
-        settings: &Settings,
-        with_cookies: bool,
+        spec: &JobSpec,
     ) -> Result<(Command, bool)> {
+        let settings = &spec.settings;
         let mut cmd = self
             .base_command(backend.tool())
             .await
@@ -367,7 +441,8 @@ impl Engine {
             }
         }
 
-        let cookies_applied = with_cookies && self.cookie_dir_apply(&mut cmd, url, backend);
+        let cookies_applied =
+            spec.with_cookies && self.apply_cookie(&mut cmd, url, backend, &spec.cookies);
         cmd.arg(url);
         Ok((cmd, cookies_applied))
     }
@@ -404,11 +479,32 @@ impl Engine {
         };
         self.status(&id, "Starting...");
 
-        let settings = self.settings();
+        let settings = request.settings.clone().unwrap_or_else(|| self.settings());
+        let cookies = match request.cookies.as_deref() {
+            Some(list) => match self.write_job_cookies(list, &request.url) {
+                Ok(file) => CookieSource {
+                    explicit: true,
+                    file,
+                },
+                Err(e) => {
+                    self.emit(CoreEvent::DownloadError {
+                        id,
+                        value: format!("Cookie error: {e}"),
+                    });
+                    return;
+                }
+            },
+            None => CookieSource::default(),
+        };
+        let spec = JobSpec {
+            settings,
+            cookies,
+            with_cookies: true,
+        };
 
         let (backend, probe_failure) = match request.backend {
             Some(backend) => (backend, None),
-            None => self.identify(&request.url, &settings).await,
+            None => self.identify(&request.url, &spec).await,
         };
 
         // yt-dlp rejected the link; if gallery-dl cannot handle it either, the
@@ -420,10 +516,7 @@ impl Engine {
 
         self.emit(CoreEvent::DownloadStarted { id: id.clone() });
 
-        let prepared = match self
-            .apply_download_args(&request.url, backend, &settings, true)
-            .await
-        {
+        let prepared = match self.apply_download_args(&request.url, backend, &spec).await {
             Ok(prepared) => prepared,
             Err(e) => {
                 self.emit(CoreEvent::DownloadError {
@@ -443,7 +536,7 @@ impl Engine {
                 backend,
                 &request.base_dir,
                 &id,
-                prepared.1,
+                spec.clone(),
             )
             .await
         {
@@ -454,8 +547,13 @@ impl Engine {
                 );
                 self.status(&id, "FAILED: Retrying without cookies...");
 
+                let retry_spec = JobSpec {
+                    with_cookies: false,
+                    ..spec.clone()
+                };
+
                 match self
-                    .apply_download_args(&request.url, backend, &settings, false)
+                    .apply_download_args(&request.url, backend, &retry_spec)
                     .await
                 {
                     Ok((retry_cmd, _)) => {
@@ -466,7 +564,7 @@ impl Engine {
                                 backend,
                                 &request.base_dir,
                                 &id,
-                                false,
+                                retry_spec,
                             )
                             .await
                         {
@@ -514,7 +612,7 @@ impl Engine {
         backend: Backend,
         base_dir: &Path,
         id: &str,
-        with_cookies: bool,
+        spec: JobSpec,
     ) -> Result<()> {
         let id = id.to_string();
         std::fs::create_dir_all(base_dir)?;
@@ -523,8 +621,8 @@ impl Engine {
         let total_urls = if backend == Backend::GalleryDl {
             println!("\n[MediaMagnet][gallery-dl] Counting total urls...");
             let mut count_cmd = self.base_command(Tool::GalleryDl).await?;
-            if with_cookies {
-                self.cookie_dir_apply(&mut count_cmd, link, backend);
+            if spec.with_cookies {
+                self.apply_cookie(&mut count_cmd, link, backend, &spec.cookies);
             }
             count_cmd.current_dir(base_dir);
 
@@ -549,7 +647,7 @@ impl Engine {
                 backend,
                 base_dir: base_dir.to_path_buf(),
                 url: link.to_string(),
-                with_cookies,
+                spec,
             },
         );
 
@@ -820,16 +918,16 @@ impl Engine {
         base: &Path,
         url: &str,
         backend: Backend,
-        with_cookies: bool,
+        spec: &JobSpec,
     ) -> Result<()> {
         match backend {
             Backend::SpotDl => return Ok(()),
             Backend::YtDlp => {
                 let mut cmd = self.base_command(Tool::YtDlp).await?;
-                if with_cookies {
-                    self.cookie_dir_apply(&mut cmd, url, backend);
+                if spec.with_cookies {
+                    self.apply_cookie(&mut cmd, url, backend, &spec.cookies);
                 }
-                let template = self.output_template(&self.settings());
+                let template = self.output_template(&spec.settings);
                 cmd.args(["-o", &template, "--print", "filename", "--no-download", url])
                     .current_dir(base);
 
@@ -857,8 +955,8 @@ impl Engine {
             }
             Backend::GalleryDl => {
                 let mut cmd = self.base_command(Tool::GalleryDl).await?;
-                if with_cookies {
-                    self.cookie_dir_apply(&mut cmd, url, backend);
+                if spec.with_cookies {
+                    self.apply_cookie(&mut cmd, url, backend, &spec.cookies);
                 }
                 cmd.args(["-s", "-d", ".", "--print", "{_directory}", url])
                     .current_dir(base);
@@ -924,12 +1022,7 @@ impl Engine {
             let _ = entry.child.wait().await;
 
             if let Err(e) = self
-                .clean_tempfiles(
-                    &entry.base_dir,
-                    &entry.url,
-                    entry.backend,
-                    entry.with_cookies,
-                )
+                .clean_tempfiles(&entry.base_dir, &entry.url, entry.backend, &entry.spec)
                 .await
             {
                 println!("[MediaMagnet] Cleanup failed during cancellation: {}", e);
@@ -980,6 +1073,27 @@ impl Engine {
     }
 }
 
+fn matching_cookie<'a>(cookies: &'a [JobCookie], link: &str) -> Option<&'a JobCookie> {
+    let link = link.to_lowercase();
+    cookies
+        .iter()
+        .filter(|cookie| {
+            let domain = cookie.domain.trim().to_lowercase();
+            !domain.is_empty() && link.contains(&domain)
+        })
+        .max_by_key(|cookie| cookie.domain.trim().len())
+}
+
+fn unique_suffix() -> String {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    format!("{nanos:x}-{:x}", COUNTER.fetch_add(1, Ordering::Relaxed))
+}
+
 fn contains_separator(template: &str) -> bool {
     template.contains('/') || template.contains('\\')
 }
@@ -988,4 +1102,39 @@ fn strip_ansi_codes(s: &str) -> std::borrow::Cow<'_, str> {
     static RE: std::sync::LazyLock<regex::Regex> =
         std::sync::LazyLock::new(|| regex::Regex::new(r"\x1b\[[0-9;]*m").unwrap());
     RE.replace_all(s, "")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn cookie(domain: &str, content: &str) -> JobCookie {
+        JobCookie {
+            domain: domain.into(),
+            content: content.into(),
+        }
+    }
+
+    #[test]
+    fn job_cookie_matches_the_most_specific_domain() {
+        let cookies = vec![cookie("youtube", "a"), cookie("youtube.com", "b")];
+        assert_eq!(
+            matching_cookie(&cookies, "https://WWW.YOUTUBE.COM/watch")
+                .unwrap()
+                .content,
+            "b"
+        );
+        assert_eq!(
+            matching_cookie(&cookies, "https://youtube.de/1")
+                .unwrap()
+                .content,
+            "a"
+        );
+        assert!(matching_cookie(&cookies, "https://vimeo.com/1").is_none());
+    }
+
+    #[test]
+    fn empty_domains_never_match() {
+        assert!(matching_cookie(&[cookie("  ", "x")], "https://example.com").is_none());
+    }
 }
