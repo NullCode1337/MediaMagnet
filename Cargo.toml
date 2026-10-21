@@ -5,7 +5,7 @@ members = ["crates/mm-core", "crates/mm-server", "apps/desktop/src-tauri"]
 [workspace.package]
 version = "0.5.3"
 edition = "2021"
-license = "AGPL-3.0-or-later"
+license = "AGPL-3.0-only"
 authors = ["NullCode1337"]
 repository = "NullCode1337/MediaMagnet"
 
