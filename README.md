@@ -145,7 +145,7 @@ const api = createMediaMagnetClient({ baseUrl: "http://localhost:8080" });
 await api.POST("/downloads", { body: { url } });
 ```
 
-Regenerate its types after changing the spec with `bun run --cwd packages/client generate`.
+Regenerate its types after changing the spec with `bun run generate:api`.
 
 ---
 

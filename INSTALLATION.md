@@ -478,7 +478,9 @@ bun run build:server      # web UI + server binary with the UI embedded
 ```
 
 `bun run package:server` additionally produces
-`target/package/mediamagnet-server-<version>-<target>.tar.gz`.
+`target/package/mediamagnet-server-<version>-<target>.tar.gz`. Add `--with-tools`
+(`bash scripts/package-server.sh --with-tools`) on the target's own architecture to
+download the pinned tools into `binaries/` and produce the `-tools` archive.
 
 ### Run at boot
 
