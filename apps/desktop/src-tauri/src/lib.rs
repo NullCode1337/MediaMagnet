@@ -53,6 +53,8 @@ pub fn run() {
             commands::utils::check_download_path,
             commands::utils::get_free_space,
             commands::utils::notify,
+            commands::utils::reinstall_python_deps,
+            commands::utils::reset_python_deps,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

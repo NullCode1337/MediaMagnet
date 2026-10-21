@@ -134,17 +134,42 @@ pub struct ToolRuntime; // Arc<ToolRuntime>
 impl ToolRuntime {
     pub fn new(config: RuntimeConfig) -> Self;
     pub async fn resolve(&self, tool: Tool) -> Result<ResolvedTool, ToolError>;
+    pub async fn reinstall_python_deps(&self, tools: &[Tool]) -> Result<(), ToolError>;
+    pub fn reset_python_overlay(&self) -> std::io::Result<()>;
+    pub fn deno(&self) -> Option<PathBuf>;
+    pub fn ffmpeg(&self) -> Option<PathBuf>;
 }
-pub enum Tool { YtDlp, GalleryDl, SpotDl }
-pub enum ToolSource { Preinstalled, Bundled }
-pub struct RuntimeConfig { pub bundled_tools_dir: Option<PathBuf> }
+pub enum Tool { YtDlp, GalleryDl, SpotDl } // name()/module()/package()
+pub enum ToolSource { Preinstalled, System, Bundled, Overlay }
+pub struct ResolvedTool {
+    pub tool: Tool,
+    pub program: PathBuf,        // tool binary or Python interpreter
+    pub args: Vec<String>,       // ["-m", "<module>"] for Python modes
+    pub env: Vec<(String, String)>, // PYTHONPATH, PYTHONNOUSERSITE, PATH
+    pub source: ToolSource,
+}
+pub struct RuntimeConfig {
+    pub bundled_tools_dir: Option<PathBuf>, // resources/binaries
+    pub overlay_dir: Option<PathBuf>,       // <app_data>/py-overlay
+    pub python_path: Option<PathBuf>,       // MM_PYTHON
+}
 pub const TOOL_TARGET: &str; // build target triple, e.g. x86_64-unknown-linux-gnu
 ```
 
-Resolution order matches OLD: `which` (skipping paths containing `mediamagnet`,
-validated with `--version`, cached) then a bundled `<tool>-<target>` /
-`<tool>` binary in `bundled_tools_dir`. Phase 4 extends this with the bundled Python
-and overlay modes; `RuntimeConfig` and `ToolSource` are the seams for that.
+Resolution order (cached per tool):
+
+1. **Overlay** — `<py-overlay>/<module>` exists; the bundled interpreter runs
+   `<python> -m <module>` with the overlay first on `PYTHONPATH`.
+2. **Preinstalled** — `which` (skipping paths containing `mediamagnet`), validated
+   with `--version`. This is the Docker/server mode.
+3. **System** — `RuntimeConfig.python_path` (`MM_PYTHON`).
+4. **Bundled** — `bundled_tools_dir/python`, a python-build-standalone install
+   with the three tools baked into its site-packages.
+
+Every resolved tool also gets `bundled_tools_dir` prepended to `PATH`, so a bundled
+`deno`/`ffmpeg`/`ffprobe` is visible to yt-dlp and spotdl. `reinstall_python_deps`
+runs `pip install --target <overlay> --upgrade <packages>` with the first available
+interpreter (bundled, then system); `reset_python_overlay` deletes the directory.
 
 ## Files and ranges (for the HTTP layer)
 

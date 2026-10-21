@@ -201,3 +201,47 @@ says what changed and why.
     while Vite's default `publicDir` is `public/`, so `favicon.png` was never
     copied into `dist`. `publicDir: 'static'` fixes it and `index.html` points at
     the real icon rather than OLD's `vite.svg` reference.
+
+## Phase 4 — tool runtime, packaging and CI
+
+42. **No frozen sidecars.** yt-dlp and gallery-dl are no longer shipped as
+    PyInstaller blobs. The desktop bundle carries a python-build-standalone
+    interpreter per target triple with `yt-dlp`, `gallery-dl` and `spotdl`
+    installed into its site-packages at build time; the tools run as
+    `python -m <module>`.
+43. **Four runtime modes.** `ToolSource` is `Overlay`, `Preinstalled`, `System` or
+    `Bundled`, in that resolution order. The overlay is checked first because it
+    only exists after the user explicitly ran `reinstall_python_deps`. The
+    preinstalled check keeps OLD's `which` + `--version` validation, so a stale
+    system binary is still skipped.
+44. **System mode is `MM_PYTHON`, not a settings key.** OLD had no Python path
+    field and adding one would change the settings UI. The environment variable
+    is read by both the desktop and the server.
+45. **Deno is found on PATH, not through `--js-runtimes`.** The bundled tools
+    directory is prepended to `PATH` for every child, so yt-dlp's default deno
+    probe finds the bundled binary. Passing `--js-runtimes deno:<path>` would
+    break against older user-installed yt-dlp builds that lack the flag.
+46. **The overlay lives in app data.** macOS `.app`, AppImage and Program Files
+    are read-only, so `reinstall_python_deps` installs into
+    `<app_data>/py-overlay` with `pip install --target`, and that directory is
+    prepended to `PYTHONPATH`. `reset_python_deps` (new command) deletes it and
+    clears the resolution cache. Both are desktop commands only; the server's
+    tools are part of its image.
+47. **ffmpeg is bundled on Windows and macOS, system on Linux and the server.**
+    A missing ffmpeg is not a preflight error: jobs that do not need merging
+    still work, and yt-dlp reports the failure itself for those that do.
+48. **CI builds the bundled Python on each target runner.** A single Python
+    standalone release is downloaded per triple and the pinned tool versions are
+    installed with that interpreter, so wheels match the runner's OS and arch.
+    arm64 jobs use `ubuntu-24.04-arm`, `windows-11-arm` and `macos-latest`;
+    x86_64 macOS uses `macos-15-intel` (the `macos-13` runner is retired).
+49. **Packaging switches from `externalBin` to `resources`.** `tauri.conf.json`
+    ships the `binaries/` directory, where CI places `python/`, `deno`,
+    `ffmpeg` and `ffprobe`. The checked-in 92-byte x86_64 stub files are no
+    longer referenced by any config; CI removes them from the bundle. They can
+    be deleted from the repository when convenient.
+50. **The server image is `python:3.12-slim-bookworm` + Debian's ffmpeg.** Python
+    3.12 is the audit's pinned interpreter (widest cp312/abi3 wheel coverage);
+    Debian bookworm provides glibc ≥ 2.28. Deno is copied from the official
+    `denoland/deno:bin` image. The same Dockerfile is built for
+    `linux/amd64` and `linux/arm64` by buildx in the release workflow.

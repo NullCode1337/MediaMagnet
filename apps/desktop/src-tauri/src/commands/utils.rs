@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use mm_core::host::{disk_usage, Host};
-use mm_core::Settings;
+use mm_core::{Settings, Tool};
 use tauri::State;
 
 use crate::app::App;
@@ -56,4 +56,34 @@ pub async fn notify(app: State<'_, App>, body: String) -> Result<(), String> {
         app.engine.notify(&body);
     }
     Ok(())
+}
+
+#[tauri::command]
+pub async fn reinstall_python_deps(
+    app: State<'_, App>,
+    tools: Option<Vec<String>>,
+) -> Result<(), String> {
+    let selected: Vec<Tool> = match tools {
+        Some(names) => names
+            .iter()
+            .filter_map(|name| Tool::all().into_iter().find(|tool| tool.name() == name))
+            .collect(),
+        None => Tool::all().to_vec(),
+    };
+
+    if selected.is_empty() {
+        return Err("no known tools requested".into());
+    }
+
+    app.runtime
+        .reinstall_python_deps(&selected)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn reset_python_deps(app: State<'_, App>) -> Result<(), String> {
+    app.runtime
+        .reset_python_overlay()
+        .map_err(|e| e.to_string())
 }

@@ -121,6 +121,8 @@ async fn serve(config: Config) -> Result<(), String> {
 
     let runtime = Arc::new(ToolRuntime::new(RuntimeConfig {
         bundled_tools_dir: env_path("MM_BINARIES_DIR"),
+        overlay_dir: Some(app_data_dir.join("py-overlay")),
+        python_path: env_path("MM_PYTHON"),
     }));
 
     let events = crate::events::EventHub::new();

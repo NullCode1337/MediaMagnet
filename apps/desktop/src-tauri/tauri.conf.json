@@ -39,9 +39,8 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "externalBin": [
-      "binaries/yt-dlp",
-      "binaries/gallery-dl"
+    "resources": [
+      "binaries"
     ]
   }
 }

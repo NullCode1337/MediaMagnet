@@ -11,6 +11,7 @@ use crate::events::TauriEventSink;
 
 pub struct App {
     pub engine: Arc<Engine>,
+    pub runtime: Arc<ToolRuntime>,
     pub config_dir: PathBuf,
     pub host: DesktopHost,
 }
@@ -58,11 +59,13 @@ pub fn init(app: &AppHandle) {
 
     let host = DesktopHost { app: app.clone() };
     let sink: SharedEventSink = Arc::new(TauriEventSink::new(app.clone()));
-    let runtime = Arc::new(ToolRuntime::new(RuntimeConfig::with_bundled_tools_dir(
-        bundled_tools_dir(app),
-    )));
+    let runtime = Arc::new(ToolRuntime::new(RuntimeConfig {
+        bundled_tools_dir: Some(bundled_tools_dir(app)),
+        overlay_dir: Some(app_data_dir.join("py-overlay")),
+        python_path: std::env::var_os("MM_PYTHON").map(PathBuf::from),
+    }));
     let engine = Engine::new(
-        runtime,
+        runtime.clone(),
         config_dir.clone(),
         app_data_dir.clone(),
         Policy::desktop(),
@@ -71,28 +74,27 @@ pub fn init(app: &AppHandle) {
 
     app.manage(App {
         engine,
+        runtime,
         config_dir,
         host,
     });
 }
 
 fn bundled_tools_dir(app: &AppHandle) -> PathBuf {
+    if let Some(dir) = std::env::var_os("MM_BINARIES_DIR") {
+        return PathBuf::from(dir);
+    }
     let exe_dir = std::env::current_exe()
         .ok()
         .and_then(|exe| exe.parent().map(Path::to_path_buf))
         .unwrap_or_default();
-    if exe_dir.join("gallery-dl").is_file() || exe_dir.join("gallery-dl.exe").is_file() {
-        exe_dir
-    } else {
-        std::env::var_os("MM_BINARIES_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|| {
-                app.path()
-                    .resource_dir()
-                    .unwrap_or_default()
-                    .join("binaries")
-            })
+    if exe_dir.join("binaries").is_dir() {
+        return exe_dir.join("binaries");
     }
+    app.path()
+        .resource_dir()
+        .unwrap_or_default()
+        .join("binaries")
 }
 
 pub struct DesktopHost {
