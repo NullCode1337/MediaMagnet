@@ -264,8 +264,10 @@
   }
 
   onMount(() => {
-    updateDiskSpace();
     currentPlatform = transport.platform();
+    // The browser has no storage figure to show; only the desktop sidebar does.
+    if (transport.kind !== "desktop") return;
+    updateDiskSpace();
     const interval = setInterval(updateDiskSpace, 60000);
     return () => clearInterval(interval);
   });
@@ -317,7 +319,7 @@
       <Titlebar {currentPlatform} />
     </div>
   {:else}
-    <TopBar {diskUsage} {currentPlatform} />
+    <TopBar {currentPlatform} />
   {/if}
 
   {#if uiState.headless}

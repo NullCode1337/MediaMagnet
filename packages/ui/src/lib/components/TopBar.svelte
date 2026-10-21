@@ -1,14 +1,8 @@
 <script lang="ts">
-  import { Download, HardDrive } from "@lucide/svelte";
-
-  import { Button } from "$lib/components/ui/button";
-  import { Progress } from "$lib/components/ui/progress";
-  import { uiState } from "$lib/stores/store.svelte";
-
   import logo from "$lib/assets/favicon.png";
   import SettingsDialog from "./Settings.svelte";
 
-  let { diskUsage, currentPlatform } = $props();
+  let { currentPlatform } = $props();
   let menuOpen = $state(false);
 
   const navButton =
@@ -26,15 +20,6 @@
   </div>
 
   <nav class="flex items-center gap-1">
-    <Button
-      variant="ghost"
-      onclick={() => (uiState.activeTab = "downloads")}
-      class={navButton}
-    >
-      <Download class="size-5 text-sidebar-foreground/70" />
-      <span class="font-medium text-[15px]">Downloads</span>
-    </Button>
-
     <SettingsDialog
       isCollapsed={false}
       bind:menuOpen
@@ -42,23 +27,4 @@
       triggerClass={navButton}
     />
   </nav>
-
-  <div class="ml-auto flex items-center gap-3 w-56">
-    <HardDrive size={18} class="text-sidebar-foreground/70 shrink-0" />
-    <div class="flex-1 min-w-0">
-      <div class="flex justify-between text-[10px] mb-1.5 font-semibold">
-        <span class="text-sidebar-foreground/50 uppercase tracking-widest"
-          >Storage</span
-        >
-        <span
-          class="text-sidebar-foreground/80 {diskUsage > 90
-            ? 'text-destructive'
-            : ''}"
-        >
-          {diskUsage.toFixed(1)}%
-        </span>
-      </div>
-      <Progress value={diskUsage} class="h-1 bg-sidebar-accent" />
-    </div>
-  </div>
 </header>
