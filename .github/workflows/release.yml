@@ -1,0 +1,192 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      draft:
+        description: 'Publish as draft release?'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+env:
+  PYTHON_STANDALONE_RELEASE: '20261013'
+  PYTHON_VERSION: '3.12'
+  YT_DLP_VERSION: '2026.8.19'
+  GALLERY_DL_VERSION: '1.32.17'
+  SPOTDL_VERSION: '4.5.2'
+  DENO_VERSION: '2.9.7'
+  FFMPEG_STATIC_RELEASE: 'b6.1.1'
+
+jobs:
+  desktop:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'ubuntu-22.04'
+            target: 'x86_64-unknown-linux-gnu'
+            args: ''
+            ffmpeg: 'system'
+          - platform: 'ubuntu-24.04-arm'
+            target: 'aarch64-unknown-linux-gnu'
+            args: '--target aarch64-unknown-linux-gnu'
+            ffmpeg: 'system'
+          - platform: 'windows-latest'
+            target: 'x86_64-pc-windows-msvc'
+            args: ''
+            ffmpeg: 'win64'
+          - platform: 'windows-11-arm'
+            target: 'aarch64-pc-windows-msvc'
+            args: '--target aarch64-pc-windows-msvc'
+            ffmpeg: 'winarm64'
+          - platform: 'macos-latest'
+            target: 'aarch64-apple-darwin'
+            args: '--target aarch64-apple-darwin'
+            ffmpeg: 'darwin-arm64'
+          - platform: 'macos-15-intel'
+            target: 'x86_64-apple-darwin'
+            args: '--target x86_64-apple-darwin'
+            ffmpeg: 'darwin-x64'
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install Linux system dependencies
+        if: startsWith(matrix.platform, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Install frontend dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Bundle Python runtime
+        shell: bash
+        env:
+          TARGET_TRIPLE: ${{ matrix.target }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          BIN="apps/desktop/src-tauri/binaries"
+          mkdir -p "$BIN"
+          rm -f "$BIN"/yt-dlp-* "$BIN"/gallery-dl-*
+
+          PYBIN="$(command -v python3 || command -v python)"
+          URL="$("$PYBIN" -c "import json,os,urllib.request; r=os.environ['PYTHON_STANDALONE_RELEASE']; t=os.environ['TARGET_TRIPLE']; v=os.environ['PYTHON_VERSION']; q=urllib.request.Request(f'https://api.github.com/repos/astral-sh/python-build-standalone/releases/tags/{r}', headers={'Authorization': 'Bearer '+os.environ.get('GITHUB_TOKEN','')}); a=json.load(urllib.request.urlopen(q))['assets']; p=f'cpython-{v}.'; s=f'{t}-install_only.tar.gz'; print(next(x['browser_download_url'] for x in a if x['name'].startswith(p) and x['name'].endswith(s)))")"
+
+          curl -fsSL "$URL" -o "$RUNNER_TEMP/python.tar.gz"
+          mkdir -p "$BIN/python"
+          tar -xzf "$RUNNER_TEMP/python.tar.gz" -C "$BIN/python" --strip-components=1
+
+          if [ -f "$BIN/python/python.exe" ]; then
+            PYTHON="$BIN/python/python.exe"
+          else
+            PYTHON="$BIN/python/bin/python3"
+          fi
+
+          "$PYTHON" -m pip install --no-cache-dir --upgrade \
+            "yt-dlp==${YT_DLP_VERSION}" \
+            "gallery-dl==${GALLERY_DL_VERSION}" \
+            "spotdl==${SPOTDL_VERSION}"
+
+      - name: Bundle Deno
+        shell: bash
+        env:
+          TARGET_TRIPLE: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          BIN="apps/desktop/src-tauri/binaries"
+          PYBIN="$(command -v python3 || command -v python)"
+          curl -fsSL "https://github.com/denoland/deno/releases/download/v${DENO_VERSION}/deno-${TARGET_TRIPLE}.zip" \
+            -o "$RUNNER_TEMP/deno.zip"
+          "$PYBIN" -m zipfile -e "$RUNNER_TEMP/deno.zip" "$RUNNER_TEMP/deno"
+          cp "$RUNNER_TEMP"/deno/deno* "$BIN/"
+          chmod +x "$BIN"/deno 2>/dev/null || true
+
+      - name: Bundle ffmpeg (Windows)
+        if: startsWith(matrix.ffmpeg, 'win')
+        shell: bash
+        run: |
+          set -euo pipefail
+          BIN="apps/desktop/src-tauri/binaries"
+          PYBIN="$(command -v python3 || command -v python)"
+          curl -fsSL "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n9.0-latest-${{ matrix.ffmpeg }}-lgpl-9.0.zip" \
+            -o "$RUNNER_TEMP/ffmpeg.zip"
+          "$PYBIN" -m zipfile -e "$RUNNER_TEMP/ffmpeg.zip" "$RUNNER_TEMP/ffmpeg"
+          cp "$RUNNER_TEMP"/ffmpeg/*/bin/ffmpeg.exe "$RUNNER_TEMP"/ffmpeg/*/bin/ffprobe.exe "$BIN/"
+
+      - name: Bundle ffmpeg (macOS)
+        if: startsWith(matrix.ffmpeg, 'darwin')
+        shell: bash
+        run: |
+          set -euo pipefail
+          BIN="apps/desktop/src-tauri/binaries"
+          for tool in ffmpeg ffprobe; do
+            curl -fsSL "https://github.com/eugeneware/ffmpeg-static/releases/download/${FFMPEG_STATIC_RELEASE}/${tool}-${{ matrix.ffmpeg }}" \
+              -o "$BIN/$tool"
+            chmod +x "$BIN/$tool"
+          done
+
+      - name: Build and publish
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: apps/desktop
+          tagName: app-v__VERSION__
+          releaseName: 'App v__VERSION__'
+          releaseBody: 'See the assets below to download and install this version.'
+          releaseDraft: ${{ github.event.inputs.draft }}
+          prerelease: false
+          generateReleaseNotes: true
+          args: ${{ matrix.args }}
+
+  docker:
+    permissions:
+      contents: read
+      packages: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-qemu-action@v3
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

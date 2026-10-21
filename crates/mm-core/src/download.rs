@@ -139,8 +139,12 @@ impl Engine {
 
     async fn base_command(&self, tool: Tool) -> Result<Command> {
         let resolved = self.runtime.resolve(tool).await?;
-        let mut cmd = Command::new(resolved.path);
+        let mut cmd = Command::new(resolved.program);
         hide_console(&mut cmd);
+        cmd.args(resolved.args);
+        for (key, value) in resolved.env {
+            cmd.env(key, value);
+        }
         Ok(cmd)
     }
 
