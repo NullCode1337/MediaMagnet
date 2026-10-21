@@ -157,6 +157,10 @@ impl Engine {
         self.app_data_dir.join("cookies")
     }
 
+    pub fn runtime(&self) -> &ToolRuntime {
+        &self.runtime
+    }
+
     /// Materialises the client's cookie for this URL into a temp file. The
     /// longest matching domain wins so `youtube.com` beats a `youtube` entry.
     fn write_job_cookies(

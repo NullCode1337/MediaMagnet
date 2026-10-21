@@ -14,7 +14,7 @@ use serde_json::{json, Value};
 
 use mm_core::cookies::CookieInput;
 use mm_core::host::disk_usage;
-use mm_core::{DownloadRequest, JobCookie, Settings};
+use mm_core::{DownloadRequest, JobCookie, Settings, Tool, ToolSource};
 
 use crate::auth::require_token;
 use crate::files;
@@ -23,10 +23,13 @@ use crate::state::AppState;
 pub fn router(state: Arc<AppState>) -> Router {
     let api = Router::new()
         .route("/health", get(health))
-        .route("/downloads", post(start_download))
+        .route(
+            "/downloads",
+            get(list_downloads).post(start_download).delete(cancel_all),
+        )
+        .route("/downloads/{id}", get(get_download).delete(cancel))
         .route("/downloads/{id}/pause", post(pause))
-        .route("/downloads/{id}", delete(cancel))
-        .route("/downloads", delete(cancel_all))
+        .route("/downloads/{id}/resume", post(resume))
         .route("/settings", get(get_settings).put(update_settings))
         .route("/settings/reset", post(reset_settings))
         .route("/cookies", get(list_cookies).post(save_cookie))
@@ -37,6 +40,13 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/files", get(files::list))
         .route("/files/{*path}", get(files::download))
         .route("/events", get(events))
+        .route("/tools", get(list_tools))
+        .route("/tools/update", post(update_tools))
+        .route(
+            "/torrents",
+            get(torrents_unavailable).post(torrents_unavailable),
+        )
+        .route("/torrents/{id}", delete(torrents_unavailable))
         .layer(middleware::from_fn_with_state(state.clone(), require_token))
         .with_state(state.clone());
 
@@ -108,22 +118,72 @@ async fn start_download(
         .filter(|id| !id.trim().is_empty())
         .unwrap_or_else(new_id);
 
+    let request = DownloadRequest {
+        id: id.clone(),
+        url,
+        backend: None,
+        base_dir: state.download_root.clone(),
+        settings,
+        cookies: body.cookies,
+    };
+    if !state.jobs.insert(request.clone()) {
+        return error(
+            StatusCode::CONFLICT,
+            "duplicate_download",
+            format!("download {id} is already running or paused"),
+        );
+    }
+
     let engine = state.engine.clone();
-    let base_dir = state.download_root.clone();
-    let job_id = id.clone();
-    let job_settings = settings;
-    let job_cookies = body.cookies;
     tokio::spawn(async move {
-        engine
-            .run_job(DownloadRequest {
-                id: job_id,
-                url,
-                backend: None,
-                base_dir,
-                settings: job_settings,
-                cookies: job_cookies,
-            })
-            .await;
+        engine.run_job(request).await;
+    });
+
+    (StatusCode::ACCEPTED, Json(json!({ "id": id }))).into_response()
+}
+
+async fn list_downloads(State(state): State<Arc<AppState>>) -> Json<Value> {
+    Json(json!({ "jobs": state.jobs.list() }))
+}
+
+async fn get_download(
+    State(state): State<Arc<AppState>>,
+    axum::extract::Path(id): axum::extract::Path<String>,
+) -> Response {
+    match state.jobs.summary(&id) {
+        Some(job) => Json(job).into_response(),
+        None => error(
+            StatusCode::NOT_FOUND,
+            "no_such_download",
+            format!("no download with id: {id}"),
+        ),
+    }
+}
+
+/// Replays the stored request of a paused job. Settings, cookies and the URL
+/// are the ones the job was created with.
+async fn resume(
+    State(state): State<Arc<AppState>>,
+    axum::extract::Path(id): axum::extract::Path<String>,
+) -> Response {
+    let Some(request) = state.jobs.take_for_resume(&id) else {
+        return match state.jobs.summary(&id) {
+            Some(_) => error(
+                StatusCode::CONFLICT,
+                "not_paused",
+                format!("download {id} is not paused"),
+            ),
+            None => error(
+                StatusCode::NOT_FOUND,
+                "no_such_download",
+                format!("no download with id: {id}"),
+            ),
+        };
+    };
+
+    let engine = state.engine.clone();
+    tokio::spawn(async move {
+        engine.run_job(request).await;
     });
 
     (StatusCode::ACCEPTED, Json(json!({ "id": id }))).into_response()
@@ -147,7 +207,10 @@ async fn pause(
     axum::extract::Path(id): axum::extract::Path<String>,
 ) -> Response {
     match state.engine.pause(&id).await {
-        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Ok(()) => {
+            state.jobs.set_state(&id, "paused");
+            StatusCode::NO_CONTENT.into_response()
+        }
         Err(e) => error(StatusCode::NOT_FOUND, "no_such_download", e.to_string()),
     }
 }
@@ -166,20 +229,101 @@ async fn cancel(
         );
     }
     match state.engine.cancel(&id).await {
-        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Ok(()) => {
+            state.jobs.set_state(&id, "cancelled");
+            StatusCode::NO_CONTENT.into_response()
+        }
         Err(e) => error(StatusCode::NOT_FOUND, "no_such_download", e.to_string()),
     }
 }
 
 async fn cancel_all(State(state): State<Arc<AppState>>) -> Response {
+    let active = state.engine.active_ids();
     match state.engine.cancel_all().await {
-        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Ok(()) => {
+            for id in active {
+                state.jobs.set_state(&id, "cancelled");
+            }
+            StatusCode::NO_CONTENT.into_response()
+        }
         Err(e) => error(
             StatusCode::INTERNAL_SERVER_ERROR,
             "cancel_failed",
             e.to_string(),
         ),
     }
+}
+
+fn source_name(source: ToolSource) -> &'static str {
+    match source {
+        ToolSource::Preinstalled => "preinstalled",
+        ToolSource::System => "system",
+        ToolSource::Bundled => "bundled",
+        ToolSource::Overlay => "overlay",
+    }
+}
+
+async fn list_tools(State(state): State<Arc<AppState>>) -> Json<Value> {
+    let runtime = state.engine.runtime();
+    let mut tools = Vec::new();
+    for tool in Tool::all() {
+        let status = match runtime.resolve(tool).await {
+            Ok(resolved) => json!({
+                "name": tool.name(),
+                "available": true,
+                "source": source_name(resolved.source),
+                "program": resolved.program.display().to_string(),
+                "args": resolved.args,
+            }),
+            Err(e) => json!({
+                "name": tool.name(),
+                "available": false,
+                "source": Value::Null,
+                "program": Value::Null,
+                "args": [],
+                "error": e.to_string(),
+            }),
+        };
+        tools.push(status);
+    }
+
+    Json(json!({
+        "tools": tools,
+        "deno": runtime.deno().map(|path| path.display().to_string()),
+        "ffmpeg": runtime.ffmpeg().map(|path| path.display().to_string()),
+    }))
+}
+
+/// Installs the pinned Python tools into the writable overlay. Fails when the
+/// host has no bundled or system interpreter (for example the Docker image,
+/// where the tools are preinstalled).
+async fn update_tools(State(state): State<Arc<AppState>>) -> Response {
+    match state
+        .engine
+        .runtime()
+        .reinstall_python_deps(&Tool::all())
+        .await
+    {
+        Ok(()) => {
+            let updated: Vec<&str> = Tool::all().into_iter().map(Tool::name).collect();
+            Json(json!({ "updated": updated })).into_response()
+        }
+        Err(e) => error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "tool_update_failed",
+            e.to_string(),
+        ),
+    }
+}
+
+/// Torrent support is not implemented; the audit records this as a later
+/// engine behind the same routes.
+async fn torrents_unavailable() -> Response {
+    error(
+        StatusCode::NOT_IMPLEMENTED,
+        "torrents_unavailable",
+        "no torrent engine is configured on this server",
+    )
 }
 
 async fn get_settings(State(state): State<Arc<AppState>>) -> Json<Value> {
@@ -328,16 +472,13 @@ async fn spa(State(state): State<Arc<AppState>>, request: axum::extract::Request
         return error(StatusCode::NOT_FOUND, "not_found", "no such file");
     }
 
-    let candidate = if path.is_empty() {
-        state.static_dir.join("index.html")
-    } else {
-        state.static_dir.join(path)
-    };
-
-    if !path.is_empty() && candidate.is_file() {
-        let body = tokio::fs::read(&candidate).await;
-        if let Ok(bytes) = body {
-            return ([(header::CONTENT_TYPE, mime_for(&candidate))], bytes).into_response();
+    if !path.is_empty() {
+        if let Some(bytes) = state.static_assets.read(path).await {
+            return (
+                [(header::CONTENT_TYPE, mime_for(std::path::Path::new(path)))],
+                bytes,
+            )
+                .into_response();
         }
     }
 
@@ -348,14 +489,16 @@ async fn spa(State(state): State<Arc<AppState>>, request: axum::extract::Request
         return error(StatusCode::NOT_FOUND, "not_found", "no such file");
     }
 
-    match tokio::fs::read(state.static_dir.join("index.html")).await {
-        Ok(bytes) => ([(header::CONTENT_TYPE, "text/html; charset=utf-8")], bytes).into_response(),
-        Err(_) => error(
+    match state.static_assets.read("index.html").await {
+        Some(bytes) => {
+            ([(header::CONTENT_TYPE, "text/html; charset=utf-8")], bytes).into_response()
+        }
+        None => error(
             StatusCode::NOT_FOUND,
             "not_found",
             format!(
-                "no route and no index.html under {}",
-                state.static_dir.display()
+                "no route and no index.html in {}",
+                state.static_assets.describe()
             ),
         ),
     }

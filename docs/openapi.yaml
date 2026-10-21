@@ -1,0 +1,1218 @@
+openapi: 3.1.0
+info:
+  title: MediaMagnet API
+  version: 0.5.3
+  summary: Self-hosted download API for yt-dlp, gallery-dl and spotdl.
+  description: |
+    All routes live under `/api/v1`. The desktop application does not expose
+    this API; it is the network surface of the self-hosted server, which the
+    shipped web UI also uses.
+
+    ## Authentication
+
+    A server started without `MM_TOKEN` accepts unauthenticated requests.
+    With `MM_TOKEN` set, every route requires that token, including `GET
+    /health`. Send it as `Authorization: Bearer <token>` or, for `EventSource`
+    clients that cannot set headers, as `?token=<token>`. A missing or wrong
+    token returns `401` with `WWW-Authenticate: Bearer`.
+
+    ## Errors
+
+    Every error response is JSON: `{"error": "<code>", "message": "<detail>"}`.
+    Codes are stable; messages are for humans and may change.
+
+    ## Per-job configuration
+
+    `POST /downloads` accepts the same settings shape as `PUT /settings` and an
+    optional list of cookies. When either is present the job uses it instead of
+    the server's stored configuration; the server's files and cookie store are
+    not modified. This lets a browser client keep its configuration in
+    `localStorage` while still producing identical downloads.
+
+    Omitted settings fields fall back to defaults, not to the server's current
+    values. Clients should send the complete object they want the job to use.
+
+    ## Policy
+
+    Servers built without `MM_ALLOW_CUSTOM_ARGS` refuse user-supplied tool
+    arguments (`yt_global_args`, `yt_site_args[].args`, `gdl_*`, `spotdl_*`):
+    a job carrying non-empty arguments for its backend fails with a
+    `Configuration Error`. Settings remain stored. With the flag set,
+    arguments are accepted through a per-tool deny-list instead. Output
+    templates containing a path separator always fall back to the default.
+    The default server configuration therefore accepts settings from
+    untrusted clients without turning them into arbitrary command lines.
+
+    ## Events
+
+    `GET /events` is a Server-Sent Events stream. The SSE `event:` field and
+    the JSON `type` field carry the same value. Event payloads are described by
+    `TransportEvent`. A keep-alive comment is sent every 20 seconds. Slow
+    consumers may miss events; the stream does not replay them.
+  license:
+    name: AGPL-3.0-only
+    identifier: AGPL-3.0-only
+servers:
+  - url: http://localhost:8080
+    description: Default bind address (`MM_BIND`)
+tags:
+  - name: health
+  - name: downloads
+  - name: settings
+  - name: cookies
+  - name: paths
+  - name: files
+  - name: events
+  - name: tools
+  - name: torrents
+security:
+  - bearerAuth: []
+  - {}
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      tags: [health]
+      summary: Liveness check
+      responses:
+        '200':
+          description: The server is running.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /downloads:
+    post:
+      operationId: startDownload
+      tags: [downloads]
+      summary: Start a download
+      description: |
+        Accepts the job and returns immediately. Progress arrives on `/events`.
+        The client chooses the job id so both transports can track the same
+        job; an empty or missing `id` gets a server-assigned one.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DownloadRequest'
+      responses:
+        '202':
+          description: Job accepted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DownloadAccepted'
+        '400':
+          description: |
+            `invalid_url` (missing, or not http/https), `invalid_settings`
+            (settings could not be sanitised) or `invalid_cookie` (a job cookie
+            domain is not a single path segment).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: |
+            `duplicate_download`: the id belongs to a job that is still running
+            or paused. Finished and cancelled ids may be reused.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    get:
+      operationId: listDownloads
+      tags: [downloads]
+      summary: List known downloads
+      description: |
+        In-memory only and oldest first; nothing survives a restart. At most 100
+        records are kept, and finished records are pruned first.
+      responses:
+        '200':
+          description: The retained job records.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      operationId: cancelAllDownloads
+      tags: [downloads]
+      summary: Cancel every active download
+      responses:
+        '204':
+          description: All active jobs were cancelled.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          description: At least one job could not be cancelled (`cancel_failed`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /downloads/{id}/pause:
+    post:
+      operationId: pauseDownload
+      tags: [downloads]
+      summary: Pause a download
+      parameters:
+        - $ref: '#/components/parameters/DownloadId'
+      responses:
+        '204':
+          description: The job was signalled to pause.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: No active download with that id (`no_such_download`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /downloads/{id}/resume:
+    post:
+      operationId: resumeDownload
+      tags: [downloads]
+      summary: Resume a paused download
+      description: |
+        Replays the URL, settings and cookies the job was created with. A job
+        that was started with the server's own settings or cookie store uses
+        the current server values.
+      parameters:
+        - $ref: '#/components/parameters/DownloadId'
+      responses:
+        '202':
+          description: The job was accepted again.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DownloadAccepted'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: No download with that id (`no_such_download`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: The download is not paused (`not_paused`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /downloads/{id}:
+    get:
+      operationId: getDownload
+      tags: [downloads]
+      summary: Read one download record
+      parameters:
+        - $ref: '#/components/parameters/DownloadId'
+      responses:
+        '200':
+          description: The job record.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: No download with that id (`no_such_download`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      operationId: cancelDownload
+      tags: [downloads]
+      summary: Cancel a download
+      parameters:
+        - $ref: '#/components/parameters/DownloadId'
+      responses:
+        '204':
+          description: The job was cancelled.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: No active download with that id (`no_such_download`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Read server settings
+      description: |
+        Desktop-only fields (`always_on_top`, `custom_titlebar`,
+        `custom_titlebar_type`, `native_notifications`,
+        `clear_cookies_on_exit`, `download_path`) are never included.
+      responses:
+        '200':
+          description: Current server settings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerSettings'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Replace server settings
+      description: |
+        The payload is sanitised: unknown keys are dropped, wrong types are
+        dropped, `accent_hue` is rounded and clamped to 0–360, and site-argument
+        entries without a string `domain`/`args` are dropped. Fields that are
+        absent take their default value, so send the complete object.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsInput'
+      responses:
+        '200':
+          description: Settings saved; returns the stored server view.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerSettings'
+        '400':
+          description: The payload could not be sanitised (`invalid_settings`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          description: The settings file could not be written (`save_failed`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /settings/reset:
+    post:
+      operationId: resetSettings
+      tags: [settings]
+      summary: Reset server settings to defaults
+      responses:
+        '200':
+          description: Defaults saved; returns the stored server view.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerSettings'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          description: The settings file could not be written (`save_failed`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /cookies:
+    get:
+      operationId: listCookies
+      tags: [cookies]
+      summary: List cookie profiles
+      responses:
+        '200':
+          description: Map of cookie domain (file stem) to absolute path.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CookieMap'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          description: The cookie directory could not be read (`cookie_read_failed`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      operationId: saveCookie
+      tags: [cookies]
+      summary: Add or replace a cookie profile
+      description: |
+        `FilePath` reads a server-side `.txt`, `.cookies` (Netscape) or `.json`
+        file. `Content` accepts raw Netscape text or JSON, which is converted to
+        Netscape. A profile is stored as `<domain>.txt`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveCookieRequest'
+      responses:
+        '200':
+          description: Profile stored.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedCookie'
+        '400':
+          description: |
+            Invalid domain, missing source file, unsupported extension, or
+            content that is neither Netscape nor JSON (`invalid_cookie`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      operationId: clearCookies
+      tags: [cookies]
+      summary: Delete every cookie profile
+      responses:
+        '200':
+          description: Number of files removed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeletedCount'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          description: The cookie directory could not be cleared (`cookie_clear_failed`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /cookies/{domain}:
+    delete:
+      operationId: deleteCookie
+      tags: [cookies]
+      summary: Delete one cookie profile
+      parameters:
+        - name: domain
+          in: path
+          required: true
+          description: Cookie domain (the file stem), not a full URL.
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Profile deleted.
+        '400':
+          description: The domain is not a single path segment (`invalid_cookie`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: No such cookie profile (`no_such_cookie`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /paths/download-root:
+    get:
+      operationId: getDownloadRoot
+      tags: [paths]
+      summary: Read the download directory
+      description: |
+        This is the directory `/files` serves from. Per-job settings cannot
+        change it; the host chooses it (`MM_DOWNLOAD_ROOT`).
+      responses:
+        '200':
+          description: Absolute path on the server.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DownloadRoot'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /paths/disk-usage:
+    get:
+      operationId: getDiskUsage
+      tags: [paths]
+      summary: Read download-filesystem usage
+      responses:
+        '200':
+          description: Used-space percentage of the filesystem holding the download root.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiskUsage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          description: Usage could not be read (`disk_usage_failed`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /files:
+    get:
+      operationId: listFiles
+      tags: [files]
+      summary: List downloaded files
+      parameters:
+        - name: path
+          in: query
+          required: false
+          description: Directory relative to the download root; empty means the root.
+          schema:
+            type: string
+            default: ''
+      responses:
+        '200':
+          description: One directory level. Entries are sorted with directories first.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: The path does not exist, is not a directory, or escapes the root (`not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /files/{path}:
+    get:
+      operationId: downloadFile
+      tags: [files]
+      summary: Download or stream a file
+      description: |
+        `path` is relative to the download root and may contain `/`; each
+        segment is percent-encoded (the `url` field from `listFiles` is ready
+        to use). A single `Range` header is honoured, so media players can
+        seek. The response uses `Content-Disposition: inline`.
+      parameters:
+        - name: path
+          in: path
+          required: true
+          description: Percent-encoded relative path.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Whole file.
+          headers:
+            Accept-Ranges:
+              schema:
+                type: string
+                const: bytes
+            Content-Disposition:
+              schema:
+                type: string
+            Content-Length:
+              schema:
+                type: integer
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '206':
+          description: One byte range.
+          headers:
+            Content-Range:
+              schema:
+                type: string
+            Content-Length:
+              schema:
+                type: integer
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: No such file, or the path escapes the root (`not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '416':
+          description: The range is unsatisfiable (`bad_range`); `Content-Range` reports the length.
+          headers:
+            Content-Range:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /events:
+    get:
+      operationId: streamEvents
+      tags: [events]
+      summary: Subscribe to download events
+      parameters:
+        - name: token
+          in: query
+          required: false
+          description: Bearer token for clients that cannot set headers. Prefer the header elsewhere.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: |
+            Server-Sent Events. Each `data:` line is one `TransportEvent`; the
+            `event:` name equals its `type`.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /tools:
+    get:
+      operationId: listTools
+      tags: [tools]
+      summary: Report how each download tool resolves
+      description: |
+        Every tool is probed, so this may take a moment when the Python
+        interpreter has to be started to check the module.
+      responses:
+        '200':
+          description: One entry per tool, plus the optional Deno and ffmpeg paths.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /tools/update:
+    post:
+      operationId: updateTools
+      tags: [tools]
+      summary: Reinstall the pinned Python tools
+      description: |
+        Installs yt-dlp, gallery-dl and spotdl into the server's writable
+        overlay. Requires a bundled or `MM_PYTHON` interpreter; images that
+        preinstall the tools (the Docker image) return an error here.
+      responses:
+        '200':
+          description: The tools now in the overlay.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolUpdate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          description: The install failed (`tool_update_failed`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /torrents:
+    get:
+      operationId: listTorrents
+      tags: [torrents]
+      summary: List torrents (not implemented)
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '501':
+          description: No torrent engine is configured (`torrents_unavailable`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      operationId: addTorrent
+      tags: [torrents]
+      summary: Add a torrent (not implemented)
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '501':
+          description: No torrent engine is configured (`torrents_unavailable`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /torrents/{id}:
+    delete:
+      operationId: removeTorrent
+      tags: [torrents]
+      summary: Remove a torrent (not implemented)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '501':
+          description: No torrent engine is configured (`torrents_unavailable`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Required only when the server sets `MM_TOKEN`.
+
+  parameters:
+    DownloadId:
+      name: id
+      in: path
+      required: true
+      description: Job id chosen by the client when the download was created.
+      schema:
+        type: string
+
+  responses:
+    Unauthorized:
+      description: Missing or wrong bearer token (`unauthorized`).
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+            const: Bearer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Error:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          description: Stable machine-readable code.
+          examples: [invalid_url]
+        message:
+          type: string
+          description: Human-readable detail; may change between versions.
+
+    Health:
+      type: object
+      required: [status, version]
+      properties:
+        status:
+          type: string
+          const: ok
+        version:
+          type: string
+          examples: ['0.5.3']
+
+    DownloadRequest:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Must start with http:// or https://.
+        id:
+          type: string
+          description: Client-chosen job id. Empty or absent means the server assigns one.
+        settings:
+          $ref: '#/components/schemas/SettingsInput'
+        cookies:
+          type: array
+          description: |
+            Job-local cookie profiles. When present, these are the only cookies
+            considered; the server's cookie store is not consulted and is not
+            modified.
+          items:
+            $ref: '#/components/schemas/JobCookie'
+
+    JobCookie:
+      type: object
+      required: [domain, content]
+      properties:
+        domain:
+          type: string
+          description: Cookie domain; also the match key against the URL.
+        content:
+          type: string
+          description: Netscape cookie text or JSON, as accepted by `POST /cookies` (`Content`).
+
+    DownloadAccepted:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+          description: The id the job will use in events.
+
+    JobSummary:
+      type: object
+      required: [id, url, state, created_at_ms]
+      properties:
+        id:
+          type: string
+        url:
+          type: string
+          format: uri
+        state:
+          type: string
+          enum: [running, paused, cancelled, failed, finished]
+        created_at_ms:
+          type: integer
+          format: int64
+          description: Unix time in milliseconds when the server accepted the job.
+
+    JobList:
+      type: object
+      required: [jobs]
+      properties:
+        jobs:
+          type: array
+          description: Oldest first.
+          items:
+            $ref: '#/components/schemas/JobSummary'
+
+    ToolStatus:
+      type: object
+      required: [name, available, args]
+      properties:
+        name:
+          type: string
+          enum: [yt-dlp, gallery-dl, spotdl]
+        available:
+          type: boolean
+        source:
+          type: [string, 'null']
+          enum: [preinstalled, system, bundled, overlay, null]
+        program:
+          type: [string, 'null']
+          description: Executable that will be spawned (the interpreter for the Python modes).
+        args:
+          type: array
+          items:
+            type: string
+          description: Leading arguments, such as `-m yt_dlp`.
+        error:
+          type: string
+          description: Present only when the tool is unavailable.
+
+    ToolList:
+      type: object
+      required: [tools, deno, ffmpeg]
+      properties:
+        tools:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolStatus'
+        deno:
+          type: [string, 'null']
+          description: Deno executable, when one was found.
+        ffmpeg:
+          type: [string, 'null']
+          description: ffmpeg executable, when one was found.
+
+    ToolUpdate:
+      type: object
+      required: [updated]
+      properties:
+        updated:
+          type: array
+          items:
+            type: string
+            enum: [yt-dlp, gallery-dl, spotdl]
+
+    SiteArgument:
+      type: object
+      required: [id, domain, args]
+      properties:
+        id:
+          type: string
+        domain:
+          type: string
+        args:
+          type: string
+
+    SiteArgumentInput:
+      type: object
+      required: [domain, args]
+      properties:
+        id:
+          type: string
+          description: Optional; generated when omitted.
+        domain:
+          type: string
+        args:
+          type: string
+
+    SettingsInput:
+      type: object
+      description: |
+        Every field is optional; omitted fields take their default. This is the
+        object stored in `settings.json`, minus the desktop-only fields, which
+        this API neither returns nor writes.
+      properties:
+        settings_version:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+          description: Default `1`.
+        dark_mode:
+          type: boolean
+          description: Default `true`.
+        amoled_mode:
+          type: boolean
+          description: Default `false`.
+        accent_hue:
+          type: integer
+          minimum: 0
+          maximum: 360
+          description: Default `260`.
+        accent_kind:
+          type: string
+          enum: [hue, black, white]
+          description: Default `hue`.
+        user_agent:
+          type: string
+          description: Default empty.
+        yt_format:
+          type: string
+          description: Default `bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best`.
+        yt_output_template:
+          type: string
+          description: Default `%(title)s.%(ext)s`.
+        yt_embed_thumbnail:
+          type: boolean
+          description: Default `false`.
+        yt_embed_subs:
+          type: boolean
+          description: Default `false`.
+        yt_restrict_filenames:
+          type: boolean
+          description: Default `false`.
+        yt_global_args:
+          type: string
+          description: Default empty.
+        yt_site_args:
+          type: array
+          items:
+            $ref: '#/components/schemas/SiteArgumentInput'
+          description: Default empty.
+        gdl_global_args:
+          type: string
+          description: Default empty.
+        gdl_site_args:
+          type: array
+          items:
+            $ref: '#/components/schemas/SiteArgumentInput'
+          description: Default empty.
+        spotdl_format:
+          type: string
+          description: Default empty.
+        spotdl_bitrate:
+          type: string
+          description: Default empty.
+        spotdl_global_args:
+          type: string
+          description: Default empty.
+
+    ServerSettings:
+      type: object
+      required:
+        - settings_version
+        - dark_mode
+        - amoled_mode
+        - accent_hue
+        - accent_kind
+        - user_agent
+        - yt_format
+        - yt_output_template
+        - yt_embed_thumbnail
+        - yt_embed_subs
+        - yt_restrict_filenames
+        - yt_global_args
+        - yt_site_args
+        - gdl_global_args
+        - gdl_site_args
+        - spotdl_format
+        - spotdl_bitrate
+        - spotdl_global_args
+      properties:
+        settings_version:
+          type: integer
+        dark_mode:
+          type: boolean
+        amoled_mode:
+          type: boolean
+        accent_hue:
+          type: integer
+        accent_kind:
+          type: string
+          enum: [hue, black, white]
+        user_agent:
+          type: string
+        yt_format:
+          type: string
+        yt_output_template:
+          type: string
+        yt_embed_thumbnail:
+          type: boolean
+        yt_embed_subs:
+          type: boolean
+        yt_restrict_filenames:
+          type: boolean
+        yt_global_args:
+          type: string
+        yt_site_args:
+          type: array
+          items:
+            $ref: '#/components/schemas/SiteArgument'
+        gdl_global_args:
+          type: string
+        gdl_site_args:
+          type: array
+          items:
+            $ref: '#/components/schemas/SiteArgument'
+        spotdl_format:
+          type: string
+        spotdl_bitrate:
+          type: string
+        spotdl_global_args:
+          type: string
+
+    CookieInput:
+      oneOf:
+        - type: object
+          required: [type, value]
+          properties:
+            type:
+              type: string
+              const: FilePath
+            value:
+              type: string
+              description: Path on the server to a .txt, .cookies or .json file.
+        - type: object
+          required: [type, value]
+          properties:
+            type:
+              type: string
+              const: Content
+            value:
+              type: string
+              description: Netscape cookie text, or JSON that will be converted.
+
+    SaveCookieRequest:
+      type: object
+      required: [domain, input]
+      properties:
+        domain:
+          type: string
+          description: Stored as `<domain>.txt`; must be a single path segment.
+        input:
+          $ref: '#/components/schemas/CookieInput'
+
+    SavedCookie:
+      type: object
+      required: [domain, path]
+      properties:
+        domain:
+          type: string
+        path:
+          type: string
+          description: Absolute path of the stored file.
+
+    CookieMap:
+      type: object
+      additionalProperties:
+        type: string
+      description: Domain (file stem) to absolute file path.
+
+    DeletedCount:
+      type: object
+      required: [deleted]
+      properties:
+        deleted:
+          type: integer
+
+    DownloadRoot:
+      type: object
+      required: [path]
+      properties:
+        path:
+          type: string
+
+    DiskUsage:
+      type: object
+      required: [used_percent]
+      properties:
+        used_percent:
+          type: number
+          minimum: 0
+          maximum: 100
+
+    FileEntry:
+      type: object
+      required: [path, name, kind, size, url]
+      properties:
+        path:
+          type: string
+          description: Path relative to the download root.
+        name:
+          type: string
+        kind:
+          type: string
+          enum: [file, directory]
+        size:
+          type: integer
+          format: int64
+          description: Bytes; zero for directories.
+        url:
+          type: string
+          description: Ready-to-use `/api/v1/files/...` URL with each segment percent-encoded.
+
+    FileList:
+      type: object
+      required: [path, entries]
+      properties:
+        path:
+          type: string
+          description: The requested directory, relative to the download root.
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/FileEntry'
+
+    DownloadState:
+      type: string
+      enum: [paused, cancelled, failed, finished]
+
+    TransportEvent:
+      description: One event from `GET /events`. Discriminated by `type`.
+      oneOf:
+        - $ref: '#/components/schemas/DownloadStartedEvent'
+        - $ref: '#/components/schemas/DownloadFinishedEvent'
+        - $ref: '#/components/schemas/DownloadProgressEvent'
+        - $ref: '#/components/schemas/DownloadStatusEvent'
+        - $ref: '#/components/schemas/DownloadErrorEvent'
+        - $ref: '#/components/schemas/DownloadStateEvent'
+        - $ref: '#/components/schemas/NotificationEvent'
+      discriminator:
+        propertyName: type
+        mapping:
+          download-started: '#/components/schemas/DownloadStartedEvent'
+          download-finished: '#/components/schemas/DownloadFinishedEvent'
+          download-progress: '#/components/schemas/DownloadProgressEvent'
+          download-status: '#/components/schemas/DownloadStatusEvent'
+          download-error: '#/components/schemas/DownloadErrorEvent'
+          download-state: '#/components/schemas/DownloadStateEvent'
+          notification: '#/components/schemas/NotificationEvent'
+
+    DownloadStartedEvent:
+      type: object
+      required: [type, id]
+      properties:
+        type:
+          type: string
+          const: download-started
+        id:
+          type: string
+
+    DownloadFinishedEvent:
+      type: object
+      required: [type, id]
+      properties:
+        type:
+          type: string
+          const: download-finished
+        id:
+          type: string
+
+    DownloadProgressEvent:
+      type: object
+      required: [type, id, value]
+      properties:
+        type:
+          type: string
+          const: download-progress
+        id:
+          type: string
+        value:
+          type: number
+          description: Percentage, 0–100.
+
+    DownloadStatusEvent:
+      type: object
+      required: [type, id, value]
+      properties:
+        type:
+          type: string
+          const: download-status
+        id:
+          type: string
+        value:
+          type: string
+          description: Human-readable status line from the backend.
+
+    DownloadErrorEvent:
+      type: object
+      required: [type, id, value]
+      properties:
+        type:
+          type: string
+          const: download-error
+        id:
+          type: string
+        value:
+          type: string
+
+    DownloadStateEvent:
+      type: object
+      required: [type, id, value]
+      properties:
+        type:
+          type: string
+          const: download-state
+        id:
+          type: string
+        value:
+          $ref: '#/components/schemas/DownloadState'
+
+    NotificationEvent:
+      type: object
+      required: [type, level, message]
+      properties:
+        type:
+          type: string
+          const: notification
+        level:
+          type: string
+          enum: [info, success, warning, error]
+        message:
+          type: string
