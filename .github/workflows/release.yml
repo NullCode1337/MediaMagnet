@@ -102,8 +102,8 @@ jobs:
           fi
 
           "$PYTHON" -m pip install --no-cache-dir --upgrade \
-            "yt-dlp==${YT_DLP_VERSION}" \
-            "gallery-dl==${GALLERY_DL_VERSION}" \
+            "yt-dlp[default]==${YT_DLP_VERSION}" \
+            "gallery-dl[extra]==${GALLERY_DL_VERSION}" \
             "spotdl==${SPOTDL_VERSION}"
 
       - name: Bundle Deno

@@ -332,7 +332,16 @@ bundle, final verification). Each item is closed or explicitly accepted:
   `current_dir` set to the download directory (`download.rs:623`), so spotdl still creates
   `.spotdl` there. Redirecting its config needs a version-specific flag and would be a
   behavioural change; until then the download directory contains that folder.
-* **Leftover stub sidecars — open.** `apps/desktop/src-tauri/binaries/` still holds six
-  tracked 92/95-byte stub files (`yt-dlp-*`, `gallery-dl-*`). Nothing reads them: the runtime
-  resolves tools from `PATH`, the overlay or `binaries/`, and the bundle no longer declares
-  sidecars. They are harmless but dead; removing them needs the owner's approval.
+* **Sidecars — closed.** The six tracked stub files were deleted, and the last pieces of the
+  shell sidecar path are gone with them: the `tauri-plugin-shell` crate, its plugin
+  registration, the `shell:default` capability and the `@tauri-apps/plugin-shell` JS
+  dependency. Nothing in core, the desktop host or the web UI ever mentions a
+  `binaries/<name>-<triple>` file; tools resolve only through `ToolRuntime` (overlay,
+  `PATH`, `MM_PYTHON` or the bundled interpreter). `binaries/` stays as the resource
+  directory CI fills with `python/`, `deno`, `ffmpeg` and `ffprobe`, which is a different
+  thing from a Tauri sidecar.
+* **Tool dependencies — closed.** The bundle installs `yt-dlp[default]` and
+  `gallery-dl[extra]` (decision 68), so the interpreter carries the YAML/TOML/SOCKS/
+  truststore/secretstorage modules and yt-dlp's `default` set explicitly rather than
+  through spotdl. Verified by importing every module and running `pip check` against the
+  rebuilt `-tools` archive.

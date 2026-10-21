@@ -34,8 +34,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir \
-    "yt-dlp==${YT_DLP_VERSION}" \
-    "gallery-dl==${GALLERY_DL_VERSION}" \
+    "yt-dlp[default]==${YT_DLP_VERSION}" \
+    "gallery-dl[extra]==${GALLERY_DL_VERSION}" \
     "spotdl==${SPOTDL_VERSION}"
 
 COPY --from=denoland/deno:bin-${DENO_VERSION} /deno /usr/local/bin/deno

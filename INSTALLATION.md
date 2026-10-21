@@ -364,17 +364,19 @@ MM_TOKEN=change-me \
 `MM_DATA_DIR` is optional on Linux; it defaults to
 `$XDG_DATA_HOME/mediamagnet` (usually `~/.local/share/mediamagnet`).
 
-For the plain archive, install tools with the distribution packages or `pipx`:
+For the plain archive, install tools with the distribution packages or `pipx`.
+`pipx` installs each tool into its own environment with its extras, so gallery-dl
+can read YAML/TOML configs and yt-dlp has its optional helpers:
 
 ```sh
 # Debian / Ubuntu
 sudo apt install ffmpeg pipx
-pipx install yt-dlp gallery-dl spotdl
+pipx install "yt-dlp[default]" "gallery-dl[extra]" spotdl
 pipx ensurepath
 
 # Fedora (RPM Fusion)
 sudo dnf install ffmpeg pipx
-pipx install yt-dlp gallery-dl spotdl
+pipx install "yt-dlp[default]" "gallery-dl[extra]" spotdl
 pipx ensurepath
 
 # Arch
@@ -405,6 +407,7 @@ MM_TOKEN=change-me \
 Without tools:
 
 ```sh
+# Homebrew builds the optional modules into these formulas.
 brew install yt-dlp gallery-dl spotdl ffmpeg deno
 
 tar -xzf mediamagnet-server-<version>-aarch64-apple-darwin.tar.gz
@@ -449,7 +452,7 @@ winget install --id Python.Python.3.12
 winget install --id Gyan.FFmpeg
 winget install --id DenoLand.Deno
 
-py -m pip install --user yt-dlp gallery-dl spotdl
+py -m pip install --user "yt-dlp[default]" "gallery-dl[extra]" spotdl
 ```
 
 `pip --user` installs the console scripts under

@@ -208,7 +208,10 @@ says what changed and why.
     PyInstaller blobs. The desktop bundle carries a python-build-standalone
     interpreter per target triple with `yt-dlp`, `gallery-dl` and `spotdl`
     installed into its site-packages at build time; the tools run as
-    `python -m <module>`.
+    `python -m <module>`. Nothing reads `binaries/<name>-<triple>` any more:
+    `externalBin`, the `tauri-plugin-shell` crate, its capability and the JS
+    package are all gone, and the six checked-in stub files were deleted. The
+    directory itself stays because `tauri.conf.json` bundles it as a resource.
 43. **Four runtime modes.** `ToolSource` is `Overlay`, `Preinstalled`, `System` or
     `Bundled`, in that resolution order. The overlay is checked first because it
     only exists after the user explicitly ran `reinstall_python_deps`. The
@@ -363,3 +366,16 @@ says what changed and why.
     binary per tool, while BtbN is the maintained source of Windows builds.
     Both are LGPL builds with the pinned versions recorded in the workflow and
     in the script defaults.
+68. **The tools are installed with their extras.** A bare
+    `pip install yt-dlp gallery-dl` leaves out modules the tools import at
+    runtime: `yt-dlp` gets its `default` extra only transitively through
+    `spotdl`, so a build without spotdl would silently lose `requests`,
+    `brotli`, `pycryptodomex` and `yt-dlp-ejs`; `gallery-dl` without `extra`
+    cannot read YAML/TOML configs, use SOCKS proxies, trust the system store or
+    use secretstorage. The bundled interpreter, the CI desktop bundle, the
+    `-tools` archive and the Docker image all install
+    `yt-dlp[default]`, `gallery-dl[extra]` and `spotdl`, and `Tool::package`
+    returns the same requirements so `reinstall_python_deps` and
+    `/tools/update` produce an overlay with the same dependency set.
+    `pip install --dry-run --only-binary=:all:` resolves every extra for all
+    six release targets, so no build host needs a compiler.

@@ -16,7 +16,6 @@
     "core:window:allow-set-always-on-top",
     "core:window:allow-set-size",
     "core:window:allow-unmaximize",
-    "shell:default",
     "process:default",
     "opener:default",
     "opener:allow-open-path",
