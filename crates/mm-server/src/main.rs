@@ -1,8 +1,10 @@
 //! MediaMagnet HTTP server: serves `/api/v1` and the built SPA from one process.
 
+mod assets;
 mod auth;
 mod events;
 mod files;
+mod jobs;
 mod routes;
 mod state;
 
@@ -12,6 +14,8 @@ use std::sync::Arc;
 
 use mm_core::{Engine, Policy, RuntimeConfig, ToolRuntime};
 
+use crate::assets::StaticAssets;
+use crate::jobs::Jobs;
 use crate::state::AppState;
 
 fn main() {
@@ -26,13 +30,24 @@ pub struct Config {
     pub bind: SocketAddr,
     pub data_dir: PathBuf,
     pub download_root: PathBuf,
-    pub static_dir: PathBuf,
+    pub static_assets: StaticAssets,
     pub token: Option<String>,
     pub allow_custom_args: bool,
 }
 
 fn env_path(name: &str) -> Option<PathBuf> {
     std::env::var_os(name).map(PathBuf::from)
+}
+
+/// Archives built with `--with-tools` keep their tools in `binaries/` beside the
+/// executable, so that directory is used when `MM_BINARIES_DIR` is unset. A bare
+/// executable has no such directory and resolves tools from `PATH` instead.
+fn binaries_dir() -> Option<PathBuf> {
+    if let Some(dir) = env_path("MM_BINARIES_DIR") {
+        return Some(dir);
+    }
+    let dir = std::env::current_exe().ok()?.parent()?.join("binaries");
+    dir.is_dir().then_some(dir)
 }
 
 impl Config {
@@ -49,13 +64,7 @@ impl Config {
         let download_root =
             env_path("MM_DOWNLOAD_ROOT").unwrap_or_else(|| data_dir.join("downloads"));
 
-        let static_dir = env_path("MM_STATIC_DIR")
-            .or_else(|| {
-                std::env::current_exe()
-                    .ok()
-                    .and_then(|exe| exe.parent().map(|p| p.join("public")))
-            })
-            .unwrap_or_else(|| PathBuf::from("public"));
+        let static_assets = StaticAssets::from_env();
 
         let token = std::env::var("MM_TOKEN")
             .ok()
@@ -70,7 +79,7 @@ impl Config {
             bind,
             data_dir,
             download_root,
-            static_dir,
+            static_assets,
             token,
             allow_custom_args,
         })
@@ -120,7 +129,7 @@ async fn serve(config: Config) -> Result<(), String> {
         .map_err(|e| format!("could not write settings: {e}"))?;
 
     let runtime = Arc::new(ToolRuntime::new(RuntimeConfig {
-        bundled_tools_dir: env_path("MM_BINARIES_DIR"),
+        bundled_tools_dir: binaries_dir(),
         overlay_dir: Some(app_data_dir.join("py-overlay")),
         python_path: env_path("MM_PYTHON"),
     }));
@@ -139,7 +148,30 @@ async fn serve(config: Config) -> Result<(), String> {
         events,
         download_root: config.download_root.clone(),
         token: config.token.clone(),
-        static_dir: config.static_dir.clone(),
+        static_assets: config.static_assets.clone(),
+        jobs: Jobs::default(),
+    });
+
+    // Core emits completion and state changes; mirror them into the job list.
+    let job_state = state.clone();
+    let mut event_rx = state.events.subscribe();
+    tokio::spawn(async move {
+        while let Ok(value) = event_rx.recv().await {
+            let Some(id) = value.get("id").and_then(serde_json::Value::as_str) else {
+                continue;
+            };
+            let next = match value.get("type").and_then(serde_json::Value::as_str) {
+                Some("download-started") => "running",
+                Some("download-finished") => "finished",
+                Some("download-error") => "failed",
+                Some("download-state") => value
+                    .get("value")
+                    .and_then(serde_json::Value::as_str)
+                    .unwrap_or_default(),
+                _ => continue,
+            };
+            job_state.jobs.set_state(id, next);
+        }
     });
 
     println!(
@@ -152,8 +184,8 @@ async fn serve(config: Config) -> Result<(), String> {
         config.download_root.display()
     );
     println!(
-        "[MediaMagnet][Server] static dir:    {}",
-        config.static_dir.display()
+        "[MediaMagnet][Server] static assets: {}",
+        config.static_assets.describe()
     );
     println!(
         "[MediaMagnet][Server] auth: {}",
