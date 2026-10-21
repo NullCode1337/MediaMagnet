@@ -3,7 +3,9 @@ use std::sync::Arc;
 
 use mm_core::Engine;
 
+use crate::assets::StaticAssets;
 use crate::events::EventHub;
+use crate::jobs::Jobs;
 
 pub struct AppState {
     pub engine: Arc<Engine>,
@@ -11,5 +13,6 @@ pub struct AppState {
     pub download_root: PathBuf,
     /// `None` means the server was started without `MM_TOKEN`: the API is open.
     pub token: Option<String>,
-    pub static_dir: PathBuf,
+    pub static_assets: StaticAssets,
+    pub jobs: Jobs,
 }
