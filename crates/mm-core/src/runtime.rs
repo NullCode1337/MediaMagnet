@@ -30,8 +30,14 @@ impl Tool {
         }
     }
 
+    /// pip requirement with the extras the tool needs at runtime. The bundles are
+    /// built from these, so an overlay reinstall gets the same dependencies.
     pub fn package(self) -> &'static str {
-        self.name()
+        match self {
+            Tool::YtDlp => "yt-dlp[default]",
+            Tool::GalleryDl => "gallery-dl[extra]",
+            Tool::SpotDl => "spotdl",
+        }
     }
 
     pub fn all() -> [Tool; 3] {

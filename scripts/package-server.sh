@@ -116,8 +116,8 @@ if [ "$WITH_TOOLS" = 1 ]; then
 
   echo "installing yt-dlp, gallery-dl and spotdl"
   "$PY" -m pip install --no-cache-dir --disable-pip-version-check --upgrade \
-    "yt-dlp==$YT_DLP_VERSION" \
-    "gallery-dl==$GALLERY_DL_VERSION" \
+    "yt-dlp[default]==$YT_DLP_VERSION" \
+    "gallery-dl[extra]==$GALLERY_DL_VERSION" \
     "spotdl==$SPOTDL_VERSION"
 
   echo "deno: $DENO_VERSION"
