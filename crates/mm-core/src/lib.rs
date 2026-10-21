@@ -11,7 +11,7 @@ pub mod policy;
 pub mod runtime;
 pub mod settings;
 
-pub use download::{Backend, DownloadRequest, Engine};
+pub use download::{Backend, DownloadRequest, Engine, JobCookie};
 pub use error::{Error, Result};
 pub use events::{
     CoreEvent, DownloadState, EventSink, NotificationLevel, NullEventSink, SharedEventSink,

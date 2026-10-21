@@ -17,6 +17,8 @@ pub async fn downloader(
         url,
         backend: None,
         base_dir,
+        settings: None,
+        cookies: None,
     };
     tokio::spawn(async move {
         engine.run_job(request).await;

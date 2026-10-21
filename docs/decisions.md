@@ -245,3 +245,27 @@ says what changed and why.
     Debian bookworm provides glibc ≥ 2.28. Deno is copied from the official
     `denoland/deno:bin` image. The same Dockerfile is built for
     `linux/amd64` and `linux/arm64` by buildx in the release workflow.
+
+## Browser storage for the web SPA
+
+51. **Settings and cookies live in the browser.** The HTTP transport reads and
+    writes `mm:settings:v1` and `mm:cookies:v1` in `localStorage`; the SPA no
+    longer calls `GET/PUT /settings`, `POST /settings/reset` or the `/cookies`
+    routes. Those routes stay for API clients that drive the server directly.
+    First run shows the shared defaults from `@mediamagnet/api`, not the
+    server's saved config.
+52. **Jobs carry their settings.** `POST /downloads` accepts optional `settings`
+    and `cookies`; core applies them to that job only. Without them the job uses
+    the host's saved settings and cookie directory, so the desktop app and
+    non-SPA API clients are unchanged. The server policy still filters custom
+    arguments and output templates, so a client cannot gain argv it was denied.
+53. **Client cookies never fall back to the server store.** When `cookies` is
+    present, core matches the URL against the longest domain, converts JSON to
+    Netscape if needed, writes one file under `<app_data>/job-cookies/`, and
+    deletes it when the job (or a concurrent cancellation) releases it. An empty
+    or non-matching list means the job runs without cookies — it does not pick
+    up the server operator's cookies.
+54. **Import/export already round-trips the local config.** The panel reads
+    `settings.config`, which is the localStorage copy; import writes through
+    `updateSettings` and therefore persists there. Export still goes through the
+    clipboard or the browser's download prompt, not the backend.

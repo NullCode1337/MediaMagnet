@@ -35,10 +35,21 @@ concurrency is still capped at five. `cancel`/`pause` look the job up by id;
 pub struct DownloadRequest {
     pub id: String,
     pub url: String,
-    pub backend: Option<Backend>, // None = auto-detect, as in OLD
-    pub base_dir: PathBuf,        // chosen by the host, never by a client
+    pub backend: Option<Backend>,          // None = auto-detect, as in OLD
+    pub base_dir: PathBuf,                 // chosen by the host, never by a client
+    pub settings: Option<Settings>,        // job-local config; None = host settings
+    pub cookies: Option<Vec<JobCookie>>,   // None = host store; Some = these only
 }
+
+pub struct JobCookie { pub domain: String, pub content: String }
 ```
+
+`settings: Some(..)` replaces the host's settings for that job; the policy still
+filters custom arguments. `cookies: Some(..)` never falls back to the host's
+cookie directory: the longest matching domain is written to
+`<app_data>/job-cookies/` (JSON converted to Netscape) and removed when the job
+ends. The web SPA uses both fields, so its browser-local store drives downloads
+without writing anything into the server's data directory.
 
 ## Events
 

@@ -1,4 +1,5 @@
 import {
+  DEFAULT_CONFIG,
   nullWindow,
   type AnyConfig,
   type AskOptions,
@@ -12,6 +13,38 @@ import {
 
 const API = "/api/v1";
 const TOKEN_KEY = "mm_token";
+/** Settings and cookies belong to the browser, not the server's data dir. */
+const SETTINGS_KEY = "mm:settings:v1";
+const COOKIES_KEY = "mm:cookies:v1";
+
+function readStored<T>(key: string): T | null {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStored(key: string, value: unknown) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // storage can be blocked; the in-memory copy still lives in the SPA
+  }
+}
+
+function storedConfig(): AnyConfig | null {
+  return readStored<AnyConfig>(SETTINGS_KEY);
+}
+
+function storedCookies(): Record<string, string> {
+  return readStored<Record<string, string>>(COOKIES_KEY) ?? {};
+}
+
+function cookieDomain(domain: string): string {
+  return domain.trim().toLowerCase().replace(/[\\/]/g, "");
+}
 
 export class HttpError extends Error {
   status: number;
@@ -167,7 +200,19 @@ export function createHttpTransport(): Transport {
     kind: "http",
 
     download: async (url, id) => {
-      await send("POST", "/downloads", { url, id });
+      // Settings and cookies live in this browser; the job carries them so the
+      // server applies them without a shared settings file.
+      const body: Record<string, unknown> = { url, id };
+      const settings = storedConfig();
+      if (settings) body.settings = settings;
+      const cookies = storedCookies();
+      if (Object.keys(cookies).length > 0) {
+        body.cookies = Object.entries(cookies).map(([domain, content]) => ({
+          domain,
+          content,
+        }));
+      }
+      await send("POST", "/downloads", body);
     },
     pause: async (id) => {
       await send("POST", `/downloads/${encodeURIComponent(id)}/pause`);
@@ -185,14 +230,19 @@ export function createHttpTransport(): Transport {
       await send("DELETE", "/downloads");
     },
 
-    settings: () => request<AnyConfig>("/settings"),
-    updateSettings: (config) =>
-      request<AnyConfig>("/settings", {
-        method: "PUT",
-        body: JSON.stringify(config),
-      }),
-    resetSettings: () =>
-      request<AnyConfig>("/settings/reset", { method: "POST" }),
+    settings: async () => storedConfig() ?? DEFAULT_CONFIG,
+    updateSettings: async (config) => {
+      writeStored(SETTINGS_KEY, config);
+      return config;
+    },
+    resetSettings: async () => {
+      try {
+        localStorage.removeItem(SETTINGS_KEY);
+      } catch {
+        // storage can be blocked; defaults are still returned
+      }
+      return DEFAULT_CONFIG;
+    },
     // The server owns the download root; there is no path for the client to pick.
     checkDownloadPath: async () => {},
     freeSpace: async () => {
@@ -208,21 +258,30 @@ export function createHttpTransport(): Transport {
           "the browser cannot upload a local file path; paste the cookie content instead",
         );
       }
-      const result = await request<{ path: string }>("/cookies", {
-        method: "POST",
-        body: JSON.stringify({ domain, input }),
-      });
-      return result.path;
+      const key = cookieDomain(domain);
+      if (!key) throw new Error("cookie domain is required");
+      const cookies = storedCookies();
+      cookies[key] = input.value;
+      writeStored(COOKIES_KEY, cookies);
+      return `${key}.txt`;
     },
-    getCookies: () => request<Record<string, string>>("/cookies"),
+    getCookies: async () =>
+      Object.fromEntries(
+        Object.keys(storedCookies()).map((domain) => [domain, `${domain}.txt`]),
+      ),
     clearCookies: async () => {
-      await send("DELETE", "/cookies");
+      try {
+        localStorage.removeItem(COOKIES_KEY);
+      } catch {
+        // storage can be blocked; there is nothing else to clear
+      }
     },
-    // The UI passes the server-side path it received from `getCookies`; the
-    // endpoint addresses cookies by domain, so the stem is the domain.
+    // The UI passes the path it received from `getCookies`; the stem is the domain.
     deleteCookie: async (path) => {
       const domain = path.split("/").pop()?.replace(/\.txt$/, "") ?? path;
-      await send("DELETE", `/cookies/${encodeURIComponent(domain)}`);
+      const cookies = storedCookies();
+      delete cookies[domain];
+      writeStored(COOKIES_KEY, cookies);
     },
 
     notify: async (message) => {
