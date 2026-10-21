@@ -258,7 +258,11 @@ says what changed and why.
     and `cookies`; core applies them to that job only. Without them the job uses
     the host's saved settings and cookie directory, so the desktop app and
     non-SPA API clients are unchanged. The server policy still filters custom
-    arguments and output templates, so a client cannot gain argv it was denied.
+    arguments and output templates: with `MM_ALLOW_CUSTOM_ARGS` off, a job
+    carrying non-empty arguments for its backend fails with a `Configuration
+    Error` (the POST itself still returns `202`); with it on, arguments pass
+    only through the per-tool deny-list. A client cannot gain argv it was
+    denied.
 53. **Client cookies never fall back to the server store.** When `cookies` is
     present, core matches the URL against the longest domain, converts JSON to
     Netscape if needed, writes one file under `<app_data>/job-cookies/`, and
@@ -269,3 +273,93 @@ says what changed and why.
     `settings.config`, which is the localStorage copy; import writes through
     `updateSettings` and therefore persists there. Export still goes through the
     clipboard or the browser's download prompt, not the backend.
+
+## API contract and packaging
+
+55. **`docs/openapi.yaml` is the source of truth for the HTTP contract.**
+    `packages/client` generates `src/schema.d.ts` from it with
+    `openapi-typescript`; the generated file is committed so a checkout builds
+    without running codegen. `openapi-fetch` is a runtime dependency of the
+    client only. The SPA keeps its hand-written transport, so the browser
+    bundle does not grow a second HTTP layer.
+56. **The client appends `/api/v1`.** Callers pass the server origin (or a
+    reverse-proxy prefix). The SSE helper puts the bearer token in `?token=`
+    because `EventSource` cannot set headers; the spec documents the same
+    trade-off as the server.
+57. **Request settings are optional in the spec; response settings are not.**
+    `Settings::from_value` defaults missing keys, so marking them `required`
+    (or giving them `default`, which `openapi-typescript` also treats as
+    required) would produce a type that lies about the request. Defaults are
+    described in prose instead. `PUT /settings` therefore has replace
+    semantics: omitted fields revert to defaults.
+58. **README rewrite covers both hosts.** `README_changed.md` records the
+    delta from the desktop-only README. The previous file's download table,
+    disclaimer, contributing steps and branding are preserved; installation,
+    features and roadmap now describe the server and the API as well.
+59. **`LICENSE` is copied verbatim from OLD** (AGPL-3.0-only), so the license
+    badge and `PKGBUILD` point at a file that exists in this repository. The
+    workspace `license` was `AGPL-3.0-or-later`; it is now `AGPL-3.0-only` to
+    match the shipped license text and OLD's `PKGBUILD`.
+60. **`PKGBUILD` builds from the monorepo root.** `bun run tauri build -b deb`
+    runs the root `tauri` script, which enters `apps/desktop`. Cargo resolves
+    the workspace target directory, so the `.deb` data lives under
+    `target/release/bundle/deb/...`, not `apps/desktop/src-tauri/target/...`;
+    `tauri build --no-bundle` confirmed the binary lands in
+    `target/release/MediaMagnet`. The old post-install removal of
+    `yt-dlp`/`gallery-dl` sidecars is gone because the bundle no longer ships
+    external binaries.
+61. **The Docker web stage copies every workspace's `package.json`, including
+    `packages/client`.** Bun tolerates a workspace directory that does not exist
+    under `--frozen-lockfile` (it installs the rest and skips that package's
+    dependencies), so this is not a hard failure. Copying the manifest keeps the
+    stage consistent with the repository and installs the client's dependencies
+    before `COPY packages packages` brings in the sources. The web build itself
+    does not depend on `packages/client`.
+62. **The server embeds the built SPA.** `crates/mm-server/build.rs` walks
+    `apps/web/dist` and generates a table of `include_bytes!` entries, so
+    `bun run build:server` produces a self-contained binary. This supersedes
+    the runtime default in decision 37: `MM_STATIC_DIR` still wins when set,
+    and a cargo build without a dist directory embeds nothing and falls back to
+    `public/` beside the binary. The build script registers the dist directory
+    with Cargo, so rebuilding the web UI recompiles the server. Docker copies
+    the web stage's dist before the server build and no longer ships a separate
+    `/app/public` directory.
+63. **Standalone server archives are built by `scripts/package-server.sh`.**
+    The script builds the SPA, then the server (with `--target` when `TARGET`
+    is set), and stages the binary with `LICENSE`, `README.md`, `docs/API.md`
+    and `docs/openapi.yaml`. CI runs it on the same six targets as the desktop
+    app, runs it again with `--with-tools` (decision 66), uploads each archive
+    as a workflow artifact, and a single release job
+    attaches them to `server-v<version>`. The tag is separate from the
+    desktop's `app-v<version>` so concurrent jobs never create the same
+    release. Archives are `.tar.gz` on every platform; Windows 10+ can extract
+    them with the built-in `tar`.
+64. **The server keeps its own in-memory job records.** Core removes a job from
+    its process table when it pauses or finishes, which left `GET /downloads`
+    and resume with nothing to report. `crates/mm-server/src/jobs.rs` stores the
+    original `DownloadRequest` and the last state, updated from the event hub
+    and from the pause/cancel handlers. Resume replays the stored request, so
+    the URL, settings and cookies are the ones the job was created with. The
+    registry is capped at 100 records, pruned from the oldest terminal job, and
+    is not persisted; the API documents that a restart clears it.
+65. **`/torrents` exists and answers `501`.** The old desktop app has torrent
+    plumbing that the new core does not implement. Returning a stable
+    `torrents_unavailable` error lets clients detect the gap explicitly instead
+    of treating a `404` as a wrong URL. `/tools` reports how each backend
+    resolves (`preinstalled`, `system`, `bundled`, `overlay`), and
+    `/tools/update` reinstalls the pinned Python tools into the overlay.
+66. **`scripts/package-server.sh --with-tools` produces a fully portable
+    archive.** It installs the pinned Python tools into the bundled
+    python-build-standalone interpreter and adds Deno plus `ffmpeg`/`ffprobe`
+    to `binaries/` beside the executable. The server now uses
+    `<exe>/binaries` as the bundled tools directory when `MM_BINARIES_DIR` is
+    unset, which is the same layout the desktop app already uses. The archive
+    name gains a `-tools` suffix so both variants can sit in one release.
+    Tools are not bundled for a cross build: the Python interpreter and Deno
+    must run on the build host to install packages into them, so CI runs the
+    second packaging step on each native runner.
+67. **Bundled `ffmpeg` comes from `eugeneware/ffmpeg-static` on Linux and
+    macOS and from BtbN on Windows.** ffmpeg-static ships a single static
+    binary per tool, while BtbN is the maintained source of Windows builds.
+    Both are LGPL builds with the pinned versions recorded in the workflow and
+    in the script defaults.
