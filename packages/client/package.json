@@ -1,0 +1,20 @@
+{
+  "name": "@mediamagnet/client",
+  "private": true,
+  "version": "0.5.3",
+  "description": "Typed client for the MediaMagnet REST API",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "generate": "openapi-typescript ../../docs/openapi.yaml -o src/schema.d.ts",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "openapi-fetch": "^0.15.0"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.9.1"
+  }
+}

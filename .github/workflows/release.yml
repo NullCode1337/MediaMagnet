@@ -158,6 +158,85 @@ jobs:
           generateReleaseNotes: true
           args: ${{ matrix.args }}
 
+  server:
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'ubuntu-22.04'
+            target: 'x86_64-unknown-linux-gnu'
+          - platform: 'ubuntu-24.04-arm'
+            target: 'aarch64-unknown-linux-gnu'
+          - platform: 'macos-15-intel'
+            target: 'x86_64-apple-darwin'
+          - platform: 'macos-latest'
+            target: 'aarch64-apple-darwin'
+          - platform: 'windows-latest'
+            target: 'x86_64-pc-windows-msvc'
+          - platform: 'windows-11-arm'
+            target: 'aarch64-pc-windows-msvc'
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install frontend dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Package server
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+        run: bash scripts/package-server.sh
+
+      # The runner is the target platform, so the tools can be bundled here.
+      - name: Package server with tools
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash scripts/package-server.sh --with-tools
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: server-${{ matrix.target }}
+          path: target/package/*.tar.gz
+          if-no-files-found: error
+
+  server-release:
+    needs: server
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version
+        id: version
+        shell: bash
+        run: |
+          echo "version=$(sed -n 's/^  "version": "\(.*\)",$/\1/p' package.json | head -n1)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: server-v${{ steps.version.outputs.version }}
+          name: Server v${{ steps.version.outputs.version }}
+          body: Standalone MediaMagnet server binaries. The API and web SPA are embedded in the binary; yt-dlp, gallery-dl, spotdl, ffmpeg and optionally Deno must be on PATH.
+          draft: ${{ github.event.inputs.draft == 'true' }}
+          files: dist/*.tar.gz
+
   docker:
     permissions:
       contents: read
