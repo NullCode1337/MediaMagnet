@@ -17,7 +17,12 @@
   import GalleryTab from "$lib/components/Settings/Gallery.svelte";
   import SpotdlTab from "$lib/components/Settings/Spotdl.svelte";
 
-  let { menuOpen = $bindable(false), isCollapsed, currentPlatform } = $props();
+  let {
+    menuOpen = $bindable(false),
+    isCollapsed,
+    currentPlatform,
+    triggerClass = undefined,
+  } = $props();
   let activeTab = $state("general");
   let windowWidth = $state(
     typeof window !== "undefined" ? window.innerWidth : 1200,
@@ -319,8 +324,9 @@
         <Button
           {...props}
           variant="ghost"
-          class="w-12 sm:w-full h-14 sm:h-11 transition-all duration-200 cursor-pointer justify-center hover:bg-sidebar-accent hover:text-sidebar-accent-foreground
-          {isCollapsed ? '' : 'sm:justify-start sm:gap-4 sm:px-4'}"
+          class={triggerClass ??
+            `w-12 sm:w-full h-14 sm:h-11 transition-all duration-200 cursor-pointer justify-center hover:bg-sidebar-accent hover:text-sidebar-accent-foreground
+          ${isCollapsed ? "" : "sm:justify-start sm:gap-4 sm:px-4"}`}
           onclick={(e) => {
             e.preventDefault();
             menuOpen = !menuOpen;
