@@ -270,9 +270,10 @@ Tauri resource, pass `--js-runtimes deno:<path>`; Docker installs Deno from the 
 * macOS arm64 + x64: `eugeneware/ffmpeg-static` release `b6.1.1` has `ffmpeg-darwin-arm64`
   (46 MB) and `ffmpeg-darwin-x64` (79 MB) plus matching `ffprobe` binaries. (evermeet.cx now
   returns HTTP 410 and was x86-only anyway.)
-* Linux and the server: system `ffmpeg`; if `ffmpeg`/`ffprobe` are missing, job creation is
-  allowed but the first run returns a clear "ffmpeg not found" error (tools that do not need
-  merging still work).
+* Linux: the desktop bundle does not ship `ffmpeg` (it uses the system one); the server's
+  `-tools` archive bundles the static Linux build (decisions 66–67). Without `ffmpeg`,
+  job creation is allowed but the first run returns a clear "ffmpeg not found" error
+  (tools that do not need merging still work).
 
 ## 8. Extraction plan for `mm-core`
 
@@ -310,11 +311,28 @@ Deviations to record in `docs/decisions.md` when implemented:
 
 ## 9. Open items deferred to later phases
 
-* Torrent endpoints: OLD has **no** torrent code (it is a README roadmap item). The API will
-  expose `/api/v1/torrents` behind a small engine trait; with no engine configured the routes
-  return `501` with a documented error code. A qBittorrent-compatible RPC adapter is the
-  intended first engine. Flagged here because it is new behaviour, not a port.
-* Public-API file serving and Range support have no OLD equivalent; designed in Phase 3.
-* `spotdl` needs a config/temp directory; OLD lets it create `.spotdl` inside the CWD
-  (the download directory). Decision: point `--cookie-file`/caches at app data where the CLI
-  allows it, otherwise keep OLD behaviour.
+Status after the four procedures (server release artifacts, remaining API surface, portable
+bundle, final verification). Each item is closed or explicitly accepted:
+
+* **Torrent endpoints — closed.** OLD has **no** torrent code (it is a README roadmap item).
+  `/api/v1/torrents` exists and returns `501 torrents_unavailable`; no engine trait was added
+  because there is nothing to plug into it yet (decision 65). A qBittorrent-compatible RPC
+  adapter is still the intended first engine. This is new behaviour, not a port.
+* **Public-API file serving and Range support — closed.** Implemented in Phase 3
+  (`GET /files/{path}`, one `Range` header, `416` with `Content-Range: bytes */N`); there is no
+  OLD equivalent.
+* **Server job durability — accepted.** Job records are in memory and capped at 100
+  (decision 64). A restart clears them; OLD has the same durability because the frontend held
+  the job list.
+* **Portable tool bundling — closed.** The `-tools` archive bundles Python, the three Python
+  tools, Deno and ffmpeg; the server finds them in `binaries/` beside the executable
+  (decision 66). Bundled ffmpeg sources and the Linux desktop's dependence on the system
+  ffmpeg are recorded in section 7.
+* **`spotdl` config/temp directory — open, OLD behaviour kept.** The child process runs with
+  `current_dir` set to the download directory (`download.rs:623`), so spotdl still creates
+  `.spotdl` there. Redirecting its config needs a version-specific flag and would be a
+  behavioural change; until then the download directory contains that folder.
+* **Leftover stub sidecars — open.** `apps/desktop/src-tauri/binaries/` still holds six
+  tracked 92/95-byte stub files (`yt-dlp-*`, `gallery-dl-*`). Nothing reads them: the runtime
+  resolves tools from `PATH`, the overlay or `binaries/`, and the bundle no longer declares
+  sidecars. They are harmless but dead; removing them needs the owner's approval.
