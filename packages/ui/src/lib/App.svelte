@@ -13,6 +13,7 @@
   import { Clipboard, Play, Plus } from "@lucide/svelte";
 
   import Sidebar from "$lib/components/Sidebar.svelte";
+  import TopBar from "$lib/components/TopBar.svelte";
   import Downloader from "$lib/components/Downloader.svelte";
   import Settings from "$lib/components/Settings.svelte";
   import Titlebar from "$lib/components/Titlebar.svelte";
@@ -315,6 +316,8 @@
     <div class="relative z-100">
       <Titlebar {currentPlatform} />
     </div>
+  {:else}
+    <TopBar {diskUsage} {currentPlatform} />
   {/if}
 
   {#if uiState.headless}
@@ -362,16 +365,26 @@
     </div>
   {:else}
     <div class="flex flex-1 w-full min-h-0 overflow-hidden relative">
-      <Sidebar bind:isCollapsed {diskUsage} {currentPlatform} />
+      {#if transport.kind === "desktop"}
+        <Sidebar bind:isCollapsed {diskUsage} {currentPlatform} />
+      {:else}
+        <!-- the website navigates from the top bar; keep the mobile pill -->
+        <div class="contents sm:hidden">
+          <Sidebar bind:isCollapsed {diskUsage} {currentPlatform} />
+        </div>
+      {/if}
 
       <main
         class="flex flex-col h-full w-full max-h-full min-h-0 bg-background text-foreground overflow-hidden"
       >
         <header
-          class="hidden sm:flex h-20 items-center px-8 bg-background/50 sticky top-0 z-10 gap-4 shrink-0"
+          class="hidden sm:flex h-20 items-center px-8 bg-background/50 sticky top-0 z-10 gap-4 shrink-0
+            {transport.kind === "http" ? 'justify-center' : ''}"
         >
           <div
-            class="flex-1 max-w-full mx-auto flex items-center gap-2 px-2 sm:max-w-5xl"
+            class="flex items-center gap-2 px-2 {transport.kind === "http"
+              ? 'w-full max-w-2xl'
+              : 'flex-1 max-w-full mx-auto sm:max-w-5xl'}"
           >
             <div class="relative flex-1">
               <form
