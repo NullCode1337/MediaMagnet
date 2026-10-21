@@ -277,7 +277,7 @@ you want to pipe `response.body`.
 Regenerate the types after changing the API:
 
 ```sh
-cd packages/client && bun run generate
+bun run generate:api
 ```
 
 ## Versioning
