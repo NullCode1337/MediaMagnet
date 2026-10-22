@@ -389,11 +389,15 @@ says what changed and why.
     artifacts are not byte-reproducible. Deno, ffmpeg and the
     python-build-standalone interpreter stay pinned because their URLs name a
     concrete release asset.
-70. **The newest preinstalled tool wins, not the first on PATH.** `resolve`
-    probes every PATH hit for `<name>`, `<name>-dev` and `<name>-git` and picks
-    the highest `--version`. Versions are compared as numeric dot-segments, so
-    yt-dlp nightlies (`2026.10.21.123456`) outrank the matching release; a
-    dev/git/nightly build is marked and wins a tie against the same version.
-    This is what lets a source install in `~/.local/bin` take over from a stale
-    distro package regardless of PATH order. The overlay still comes first (an
-    explicit `/tools/update`), and bundled/system Python remain the fallback.
+70. **The newest tool wins, not the first on PATH.** `resolve` probes every PATH
+    hit for `<name>`, `<name>-dev` and `<name>-git`, and also runs
+    `<python> -m <module> --version` for the bundled and `MM_PYTHON`
+    interpreters, then picks the highest version. Versions are compared as
+    numeric dot-segments, so yt-dlp nightlies (`2026.10.21.123456`) outrank the
+    matching release; a dev/git/nightly build is marked and wins a tie against
+    the same version. Ties keep the earlier candidate, so PATH is preferred
+    over an interpreter of the same version. This is what lets either a source
+    install in `~/.local/bin` or the app's own newer pip bundle take over from
+    a stale distro package regardless of PATH order. The overlay still comes
+    first (an explicit `/tools/update`), and an interpreter whose module fails
+    to run is ignored before falling back to the first interpreter.
