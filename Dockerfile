@@ -24,9 +24,6 @@ COPY --from=web /src/apps/web/dist apps/web/dist
 RUN cargo build --release -p mm-server --bin mediamagnet-server
 
 FROM python:3.12-slim-bookworm
-ARG YT_DLP_VERSION=2026.8.19
-ARG GALLERY_DL_VERSION=1.32.17
-ARG SPOTDL_VERSION=4.5.2
 ARG DENO_VERSION=2.9.7
 
 RUN apt-get update \
@@ -34,9 +31,9 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir \
-    "yt-dlp[default]==${YT_DLP_VERSION}" \
-    "gallery-dl[extra]==${GALLERY_DL_VERSION}" \
-    "spotdl==${SPOTDL_VERSION}"
+    "yt-dlp[default]" \
+    "gallery-dl[extra]" \
+    "spotdl"
 
 COPY --from=denoland/deno:bin-${DENO_VERSION} /deno /usr/local/bin/deno
 

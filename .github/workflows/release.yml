@@ -15,9 +15,6 @@ on:
 env:
   PYTHON_STANDALONE_RELEASE: '20261013'
   PYTHON_VERSION: '3.12'
-  YT_DLP_VERSION: '2026.8.19'
-  GALLERY_DL_VERSION: '1.32.17'
-  SPOTDL_VERSION: '4.5.2'
   DENO_VERSION: '2.9.7'
   FFMPEG_STATIC_RELEASE: 'b6.1.1'
 
@@ -102,9 +99,9 @@ jobs:
           fi
 
           "$PYTHON" -m pip install --no-cache-dir --upgrade \
-            "yt-dlp[default]==${YT_DLP_VERSION}" \
-            "gallery-dl[extra]==${GALLERY_DL_VERSION}" \
-            "spotdl==${SPOTDL_VERSION}"
+            "yt-dlp[default]" \
+            "gallery-dl[extra]" \
+            "spotdl"
 
       - name: Bundle Deno
         shell: bash

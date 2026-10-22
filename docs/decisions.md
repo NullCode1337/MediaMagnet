@@ -234,7 +234,7 @@ says what changed and why.
     A missing ffmpeg is not a preflight error: jobs that do not need merging
     still work, and yt-dlp reports the failure itself for those that do.
 48. **CI builds the bundled Python on each target runner.** A single Python
-    standalone release is downloaded per triple and the pinned tool versions are
+    standalone release is downloaded per triple and the latest tool releases are
     installed with that interpreter, so wheels match the runner's OS and arch.
     arm64 jobs use `ubuntu-24.04-arm`, `windows-11-arm` and `macos-latest`;
     x86_64 macOS uses `macos-15-intel` (the `macos-13` runner is retired).
@@ -350,9 +350,9 @@ says what changed and why.
     `torrents_unavailable` error lets clients detect the gap explicitly instead
     of treating a `404` as a wrong URL. `/tools` reports how each backend
     resolves (`preinstalled`, `system`, `bundled`, `overlay`), and
-    `/tools/update` reinstalls the pinned Python tools into the overlay.
+    `/tools/update` reinstalls the Python tools into the overlay.
 66. **`scripts/package-server.sh --with-tools` produces a fully portable
-    archive.** It installs the pinned Python tools into the bundled
+    archive.** It installs the Python tools into the bundled
     python-build-standalone interpreter and adds Deno plus `ffmpeg`/`ffprobe`
     to `binaries/` beside the executable. The server now uses
     `<exe>/binaries` as the bundled tools directory when `MM_BINARIES_DIR` is
@@ -364,8 +364,8 @@ says what changed and why.
 67. **Bundled `ffmpeg` comes from `eugeneware/ffmpeg-static` on Linux and
     macOS and from BtbN on Windows.** ffmpeg-static ships a single static
     binary per tool, while BtbN is the maintained source of Windows builds.
-    Both are LGPL builds with the pinned versions recorded in the workflow and
-    in the script defaults.
+    Both are LGPL builds with their release versions recorded in the workflow
+    and in the script defaults.
 68. **The tools are installed with their extras.** A bare
     `pip install yt-dlp gallery-dl` leaves out modules the tools import at
     runtime: `yt-dlp` gets its `default` extra only transitively through
@@ -379,3 +379,21 @@ says what changed and why.
     `/tools/update` produce an overlay with the same dependency set.
     `pip install --dry-run --only-binary=:all:` resolves every extra for all
     six release targets, so no build host needs a compiler.
+69. **The Python tools are not version pinned.** `yt-dlp`, `gallery-dl` and
+    `spotdl` are installed unpinned everywhere they are bundled: the desktop
+    release workflow, `scripts/package-server.sh --with-tools`, the Docker
+    image, the PKGBUILDs and `Tool::package` (so `/tools/update` matches). A
+    build therefore ships whatever PyPI serves at build time, which is what
+    keeps extractor fixes flowing without a code change. Consequence: a rebuild
+    of the same `pkgver` or tag can carry different tool versions, and release
+    artifacts are not byte-reproducible. Deno, ffmpeg and the
+    python-build-standalone interpreter stay pinned because their URLs name a
+    concrete release asset.
+70. **The newest preinstalled tool wins, not the first on PATH.** `resolve`
+    probes every PATH hit for `<name>`, `<name>-dev` and `<name>-git` and picks
+    the highest `--version`. Versions are compared as numeric dot-segments, so
+    yt-dlp nightlies (`2026.10.21.123456`) outrank the matching release; a
+    dev/git/nightly build is marked and wins a tie against the same version.
+    This is what lets a source install in `~/.local/bin` take over from a stale
+    distro package regardless of PATH order. The overlay still comes first (an
+    explicit `/tools/update`), and bundled/system Python remain the fallback.

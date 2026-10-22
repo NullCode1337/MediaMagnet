@@ -66,7 +66,7 @@ Standalone server archives for Linux (x86_64/aarch64), macOS and Windows are att
 
 ## Self-hosting
 
-The server needs the same download tools as the desktop app: `yt-dlp`, `gallery-dl` and `spotdl` on `PATH` (or a directory set in `MM_BINARIES_DIR`), plus `ffmpeg` for merging. Desktop release builds, the Docker image and the `-tools` server archives bundle pinned versions; the plain server archive expects the tools on `PATH`.
+The server needs the same download tools as the desktop app: `yt-dlp`, `gallery-dl` and `spotdl` on `PATH` (or a directory set in `MM_BINARIES_DIR`), plus `ffmpeg` for merging. Desktop release builds, the Docker image and the `-tools` server archives install the latest versions from PyPI at build time; the plain server archive expects the tools on `PATH`.
 
 ### Docker
 
@@ -79,7 +79,7 @@ docker run -d --name mediamagnet \
   mediamagnet
 ```
 
-Then open <http://localhost:8080>. Downloads and settings live in the `/data` volume. The image installs pinned `yt-dlp`, `gallery-dl`, `spotdl`, `ffmpeg` and Deno.
+Then open <http://localhost:8080>. Downloads and settings live in the `/data` volume. The image installs `yt-dlp`, `gallery-dl`, `spotdl` and `ffmpeg` from the repositories, plus Deno.
 
 ### Standalone binary
 

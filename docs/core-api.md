@@ -171,8 +171,10 @@ Resolution order (cached per tool):
 
 1. **Overlay** — `<py-overlay>/<module>` exists; the bundled interpreter runs
    `<python> -m <module>` with the overlay first on `PYTHONPATH`.
-2. **Preinstalled** — `which` (skipping paths containing `mediamagnet`), validated
-   with `--version`. This is the Docker/server mode.
+2. **Preinstalled** — every PATH hit for `<name>`, `<name>-dev` and `<name>-git`
+   (skipping paths containing `mediamagnet`) is validated with `--version`; the
+   highest parsed version wins, and a dev/git/nightly build wins a tie. This is
+   the Docker/server mode.
 3. **System** — `RuntimeConfig.python_path` (`MM_PYTHON`).
 4. **Bundled** — `bundled_tools_dir/python`, a python-build-standalone install
    with the three tools baked into its site-packages.

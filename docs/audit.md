@@ -225,6 +225,9 @@ Verified on 2026-10-19 against PyPI and GitHub releases.
 ### Wheel availability (CPython 3.12, `pip download --only-binary=:all:` with the full
 platform-tag set; 64 wheels resolve for every target):
 
+The versions below are the ones checked on the date above. Builds install the tools
+unpinned (decision 69), so the dependency closure can move ahead of this table.
+
 | Target | spotdl 4.5.2 | gallery-dl 1.32.17 | yt-dlp 2026.8.19 + EJS |
 |---|---|---|---|
 | linux x86_64 | ✅ | ✅ | ✅ |

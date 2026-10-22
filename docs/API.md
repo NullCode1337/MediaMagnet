@@ -161,7 +161,7 @@ curl -s -X POST http://localhost:8080/api/v1/tools/update
 
 `source` is `preinstalled` (on `PATH`), `system` (`MM_PYTHON`), `bundled` or
 `overlay`. An unavailable tool has `"available": false` and an `error`.
-`/tools/update` reinstalls the pinned Python tools into the writable overlay
+`/tools/update` reinstalls the latest Python tools into the writable overlay
 and needs a bundled or `MM_PYTHON` interpreter; the Docker image preinstalls
 them and answers `500 tool_update_failed`.
 
