@@ -319,10 +319,11 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Reinstall the pinned Python tools
-         * @description Installs yt-dlp, gallery-dl and spotdl into the server's writable
-         *     overlay. Requires a bundled or `MM_PYTHON` interpreter; images that
-         *     preinstall the tools (the Docker image) return an error here.
+         * Reinstall the Python tools
+         * @description Installs the latest yt-dlp, gallery-dl and spotdl into the server's
+         *     writable overlay and returns the installer's console output. Requires
+         *     a bundled or `MM_PYTHON` interpreter; images that preinstall the tools
+         *     (the Docker image) return an error here.
          */
         post: operations["updateTools"];
         delete?: never;
@@ -449,6 +450,8 @@ export interface components {
         };
         ToolUpdate: {
             updated: ("yt-dlp" | "gallery-dl" | "spotdl")[];
+            /** @description Combined stdout and stderr from the installer. */
+            output: string;
         };
         SiteArgument: {
             id: string;

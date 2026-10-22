@@ -6,6 +6,7 @@ import {
   type CookieInput,
   type OpenOptions,
   type SaveOptions,
+  type ToolUpdateResult,
   type Transport,
   type TransportEvent,
   type Unsubscribe,
@@ -282,6 +283,22 @@ export function createHttpTransport(): Transport {
       const cookies = storedCookies();
       delete cookies[domain];
       writeStored(COOKIES_KEY, cookies);
+    },
+
+    updateTools: async (): Promise<ToolUpdateResult> => {
+      try {
+        const result = await request<{ updated: string[]; output?: string }>(
+          "/tools/update",
+          { method: "POST" },
+        );
+        return {
+          ok: true,
+          output: result.output ?? `Updated: ${result.updated.join(", ")}`,
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return { ok: false, output: message, error: message };
+      }
     },
 
     notify: async (message) => {

@@ -401,3 +401,11 @@ says what changed and why.
     a stale distro package regardless of PATH order. The overlay still comes
     first (an explicit `/tools/update`), and an interpreter whose module fails
     to run is ignored before falling back to the first interpreter.
+71. **"Update backends" is a settings action that returns the pip log.** The
+    Download settings tab calls `Transport.updateTools()`; the desktop command
+    runs `reinstall_python_deps` over the overlay and the HTTP transport posts
+    to `/tools/update`. Core returns pip's combined stdout and stderr, the
+    desktop command wraps it as `{ok, output, error}` even on failure (async
+    Tauri commands must return `Result`), and the server's `ToolUpdate` gained
+    `output`. The UI shows the log in a scrollable box under the button and a
+    sonner toast for success or failure.

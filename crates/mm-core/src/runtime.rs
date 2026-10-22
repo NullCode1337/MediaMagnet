@@ -454,7 +454,8 @@ impl ToolRuntime {
             .or_else(|| which::which("ffmpeg").ok())
     }
 
-    pub async fn reinstall_python_deps(&self, tools: &[Tool]) -> Result<(), ToolError> {
+    /// Installs the tools into the overlay and returns pip's console output.
+    pub async fn reinstall_python_deps(&self, tools: &[Tool]) -> Result<String, ToolError> {
         let python = self
             .interpreters()
             .into_iter()
@@ -485,9 +486,12 @@ impl ToolRuntime {
             .await
             .map_err(|e| ToolError::Install(e.to_string()))?;
 
+        let mut log = String::from_utf8_lossy(&output.stdout).into_owned();
+        log.push_str(&String::from_utf8_lossy(&output.stderr));
+        let log = log.trim().to_string();
+
         if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(ToolError::Install(stderr.trim().to_string()));
+            return Err(ToolError::Install(log));
         }
 
         if let Ok(mut cache) = self.cache.lock() {
@@ -503,7 +507,7 @@ impl ToolRuntime {
             }
         }
 
-        Ok(())
+        Ok(log)
     }
 
     /// Removes the writable overlay, returning to the bundled packages.

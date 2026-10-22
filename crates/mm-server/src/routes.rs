@@ -304,9 +304,9 @@ async fn update_tools(State(state): State<Arc<AppState>>) -> Response {
         .reinstall_python_deps(&Tool::all())
         .await
     {
-        Ok(()) => {
+        Ok(log) => {
             let updated: Vec<&str> = Tool::all().into_iter().map(Tool::name).collect();
-            Json(json!({ "updated": updated })).into_response()
+            Json(json!({ "updated": updated, "output": log })).into_response()
         }
         Err(e) => error(
             StatusCode::INTERNAL_SERVER_ERROR,

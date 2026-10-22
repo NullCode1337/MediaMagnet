@@ -609,11 +609,12 @@ paths:
     post:
       operationId: updateTools
       tags: [tools]
-      summary: Reinstall the pinned Python tools
+      summary: Reinstall the Python tools
       description: |
-        Installs yt-dlp, gallery-dl and spotdl into the server's writable
-        overlay. Requires a bundled or `MM_PYTHON` interpreter; images that
-        preinstall the tools (the Docker image) return an error here.
+        Installs the latest yt-dlp, gallery-dl and spotdl into the server's
+        writable overlay and returns the installer's console output. Requires
+        a bundled or `MM_PYTHON` interpreter; images that preinstall the tools
+        (the Docker image) return an error here.
       responses:
         '200':
           description: The tools now in the overlay.
@@ -841,13 +842,16 @@ components:
 
     ToolUpdate:
       type: object
-      required: [updated]
+      required: [updated, output]
       properties:
         updated:
           type: array
           items:
             type: string
             enum: [yt-dlp, gallery-dl, spotdl]
+        output:
+          type: string
+          description: Combined stdout and stderr from the installer.
 
     SiteArgument:
       type: object

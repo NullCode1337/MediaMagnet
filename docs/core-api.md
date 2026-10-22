@@ -145,7 +145,7 @@ pub struct ToolRuntime; // Arc<ToolRuntime>
 impl ToolRuntime {
     pub fn new(config: RuntimeConfig) -> Self;
     pub async fn resolve(&self, tool: Tool) -> Result<ResolvedTool, ToolError>;
-    pub async fn reinstall_python_deps(&self, tools: &[Tool]) -> Result<(), ToolError>;
+    pub async fn reinstall_python_deps(&self, tools: &[Tool]) -> Result<String, ToolError>; // pip log
     pub fn reset_python_overlay(&self) -> std::io::Result<()>;
     pub fn deno(&self) -> Option<PathBuf>;
     pub fn ffmpeg(&self) -> Option<PathBuf>;
