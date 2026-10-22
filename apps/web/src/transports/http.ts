@@ -200,6 +200,11 @@ export function createHttpTransport(): Transport {
   return {
     kind: "http",
 
+    appVersion: async () => (await request<{ version: string }>("/health")).version,
+    openUrl: async (url) => {
+      window.open(url, "_blank", "noopener,noreferrer");
+    },
+
     download: async (url, id) => {
       // Settings and cookies live in this browser; the job carries them so the
       // server applies them without a shared settings file.

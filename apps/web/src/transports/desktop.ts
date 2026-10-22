@@ -5,12 +5,12 @@ import {
   LogicalSize,
   type Window,
 } from "@tauri-apps/api/window";
-import { onBackButtonPress } from "@tauri-apps/api/app";
+import { getVersion, onBackButtonPress } from "@tauri-apps/api/app";
 import { sep, downloadDir } from "@tauri-apps/api/path";
 import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { ask, open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
-import { openPath } from "@tauri-apps/plugin-opener";
+import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 import { platform } from "@tauri-apps/plugin-os";
 import type {
   AnyConfig,
@@ -94,6 +94,9 @@ export function createDesktopTransport(): Transport {
 
   return {
     kind: "desktop",
+
+    appVersion: () => getVersion(),
+    openUrl: (url) => openUrl(url),
 
     download: (url, id) =>
       invoke("downloader", { url, downloadId: id }),
