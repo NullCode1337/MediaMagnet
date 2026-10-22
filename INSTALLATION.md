@@ -71,9 +71,9 @@ interpreter with `yt-dlp`, `gallery-dl` and `spotdl`, plus Deno,
 
 ### Before you install
 
-Release builds bundle their own Python runtime with pinned `yt-dlp`,
-`gallery-dl` and `spotdl`, plus Deno. Windows and macOS builds also bundle
-`ffmpeg` and `ffprobe`.
+Release builds bundle their own Python runtime with the latest `yt-dlp`,
+`gallery-dl` and `spotdl` resolved from PyPI at build time, plus Deno. Windows
+and macOS builds also bundle `ffmpeg` and `ffprobe`.
 
 **Linux builds do not bundle ffmpeg.** Install it before downloading video or
 audio that needs merging:
@@ -483,7 +483,7 @@ bun run build:server      # web UI + server binary with the UI embedded
 `bun run package:server` additionally produces
 `target/package/mediamagnet-server-<version>-<target>.tar.gz`. Add `--with-tools`
 (`bash scripts/package-server.sh --with-tools`) on the target's own architecture to
-download the pinned tools into `binaries/` and produce the `-tools` archive.
+download the latest tools from PyPI into `binaries/` and produce the `-tools` archive.
 
 ### Run at boot
 

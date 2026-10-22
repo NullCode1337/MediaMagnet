@@ -43,6 +43,57 @@ impl Tool {
     pub fn all() -> [Tool; 3] {
         [Tool::YtDlp, Tool::GalleryDl, Tool::SpotDl]
     }
+
+    /// Names to look for on PATH: the release binary and the dev/git variants.
+    pub fn candidate_names(self) -> [&'static str; 3] {
+        match self {
+            Tool::YtDlp => ["yt-dlp", "yt-dlp-dev", "yt-dlp-git"],
+            Tool::GalleryDl => ["gallery-dl", "gallery-dl-dev", "gallery-dl-git"],
+            Tool::SpotDl => ["spotdl", "spotdl-dev", "spotdl-git"],
+        }
+    }
+}
+
+/// Parsed `--version` output. The version tuple orders numerically, and a
+/// dev/git/nightly build wins a tie against the matching release.
+#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
+struct ToolVersion {
+    parts: Vec<u64>,
+    dev: bool,
+}
+
+impl ToolVersion {
+    fn parse(text: &str) -> Self {
+        static PATTERN: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+        let re = PATTERN
+            .get_or_init(|| regex::Regex::new(r"\d+(?:\.\d+)+").expect("valid version pattern"));
+        let parts = re
+            .find(text)
+            .map(|m| {
+                m.as_str()
+                    .split('.')
+                    .filter_map(|p| p.parse().ok())
+                    .collect()
+            })
+            .unwrap_or_default();
+        let lower = text.to_ascii_lowercase();
+        Self {
+            parts,
+            dev: lower.contains("dev") || lower.contains("git") || lower.contains("nightly"),
+        }
+    }
+}
+
+impl std::fmt::Display for ToolVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let parts = self
+            .parts
+            .iter()
+            .map(u64::to_string)
+            .collect::<Vec<_>>()
+            .join(".");
+        write!(f, "{parts}{}", if self.dev { "-dev" } else { "" })
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -130,16 +181,24 @@ impl ToolRuntime {
         &self.config
     }
 
-    async fn probe(path: &Path) -> bool {
+    async fn probe(path: &Path, dev_name: bool) -> Option<ToolVersion> {
         let mut cmd = Command::new(path);
         hide_console(&mut cmd);
-        cmd.arg("--version")
+        let output = cmd
+            .arg("--version")
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .output()
             .await
-            .map(|output| output.status.success())
-            .unwrap_or(false)
+            .ok()?;
+        if !output.status.success() {
+            return None;
+        }
+        let mut text = String::from_utf8_lossy(&output.stdout).into_owned();
+        text.push_str(&String::from_utf8_lossy(&output.stderr));
+        let mut version = ToolVersion::parse(&text);
+        version.dev |= dev_name;
+        Some(version)
     }
 
     fn bundled_python(&self) -> Option<PathBuf> {
@@ -272,7 +331,14 @@ impl ToolRuntime {
             return Ok(resolved);
         }
 
-        if let Ok(paths) = which::which_all(tool.name()) {
+        // Every PATH candidate is probed; the newest version wins, with dev/git
+        // builds preferred over a release reporting the same version.
+        let mut newest: Option<(PathBuf, ToolVersion)> = None;
+        for name in tool.candidate_names() {
+            let dev_name = name != tool.name();
+            let Ok(paths) = which::which_all(name) else {
+                continue;
+            };
             // The app's own bundled binaries must never shadow a real installation here.
             let filtered = paths.filter(|path| {
                 !path
@@ -280,24 +346,39 @@ impl ToolRuntime {
                     .to_ascii_lowercase()
                     .contains("mediamagnet")
             });
-
             for bin_path in filtered {
-                if Self::probe(&bin_path).await {
-                    let resolved = ResolvedTool {
-                        tool,
-                        program: bin_path,
-                        args: Vec::new(),
-                        env: self.environment(None),
-                        source: ToolSource::Preinstalled,
-                    };
-                    self.remember(&resolved);
-                    return Ok(resolved);
+                match Self::probe(&bin_path, dev_name).await {
+                    Some(version) => {
+                        println!(
+                            "[MediaMagnet][Download] Candidate: {} {version}",
+                            bin_path.display()
+                        );
+                        if newest
+                            .as_ref()
+                            .is_none_or(|(_, current)| version > *current)
+                        {
+                            newest = Some((bin_path, version));
+                        }
+                    }
+                    None => println!(
+                        "[MediaMagnet][Download] Backend: Local {} [INVALID]. Continuing...",
+                        bin_path.display()
+                    ),
                 }
-                println!(
-                    "[MediaMagnet][Download] Backend: Local {} [INVALID]. Continuing...",
-                    bin_path.display()
-                );
             }
+        }
+
+        if let Some((program, version)) = newest {
+            println!("[MediaMagnet][Download] Selected: {version}");
+            let resolved = ResolvedTool {
+                tool,
+                program,
+                args: Vec::new(),
+                env: self.environment(None),
+                source: ToolSource::Preinstalled,
+            };
+            self.remember(&resolved);
+            return Ok(resolved);
         }
 
         if let Some((python, source)) = interpreters.into_iter().next() {
@@ -421,6 +502,15 @@ mod tests {
         std::fs::create_dir_all(python.parent().unwrap()).unwrap();
         std::fs::write(&python, b"").unwrap();
         python
+    }
+
+    #[test]
+    fn newest_version_wins_and_dev_breaks_ties() {
+        assert!(ToolVersion::parse("2026.10.21.123456") > ToolVersion::parse("2026.10.21"));
+        assert!(ToolVersion::parse("1.32.17-dev") > ToolVersion::parse("1.32.17"));
+        assert!(ToolVersion::parse("1.33.0") > ToolVersion::parse("1.32.17-dev"));
+        assert_eq!(ToolVersion::parse("spotdl 4.5.2").parts, vec![4, 5, 2]);
+        assert!(ToolVersion::parse("no version here").parts.is_empty());
     }
 
     #[tokio::test]

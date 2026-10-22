@@ -27,9 +27,6 @@ done
 
 PYTHON_STANDALONE_RELEASE="${PYTHON_STANDALONE_RELEASE:-20261013}"
 PYTHON_VERSION="${PYTHON_VERSION:-3.12}"
-YT_DLP_VERSION="${YT_DLP_VERSION:-2026.8.19}"
-GALLERY_DL_VERSION="${GALLERY_DL_VERSION:-1.32.17}"
-SPOTDL_VERSION="${SPOTDL_VERSION:-4.5.2}"
 DENO_VERSION="${DENO_VERSION:-2.9.7}"
 FFMPEG_STATIC_RELEASE="${FFMPEG_STATIC_RELEASE:-b6.1.1}"
 
@@ -116,9 +113,9 @@ if [ "$WITH_TOOLS" = 1 ]; then
 
   echo "installing yt-dlp, gallery-dl and spotdl"
   "$PY" -m pip install --no-cache-dir --disable-pip-version-check --upgrade \
-    "yt-dlp[default]==$YT_DLP_VERSION" \
-    "gallery-dl[extra]==$GALLERY_DL_VERSION" \
-    "spotdl==$SPOTDL_VERSION"
+    "yt-dlp[default]" \
+    "gallery-dl[extra]" \
+    "spotdl"
 
   echo "deno: $DENO_VERSION"
   curl -fsSL "https://github.com/denoland/deno/releases/download/v$DENO_VERSION/deno-$NAME_TRIPLE.zip" \
