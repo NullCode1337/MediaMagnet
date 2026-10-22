@@ -171,13 +171,17 @@ Resolution order (cached per tool):
 
 1. **Overlay** — `<py-overlay>/<module>` exists; the bundled interpreter runs
    `<python> -m <module>` with the overlay first on `PYTHONPATH`.
-2. **Preinstalled** — every PATH hit for `<name>`, `<name>-dev` and `<name>-git`
-   (skipping paths containing `mediamagnet`) is validated with `--version`; the
-   highest parsed version wins, and a dev/git/nightly build wins a tie. This is
-   the Docker/server mode.
-3. **System** — `RuntimeConfig.python_path` (`MM_PYTHON`).
-4. **Bundled** — `bundled_tools_dir/python`, a python-build-standalone install
-   with the three tools baked into its site-packages.
+2. **Preinstalled / System / Bundled** — every PATH hit for `<name>`,
+   `<name>-dev` and `<name>-git` (skipping paths containing `mediamagnet`) is
+   validated with `--version`, as is `<python> -m <module> --version` for
+   `MM_PYTHON` and the bundled interpreter. The highest parsed version wins,
+   a dev/git/nightly build wins a tie, and PATH wins a tie with an interpreter.
+   `bundled_tools_dir/python` is a python-build-standalone install with the
+   three tools baked into its site-packages; PATH alone is the Docker/server
+   mode.
+
+   If no candidate responds, the first available interpreter runs the module
+   (bundled first, then `MM_PYTHON`).
 
 Every resolved tool also gets `bundled_tools_dir` prepended to `PATH`, so a bundled
 `deno`/`ffmpeg`/`ffprobe` is visible to yt-dlp and spotdl. `reinstall_python_deps`

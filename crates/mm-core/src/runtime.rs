@@ -161,6 +161,15 @@ pub enum ToolSource {
     Overlay,
 }
 
+/// One probe-validated way to run a tool, before the newest is picked.
+#[derive(Debug)]
+struct Candidate {
+    program: PathBuf,
+    args: Vec<String>,
+    source: ToolSource,
+    version: ToolVersion,
+}
+
 #[derive(Debug)]
 pub struct ToolRuntime {
     config: RuntimeConfig,
@@ -184,6 +193,19 @@ impl ToolRuntime {
     async fn probe(path: &Path, dev_name: bool) -> Option<ToolVersion> {
         let mut cmd = Command::new(path);
         hide_console(&mut cmd);
+        Self::version_of(cmd, dev_name).await
+    }
+
+    /// Ask an interpreter for the module's version (`<python> -m <module> --version`).
+    async fn probe_python(&self, python: &Path, tool: Tool) -> Option<ToolVersion> {
+        let mut cmd = Command::new(python);
+        hide_console(&mut cmd);
+        cmd.arg("-m").arg(tool.module());
+        cmd.envs(self.environment(None));
+        Self::version_of(cmd, false).await
+    }
+
+    async fn version_of(mut cmd: Command, dev_name: bool) -> Option<ToolVersion> {
         let output = cmd
             .arg("--version")
             .stdout(std::process::Stdio::piped())
@@ -331,9 +353,11 @@ impl ToolRuntime {
             return Ok(resolved);
         }
 
-        // Every PATH candidate is probed; the newest version wins, with dev/git
-        // builds preferred over a release reporting the same version.
-        let mut newest: Option<(PathBuf, ToolVersion)> = None;
+        // Every candidate — PATH binaries and the interpreters' modules — is
+        // probed; the newest version wins, with dev/git builds preferred over a
+        // release reporting the same version. Ties keep the earlier candidate,
+        // so PATH is preferred over an interpreter of the same version.
+        let mut newest: Option<Candidate> = None;
         for name in tool.candidate_names() {
             let dev_name = name != tool.name();
             let Ok(paths) = which::which_all(name) else {
@@ -350,14 +374,19 @@ impl ToolRuntime {
                 match Self::probe(&bin_path, dev_name).await {
                     Some(version) => {
                         println!(
-                            "[MediaMagnet][Download] Candidate: {} {version}",
+                            "[MediaMagnet][Download] Found: {} {version}",
                             bin_path.display()
                         );
                         if newest
                             .as_ref()
-                            .is_none_or(|(_, current)| version > *current)
+                            .is_none_or(|candidate| version > candidate.version)
                         {
-                            newest = Some((bin_path, version));
+                            newest = Some(Candidate {
+                                program: bin_path,
+                                args: Vec::new(),
+                                source: ToolSource::Preinstalled,
+                                version,
+                            });
                         }
                     }
                     None => println!(
@@ -368,14 +397,37 @@ impl ToolRuntime {
             }
         }
 
-        if let Some((program, version)) = newest {
-            println!("[MediaMagnet][Download] Selected: {version}");
+        // A bundled or MM_PYTHON interpreter can hold a newer tool than the one
+        // on PATH, so its module version competes with the PATH candidates.
+        for (python, source) in &interpreters {
+            if let Some(version) = self.probe_python(python, tool).await {
+                println!(
+                    "[MediaMagnet][Download] Found: {} -m {} {version}",
+                    python.display(),
+                    tool.module()
+                );
+                if newest
+                    .as_ref()
+                    .is_none_or(|candidate| version > candidate.version)
+                {
+                    newest = Some(Candidate {
+                        program: python.clone(),
+                        args: vec!["-m".to_string(), tool.module().to_string()],
+                        source: *source,
+                        version,
+                    });
+                }
+            }
+        }
+
+        if let Some(candidate) = newest {
+            println!("[MediaMagnet][Download] Selected: {}", candidate.version);
             let resolved = ResolvedTool {
                 tool,
-                program,
-                args: Vec::new(),
+                program: candidate.program,
+                args: candidate.args,
                 env: self.environment(None),
-                source: ToolSource::Preinstalled,
+                source: candidate.source,
             };
             self.remember(&resolved);
             return Ok(resolved);
