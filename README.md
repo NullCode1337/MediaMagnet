@@ -99,6 +99,21 @@ Two variants are published:
 
 The server picks up `binaries/` beside the executable automatically.
 
+### Desktop binary as a server
+
+The desktop executable embeds the same server and web UI. Pass
+`--launch-server` to serve the SPA and `/api/v1` without opening a window:
+
+```bash
+MediaMagnet --launch-server
+```
+
+It listens on `0.0.0.0:8080` and honours the same `MM_*` variables as the
+standalone server (including `MM_TOKEN`). The bundled Python tools are found
+relative to the installed executable. Server mode keeps its data in the
+standalone server's directory (`$XDG_DATA_HOME/mediamagnet`), separate from the
+desktop app's own settings.
+
 ### From source
 
 ```bash

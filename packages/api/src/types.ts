@@ -47,6 +47,11 @@ export interface Transport extends Environment {
   /** `desktop` enables the titlebar, window controls and native-shell behaviour. */
   readonly kind: "desktop" | "http";
 
+  /** Version reported by the host: the desktop bundle or the server. */
+  appVersion(): Promise<string>;
+  /** Open an external link in the user's browser. */
+  openUrl(url: string): Promise<void>;
+
   // downloads
   download(url: string, id: string): Promise<void>;
   pause(id: string): Promise<void>;

@@ -2,7 +2,30 @@ mod app;
 mod commands;
 mod events;
 
+use std::path::PathBuf;
+
 use tauri::Manager;
+
+/// Tools beside a desktop install, resolved without a Tauri context.
+fn server_binaries_dir() -> Option<PathBuf> {
+    if let Some(dir) = std::env::var_os("MM_BINARIES_DIR") {
+        return Some(PathBuf::from(dir));
+    }
+    let exe_dir = std::env::current_exe().ok()?.parent()?.to_path_buf();
+    [
+        exe_dir.join("binaries"),
+        exe_dir.join("../lib/MediaMagnet/binaries"),
+        exe_dir.join("../Resources/binaries"),
+    ]
+    .into_iter()
+    .find(|dir| dir.is_dir())
+}
+
+/// `MediaMagnet --launch-server`: serve the SPA and API without a window.
+pub fn launch_server() -> Result<(), String> {
+    let config = mm_server::Config::from_env_with_binaries(server_binaries_dir())?;
+    mm_server::run_blocking(config)
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

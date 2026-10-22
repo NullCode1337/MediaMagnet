@@ -409,3 +409,20 @@ says what changed and why.
     Tauri commands must return `Result`), and the server's `ToolUpdate` gained
     `output`. The UI shows the log in a scrollable box under the button and a
     sonner toast for success or failure.
+72. **The About tab reads the version from its host.** The page is static except
+    for `Transport.appVersion()`: the desktop asks Tauri's `getVersion()` and
+    the browser asks `/api/v1/health`, so the same tab shows the desktop bundle
+    or server version. External links go through `Transport.openUrl()` (the
+    opener plugin on desktop, a new tab in the browser) instead of anchors,
+    because the desktop webview must not navigate away from the app.
+73. **The desktop binary embeds the server and API; `--launch-server` runs it
+    headless.** `mm-server` gained a library target (`Config::from_env`,
+    `Config::from_env_with_binaries`, `run_blocking`) and its binary is now a
+    thin wrapper, so `mediamagnet` links the same server into the desktop
+    executable. `main` checks the flag before Tauri starts, so no window or
+    single-instance handling runs. Server mode uses the standalone defaults
+    (`0.0.0.0:8080`, `$XDG_DATA_HOME/mediamagnet`, `MM_*` overrides) and finds
+    bundled tools at `<exe>/binaries`, `<exe>/../lib/MediaMagnet/binaries`
+    (Linux/AppImage) or `<exe>/../Resources/binaries` (macOS). Windows release
+    builds keep the GUI subsystem, so the flag serves silently when launched
+    without a console.

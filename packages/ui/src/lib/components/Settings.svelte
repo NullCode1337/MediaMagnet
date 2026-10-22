@@ -16,6 +16,7 @@
   import YouTubeTab from "$lib/components/Settings/YouTube.svelte";
   import GalleryTab from "$lib/components/Settings/Gallery.svelte";
   import SpotdlTab from "$lib/components/Settings/Spotdl.svelte";
+  import AboutTab from "$lib/components/Settings/About.svelte";
 
   let {
     menuOpen = $bindable(false),
@@ -62,6 +63,8 @@
     { id: "gallery", label: "gallery-dl", icon: Icons.Image },
     { id: "spotdl", label: "spotdl", icon: Icons.Music },
   ];
+
+  const ABOUT_TABS = [{ id: "about", label: "About", icon: Icons.Info }];
 
   const btnClass =
     "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground relative justify-start";
@@ -164,6 +167,28 @@
               {/each}
             </div>
           </div>
+
+          <div>
+            <p class="text-xs text-muted-foreground font-bold px-1 ml-2 mb-4">
+              About
+            </p>
+            <div
+              class="rounded-2xl overflow-hidden bg-background divide-y divide-border/60"
+            >
+              {#each ABOUT_TABS as tab (tab.id)}
+                <button
+                  onclick={() => {
+                    activeTab = tab.id;
+                    mobileView = "content";
+                  }}
+                  class="w-full flex items-center gap-5 px-5 py-6 text-sm text-foreground hover:bg-muted/50 active:bg-muted transition-colors cursor-pointer"
+                >
+                  <tab.icon size={20} class="text-muted-foreground shrink-0" />
+                  <span class="font-medium">{tab.label}</span>
+                </button>
+              {/each}
+            </div>
+          </div>
         </div>
       {:else}
         <h2
@@ -192,6 +217,26 @@
           Backend
         </h2>
         {#each BACKEND_TABS as tab (tab.id)}
+          <button
+            onclick={() => {
+              activeTab = tab.id;
+              mobileView = "content";
+            }}
+            class="{btnClass} {activeTab === tab.id
+              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
+              : 'text-sidebar-foreground/70'}"
+          >
+            <tab.icon size={17} />
+            <span class="whitespace-nowrap">{tab.label}</span>
+          </button>
+        {/each}
+
+        <h2
+          class="text-sm font-bold font-[Verdana] text-sidebar-foreground/50 mt-6 mb-4 px-2"
+        >
+          About
+        </h2>
+        {#each ABOUT_TABS as tab (tab.id)}
           <button
             onclick={() => {
               activeTab = tab.id;
@@ -276,6 +321,8 @@
             <GalleryTab />
           {:else if activeTab === "spotdl"}
             <SpotdlTab />
+          {:else if activeTab === "about"}
+            <AboutTab />
           {/if}
         </div>
       {:else if settings.loadError}
