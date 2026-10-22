@@ -18,6 +18,7 @@ import type {
   CookieInput,
   OpenOptions,
   SaveOptions,
+  ToolUpdateResult,
   Transport,
   TransportEvent,
   Unsubscribe,
@@ -113,6 +114,9 @@ export function createDesktopTransport(): Transport {
     getCookies: () => invoke<Record<string, string>>("get_cookies"),
     clearCookies: () => invoke("clear_cookies"),
     deleteCookie: (path) => invoke("delete_cookie", { path }),
+
+    updateTools: () =>
+      invoke<ToolUpdateResult>("reinstall_python_deps", { tools: null }),
 
     notify: (message) => invoke("notify", { body: message }),
 

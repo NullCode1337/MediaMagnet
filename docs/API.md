@@ -156,14 +156,15 @@ curl -s http://localhost:8080/api/v1/tools
 # {"tools":[{"name":"yt-dlp","available":true,"source":"preinstalled",...}],"deno":null,"ffmpeg":"/usr/bin/ffmpeg"}
 
 curl -s -X POST http://localhost:8080/api/v1/tools/update
-# {"updated":["yt-dlp","gallery-dl","spotdl"]}
+# {"updated":["yt-dlp","gallery-dl","spotdl"],"output":"... pip log ..."}
 ```
 
 `source` is `preinstalled` (on `PATH`), `system` (`MM_PYTHON`), `bundled` or
 `overlay`. An unavailable tool has `"available": false` and an `error`.
-`/tools/update` reinstalls the latest Python tools into the writable overlay
-and needs a bundled or `MM_PYTHON` interpreter; the Docker image preinstalls
-them and answers `500 tool_update_failed`.
+`/tools/update` reinstalls the latest Python tools into the writable overlay,
+returns the installer's console output in `output`, and needs a bundled or
+`MM_PYTHON` interpreter; the Docker image preinstalls them and answers
+`500 tool_update_failed`.
 
 ## Torrents
 

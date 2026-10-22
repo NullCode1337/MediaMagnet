@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { toast } from "svelte-sonner";
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
   import { settings } from "$lib/stores/settings.svelte";
@@ -13,6 +14,27 @@
 
   // The server chooses the download root; the client cannot set a path.
   const isDesktop = transport.kind === "desktop";
+
+  let updating = $state(false);
+  let showLog = $state(false);
+  let output = $state("");
+
+  async function updateBackends() {
+    updating = true;
+    showLog = true;
+    output = "";
+    try {
+      const result = await transport.updateTools();
+      output = result.output || result.error || "";
+      if (result.ok) toast.success("Backends updated");
+      else toast.error("Backend update failed", { description: result.error });
+    } catch (err) {
+      output = String(err);
+      toast.error("Backend update failed: " + String(err));
+    } finally {
+      updating = false;
+    }
+  }
 </script>
 
 {#snippet downloadPathRow()}
@@ -37,6 +59,35 @@
   </div>
 {/snippet}
 
+{#snippet backendsRow()}
+  <div class="flex flex-col gap-3 px-4 py-4">
+    <div class="flex items-start justify-between gap-4">
+      <div class="min-w-0">
+        <span class="text-[15px] font-normal text-foreground"
+          >Update Backends</span
+        >
+        <p class="mt-1 text-xs leading-normal text-muted-foreground">
+          Reinstalls yt-dlp, gallery-dl and spotdl with pip.
+        </p>
+      </div>
+      <Button
+        variant="outline"
+        disabled={updating}
+        onclick={updateBackends}
+        class="h-10 shrink-0 border-input bg-transparent text-xs cursor-pointer text-primary hover:bg-muted shadow-sm"
+      >
+        {updating ? "Updating…" : "Update"}
+      </Button>
+    </div>
+
+    {#if showLog}
+      <pre
+        class="max-h-64 overflow-auto rounded-md border border-input bg-background px-3 py-2 font-mono text-xs leading-relaxed text-foreground whitespace-pre-wrap">{output ||
+          (updating ? "Running…" : "(no output)")}</pre>
+    {/if}
+  </div>
+{/snippet}
+
 <Section
   config={{
     title: "Downloads",
@@ -55,6 +106,10 @@
             monospace: true,
           },
         ],
+      },
+      {
+        label: "Backends",
+        items: [{ type: "custom" as const, node: backendsRow }],
       },
     ],
   }}

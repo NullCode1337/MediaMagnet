@@ -58,11 +58,18 @@ pub async fn notify(app: State<'_, App>, body: String) -> Result<(), String> {
     Ok(())
 }
 
+#[derive(serde::Serialize)]
+pub struct ToolUpdateResult {
+    ok: bool,
+    output: String,
+    error: Option<String>,
+}
+
 #[tauri::command]
 pub async fn reinstall_python_deps(
     app: State<'_, App>,
     tools: Option<Vec<String>>,
-) -> Result<(), String> {
+) -> Result<ToolUpdateResult, String> {
     let selected: Vec<Tool> = match tools {
         Some(names) => names
             .iter()
@@ -72,13 +79,28 @@ pub async fn reinstall_python_deps(
     };
 
     if selected.is_empty() {
-        return Err("no known tools requested".into());
+        return Ok(ToolUpdateResult {
+            ok: false,
+            output: String::new(),
+            error: Some("no known tools requested".into()),
+        });
     }
 
-    app.runtime
-        .reinstall_python_deps(&selected)
-        .await
-        .map_err(|e| e.to_string())
+    Ok(match app.runtime.reinstall_python_deps(&selected).await {
+        Ok(output) => ToolUpdateResult {
+            ok: true,
+            output,
+            error: None,
+        },
+        Err(e) => {
+            let message = e.to_string();
+            ToolUpdateResult {
+                ok: false,
+                output: message.clone(),
+                error: Some(message),
+            }
+        }
+    })
 }
 
 #[tauri::command]

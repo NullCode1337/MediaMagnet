@@ -31,6 +31,13 @@ export type TransportEvent =
 
 export type Unsubscribe = () => void;
 
+/** Outcome of a backend reinstall; `output` is the installer's console log. */
+export interface ToolUpdateResult {
+  ok: boolean;
+  output: string;
+  error?: string;
+}
+
 /**
  * Everything the UI needs from its host. The desktop app implements this over
  * Tauri IPC, the browser build over `/api/v1`. Nothing under
@@ -59,6 +66,10 @@ export interface Transport extends Environment {
   getCookies(): Promise<Record<string, string>>;
   clearCookies(): Promise<void>;
   deleteCookie(path: string): Promise<void>;
+
+  // tools
+  /** Reinstalls yt-dlp, gallery-dl and spotdl into the writable overlay. */
+  updateTools(): Promise<ToolUpdateResult>;
 
   // notifications
   notify(message: string): Promise<void>;
