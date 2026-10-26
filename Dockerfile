@@ -24,6 +24,8 @@ COPY Cargo.toml Cargo.lock ./
 COPY crates crates
 COPY apps/desktop/src-tauri/Cargo.toml apps/desktop/src-tauri/Cargo.toml
 COPY apps/desktop/src-tauri/build.rs apps/desktop/src-tauri/build.rs
+# Not built here, but cargo rejects the workspace member without its lib sources.
+COPY apps/desktop/src-tauri/src apps/desktop/src-tauri/src
 # The server embeds the SPA at compile time.
 COPY --from=web /src/apps/web/dist apps/web/dist
 RUN cargo build --release -p mm-server --bin mediamagnet-server
