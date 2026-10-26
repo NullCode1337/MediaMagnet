@@ -125,7 +125,7 @@
 
         <div class="flex-1 overflow-y-auto bg-muted/40 px-4 py-1 space-y-6">
           <div>
-            <p class="text-xs text-muted-foreground font-bold px-1 ml-2 mb-4">
+            <p class="text-xs text-muted-foreground font-bold px-1 ml-2 mb-2">
               Configuration
             </p>
             <div
@@ -147,7 +147,7 @@
           </div>
 
           <div>
-            <p class="text-xs text-muted-foreground font-bold px-1 ml-2 mb-4">
+            <p class="text-xs text-muted-foreground font-bold px-1 ml-2 mb-2">
               Backend
             </p>
             <div
@@ -169,7 +169,7 @@
           </div>
 
           <div>
-            <p class="text-xs text-muted-foreground font-bold px-1 ml-2 mb-4">
+            <p class="text-xs text-muted-foreground font-bold px-1 ml-2 mb-2">
               About
             </p>
             <div
@@ -192,7 +192,7 @@
         </div>
       {:else}
         <h2
-          class="text-sm font-bold font-[Verdana] text-sidebar-foreground/50 mb-4 px-2"
+          class="text-sm font-bold font-[Verdana] text-sidebar-foreground/50 mb-1 px-2"
         >
           Configuration
         </h2>
@@ -212,7 +212,7 @@
         {/each}
 
         <h2
-          class="text-sm font-bold font-[Verdana] text-sidebar-foreground/50 mt-6 mb-4 px-2"
+          class="text-sm font-bold font-[Verdana] text-sidebar-foreground/50 mt-4 mb-1 px-2"
         >
           Backend
         </h2>
@@ -232,7 +232,7 @@
         {/each}
 
         <h2
-          class="text-sm font-bold font-[Verdana] text-sidebar-foreground/50 mt-6 mb-4 px-2"
+          class="text-sm font-bold font-[Verdana] text-sidebar-foreground/50 mt-4 mb-1 px-2"
         >
           About
         </h2>

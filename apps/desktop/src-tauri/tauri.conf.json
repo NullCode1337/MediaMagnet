@@ -2,7 +2,7 @@
   "$schema": "../../../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "MediaMagnet",
   "mainBinaryName": "MediaMagnet",
-  "version": "0.5.3",
+  "version": "0.6.0",
   "identifier": "com.nullcode1337.mediamagnet",
   "build": {
     "frontendDist": "../../web/dist",
@@ -14,8 +14,8 @@
     "windows": [
       {
         "title": "MediaMagnet",
-        "width": 800,
-        "height": 650,
+        "width": 880,
+        "height": 755,
         "minHeight": 200,
         "minWidth": 200,
         "backgroundColor": "#2e2e32",
