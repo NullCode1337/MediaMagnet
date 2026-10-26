@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: MediaMagnet API
-  version: 0.5.3
+  version: 0.6.0
   summary: Self-hosted download API for yt-dlp, gallery-dl and spotdl.
   description: |
     All routes live under `/api/v1`. The desktop application does not expose
@@ -731,7 +731,7 @@ components:
           const: ok
         version:
           type: string
-          examples: ['0.5.3']
+          examples: ['0.6.0']
 
     DownloadRequest:
       type: object

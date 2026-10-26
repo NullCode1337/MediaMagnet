@@ -687,7 +687,7 @@ responses, downloads still work but event streams appear frozen.
 
 ```sh
 curl -fsS http://127.0.0.1:8080/api/v1/health
-# {"status":"ok","version":"0.5.3"}
+# {"status":"ok","version":"0.6.0"}
 
 curl -fsS -H "Authorization: Bearer change-me" \
   http://127.0.0.1:8080/api/v1/tools

@@ -383,7 +383,7 @@ export interface components {
         Health: {
             /** @constant */
             status: "ok";
-            /** @example 0.5.3 */
+            /** @example 0.6.0 */
             version: string;
         };
         DownloadRequest: {
