@@ -68,14 +68,9 @@
   </header>
 
   <div class="flex flex-col gap-3">
-    <div
-      class="relative overflow-hidden rounded-2xl bg-muted/40 shadow-sm ring-1 ring-border/40"
-    >
+    <div class="overflow-hidden rounded-2xl bg-muted/40 shadow-sm">
       <div
-        class="pointer-events-none absolute -right-16 -top-20 size-56 rounded-full bg-primary/10 blur-3xl"
-      ></div>
-      <div
-        class="relative flex flex-col items-center gap-5 px-6 py-8 text-center sm:flex-row sm:text-left"
+        class="flex flex-col items-center gap-5 px-6 py-8 text-center sm:flex-row sm:text-left"
       >
         <img
           src={logo}
