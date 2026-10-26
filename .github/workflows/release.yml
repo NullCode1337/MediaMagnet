@@ -74,6 +74,8 @@ jobs:
       - name: Install frontend dependencies
         run: bun install --frozen-lockfile
 
+      # Relative paths only: GNU tar on the Windows runners parses a drive-letter
+      # path such as D:\a\_temp as a remote host.
       - name: Bundle Python runtime
         shell: bash
         env:
@@ -82,15 +84,27 @@ jobs:
         run: |
           set -euo pipefail
           BIN="apps/desktop/src-tauri/binaries"
-          mkdir -p "$BIN"
-          rm -f "$BIN"/yt-dlp-* "$BIN"/gallery-dl-*
+          TMP="target/tools/$TARGET_TRIPLE"
+          rm -rf "$TMP" "$BIN/python"
+          mkdir -p "$TMP" "$BIN/python"
 
-          PYBIN="$(command -v python3 || command -v python)"
-          URL="$("$PYBIN" -c "import json,os,urllib.request; r=os.environ['PYTHON_STANDALONE_RELEASE']; t=os.environ['TARGET_TRIPLE']; v=os.environ['PYTHON_VERSION']; q=urllib.request.Request(f'https://api.github.com/repos/astral-sh/python-build-standalone/releases/tags/{r}', headers={'Authorization': 'Bearer '+os.environ.get('GITHUB_TOKEN','')}); a=json.load(urllib.request.urlopen(q))['assets']; p=f'cpython-{v}.'; s=f'{t}-install_only.tar.gz'; print(next(x['browser_download_url'] for x in a if x['name'].startswith(p) and x['name'].endswith(s)))")"
+          AUTH=()
+          if [ -n "${GITHUB_TOKEN:-}" ]; then
+            AUTH=(-H "Authorization: Bearer $GITHUB_TOKEN")
+          fi
 
-          curl -fsSL "$URL" -o "$RUNNER_TEMP/python.tar.gz"
-          mkdir -p "$BIN/python"
-          tar -xzf "$RUNNER_TEMP/python.tar.gz" -C "$BIN/python" --strip-components=1
+          URL="$(curl -fsSL ${AUTH[@]+"${AUTH[@]}"} \
+            "https://api.github.com/repos/astral-sh/python-build-standalone/releases/tags/$PYTHON_STANDALONE_RELEASE" \
+            | tr ',' '\n' \
+            | sed -n "s/.*\"browser_download_url\": *\"\\([^\"]*cpython-$PYTHON_VERSION\\.[^\"]*-$TARGET_TRIPLE-install_only\\.tar\\.gz\\)\".*/\\1/p" \
+            | head -n1)"
+          if [ -z "$URL" ]; then
+            echo "no Python $PYTHON_VERSION build for $TARGET_TRIPLE" >&2
+            exit 1
+          fi
+
+          curl -fsSL "$URL" -o "$TMP/python.tar.gz"
+          tar -xzf "$TMP/python.tar.gz" -C "$BIN/python" --strip-components=1
 
           if [ -f "$BIN/python/python.exe" ]; then
             PYTHON="$BIN/python/python.exe"
@@ -98,7 +112,7 @@ jobs:
             PYTHON="$BIN/python/bin/python3"
           fi
 
-          "$PYTHON" -m pip install --no-cache-dir --upgrade \
+          "$PYTHON" -m pip install --no-cache-dir --disable-pip-version-check --upgrade \
             "yt-dlp[default]" \
             "gallery-dl[extra]" \
             "spotdl"
@@ -110,11 +124,13 @@ jobs:
         run: |
           set -euo pipefail
           BIN="apps/desktop/src-tauri/binaries"
+          TMP="target/tools/$TARGET_TRIPLE"
           PYBIN="$(command -v python3 || command -v python)"
-          curl -fsSL "https://github.com/denoland/deno/releases/download/v${DENO_VERSION}/deno-${TARGET_TRIPLE}.zip" \
-            -o "$RUNNER_TEMP/deno.zip"
-          "$PYBIN" -m zipfile -e "$RUNNER_TEMP/deno.zip" "$RUNNER_TEMP/deno"
-          cp "$RUNNER_TEMP"/deno/deno* "$BIN/"
+          mkdir -p "$TMP"
+          curl -fsSL "https://github.com/denoland/deno/releases/download/v$DENO_VERSION/deno-$TARGET_TRIPLE.zip" \
+            -o "$TMP/deno.zip"
+          "$PYBIN" -m zipfile -e "$TMP/deno.zip" "$TMP/deno"
+          cp "$TMP"/deno/deno* "$BIN/"
           chmod +x "$BIN"/deno 2>/dev/null || true
 
       - name: Bundle ffmpeg (Windows)
@@ -123,11 +139,20 @@ jobs:
         run: |
           set -euo pipefail
           BIN="apps/desktop/src-tauri/binaries"
+          TMP="target/tools/${{ matrix.target }}"
           PYBIN="$(command -v python3 || command -v python)"
+          mkdir -p "$TMP"
           curl -fsSL "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n9.0-latest-${{ matrix.ffmpeg }}-lgpl-9.0.zip" \
-            -o "$RUNNER_TEMP/ffmpeg.zip"
-          "$PYBIN" -m zipfile -e "$RUNNER_TEMP/ffmpeg.zip" "$RUNNER_TEMP/ffmpeg"
-          cp "$RUNNER_TEMP"/ffmpeg/*/bin/ffmpeg.exe "$RUNNER_TEMP"/ffmpeg/*/bin/ffprobe.exe "$BIN/"
+            -o "$TMP/ffmpeg.zip"
+          "$PYBIN" -m zipfile -e "$TMP/ffmpeg.zip" "$TMP/ffmpeg"
+          for tool in ffmpeg ffprobe; do
+            found="$(find "$TMP/ffmpeg" -type f -name "$tool.exe" | head -n1)"
+            if [ -z "$found" ]; then
+              echo "the ffmpeg archive did not contain $tool.exe" >&2
+              exit 1
+            fi
+            cp "$found" "$BIN/$tool.exe"
+          done
 
       - name: Bundle ffmpeg (macOS)
         if: startsWith(matrix.ffmpeg, 'darwin')
@@ -211,6 +236,7 @@ jobs:
     needs: server
     permissions:
       contents: write
+      actions: read
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -223,6 +249,7 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
+          pattern: server-*
           path: dist
           merge-multiple: true
 

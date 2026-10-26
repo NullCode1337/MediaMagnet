@@ -1,5 +1,10 @@
 # syntax=docker/dockerfile:1
 
+# BuildKit does not expand variables in COPY --from, so the image is a stage.
+ARG DENO_VERSION=2.9.7
+
+FROM denoland/deno:bin-${DENO_VERSION} AS deno
+
 FROM oven/bun:1 AS web
 WORKDIR /src
 COPY package.json bun.lock ./
@@ -24,7 +29,6 @@ COPY --from=web /src/apps/web/dist apps/web/dist
 RUN cargo build --release -p mm-server --bin mediamagnet-server
 
 FROM python:3.12-slim-bookworm
-ARG DENO_VERSION=2.9.7
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ffmpeg ca-certificates \
@@ -35,7 +39,7 @@ RUN pip install --no-cache-dir \
     "gallery-dl[extra]" \
     "spotdl"
 
-COPY --from=denoland/deno:bin-${DENO_VERSION} /deno /usr/local/bin/deno
+COPY --from=deno /deno /usr/local/bin/deno
 
 COPY --from=server /src/target/release/mediamagnet-server /app/mediamagnet-server
 
