@@ -219,7 +219,7 @@
             {#if item.type === "switch"}
               <label
                 for="{item.id}--{sindex}-{ii}"
-                class="group flex min-h-[64px] cursor-pointer items-center gap-4 px-4 py-3.5 transition-colors hover:bg-foreground/[0.03] {item.disabled
+                class="group flex min-h-16 cursor-pointer items-center gap-4 px-4 py-3.5 transition-colors hover:bg-foreground/3 {item.disabled
                   ? 'pointer-events-none opacity-40'
                   : ''}"
               >
@@ -406,8 +406,8 @@
                             (e.key === "Enter" || e.key === " ") &&
                             entry.onclick?.()
                         : undefined}
-                      class="group flex min-h-[56px] items-center gap-4 px-4 py-3 transition-colors {entry.onclick
-                        ? 'cursor-pointer hover:bg-foreground/[0.03]'
+                      class="group flex min-h-14 items-center gap-4 px-4 py-3 transition-colors {entry.onclick
+                        ? 'cursor-pointer hover:bg-foreground/3'
                         : ''}"
                     >
                       {#if entry.icon}
@@ -464,7 +464,7 @@
                 </div>
               {:else}
                 <div
-                  class="max-h-[400px] overflow-y-auto divide-y divide-border/40"
+                  class="max-h-100 overflow-y-auto divide-y divide-border/40"
                 >
                   {#each item.value as siteArg (siteArg.id)}
                     <div class="flex flex-col gap-4 px-4 py-5 bg-transparent">

@@ -61,7 +61,7 @@
                 value:
                   "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
               },
-              { label: "Best (any)", value: "bestvideo+bestaudio/best" },
+              { label: "Best", value: "bestvideo+bestaudio/best" },
               {
                 label: "1080p",
                 value: "bestvideo[height<=1080]+bestaudio/best[height<=1080]",
@@ -78,7 +78,7 @@
                 label: "Audio only (m4a)",
                 value: "bestaudio[ext=m4a]/bestaudio",
               },
-              { label: "Audio only (mp3)", value: "bestaudio/best" },
+              { label: "Audio only (webm)", value: "bestaudio/best" },
               { label: "Worst (smallest)", value: "worst" },
             ],
             value: settings.config?.yt_format ?? "",

@@ -97,7 +97,7 @@
         <button
           type="button"
           onclick={() => transport.openUrl(link.href)}
-          class="group flex w-full cursor-pointer items-center gap-4 px-4 py-3.5 text-left transition-colors hover:bg-foreground/[0.03]"
+          class="group flex w-full cursor-pointer items-center gap-4 px-4 py-3.5 text-left transition-colors hover:bg-foreground/3"
         >
           <span class="shrink-0 text-primary"><Icon size={17} /></span>
           <span class="min-w-0 flex-1">

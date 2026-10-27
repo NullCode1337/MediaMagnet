@@ -132,7 +132,7 @@
       bind:value={cookieRawContent}
       class="flex w-full resize-y rounded-lg border border-input bg-muted/20
              px-3 py-2 font-mono text-xs leading-relaxed overscroll-contain
-             placeholder:text-muted-foreground/60 min-h-[100px]
+             placeholder:text-muted-foreground/60 min-h-25
              focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring
              focus-visible:ring-offset-2"
       placeholder={"[ { 'domain': '.google.com', ... } ]  or  # Netscape format..."}
