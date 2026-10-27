@@ -127,6 +127,14 @@
 </script>
 
 <script lang="ts">
+  const ITEM_TITLE_CLASS =
+    "text-[15px] font-normal leading-tight text-foreground";
+  const ITEM_DESCRIPTION_CLASS = "text-xs leading-normal text-muted-foreground";
+  const ARGS_TEXTAREA_BASE =
+    "flex w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-xs leading-relaxed text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-40";
+  const ARGS_TEXTAREA_CLASS = `${ARGS_TEXTAREA_BASE} font-mono`;
+  const argsMinHeight = (rows = 3) => rows * 22 + 20 + "px";
+
   let { config } = $props();
 </script>
 
@@ -179,31 +187,25 @@
         {/if}
 
         <div
-          class="overflow-hidden rounded-2xl bg-muted/40 divide-y divide-border/50 shadow-sm"
+          class="overflow-hidden rounded-2xl bg-muted/40 shadow-sm {section.headerAction
+            ? ''
+            : 'divide-y divide-border/50'}"
         >
           {#if section.headerAction}
-            <div
-              class="flex items-center justify-between gap-4 bg-foreground/5 px-4 py-3"
-            >
-              <div>
+            <div class="flex items-start justify-between gap-3 px-4 pt-4 pb-2">
+              <div class="min-w-0 flex flex-col gap-0.5">
                 {#if section.label}
-                  <p class="text-xs font-medium text-primary">
-                    {section.label}
-                  </p>
+                  <p class={ITEM_TITLE_CLASS}>{section.label}</p>
                 {/if}
                 {#if section.description}
-                  <p
-                    class="mt-0.5 text-11 text-muted-foreground/60 leading-normal"
-                  >
-                    {section.description}
-                  </p>
+                  <p class={ITEM_DESCRIPTION_CLASS}>{section.description}</p>
                 {/if}
               </div>
               <Button
                 variant={section.headerAction.variant ?? "outline"}
                 size="sm"
                 onclick={section.headerAction.onclick}
-                class="h-8 border-border bg-transparent text-xs text-primary hover:bg-foreground/5"
+                class="h-8 shrink-0 border-border bg-transparent text-xs text-primary hover:bg-foreground/5"
               >
                 {#if section.headerAction.icon}
                   <span class="mr-1.5 flex shrink-0 items-center">
@@ -289,15 +291,13 @@
                     for="{item.id}--{sindex}-{ii}"
                     class="flex flex-1 flex-col gap-0.5"
                   >
-                    <span class="text-[15px] font-normal text-foreground"
-                      >{item.label}</span
-                    >
+                    <span class={ITEM_TITLE_CLASS}>{item.label}</span>
                     {#if item.descriptionNode}
-                      <span class="text-xs text-muted-foreground leading-normal"
+                      <span class={ITEM_DESCRIPTION_CLASS}
                         >{@render item.descriptionNode()}</span
                       >
                     {:else if item.description}
-                      <span class="text-xs text-muted-foreground leading-normal"
+                      <span class={ITEM_DESCRIPTION_CLASS}
                         >{item.description}</span
                       >
                     {/if}
@@ -325,9 +325,8 @@
                   id="{item.id}--{sindex}-{ii}"
                   value={item.value}
                   placeholder={item.placeholder}
-                  style="min-height: {(item.minRows ?? 3) * 22 + 20}px"
-                  class="flex w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-xs leading-relaxed text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-40 {item.monospace !==
-                  false
+                  style="min-height: {argsMinHeight(item.minRows)}"
+                  class="{ARGS_TEXTAREA_BASE} {item.monospace !== false
                     ? 'font-mono'
                     : ''}"
                   onchange={(e) =>
@@ -463,34 +462,10 @@
                   </div>
                 </div>
               {:else}
-                <div
-                  class="max-h-100 overflow-y-auto divide-y divide-border/40"
-                >
+                <div class="divide-y divide-border/40">
                   {#each item.value as siteArg (siteArg.id)}
-                    <div class="flex flex-col gap-4 px-4 py-5 bg-transparent">
-                      <div class="flex flex-col gap-2.5">
-                        <!-- svelte-ignore a11y_label_has_associated_control -->
-                        <div class="flex items-center justify-between">
-                          <label class="text-[15px] font-normal text-foreground"
-                            >Domain</label
-                          >
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onclick={() => {
-                              item.onchange(
-                                item.value.filter(
-                                  (i: GlobalArg) => i.id !== siteArg.id,
-                                ),
-                              );
-                            }}
-                            class="h-8 w-8 cursor-pointer shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                            aria-label="Remove {siteArg.domain}"
-                          >
-                            <Delete size={14} />
-                          </Button>
-                        </div>
-
+                    <div class="flex flex-col gap-2 px-4 pt-2 pb-3">
+                      <div class="flex items-center gap-2">
                         <Input
                           value={siteArg.domain}
                           onchange={(e) => {
@@ -502,30 +477,41 @@
                             );
                           }}
                           placeholder={item.domainPlaceholder ?? "example.com"}
-                          class="h-10 border-input bg-background font-mono text-sm text-foreground focus-visible:ring-ring"
+                          aria-label="Domain"
+                          class="h-9 rounded-md border-input bg-muted/50 px-3 font-mono text-xs text-foreground focus-visible:ring-ring"
                         />
-                      </div>
-
-                      <div class="flex flex-col gap-2.5">
-                        <!-- svelte-ignore a11y_label_has_associated_control -->
-                        <label class="text-[15px] font-normal text-foreground"
-                          >Arguments</label
-                        >
-                        <textarea
-                          value={siteArg.args}
-                          onchange={(e) => {
-                            const val = (e.target as HTMLTextAreaElement).value;
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onclick={() => {
                             item.onchange(
-                              item.value.map((i: GlobalArg) =>
-                                i.id === siteArg.id ? { ...i, args: val } : i,
+                              item.value.filter(
+                                (i: GlobalArg) => i.id !== siteArg.id,
                               ),
                             );
                           }}
-                          placeholder={item.argsPlaceholder ?? "--api-key=xyz"}
-                          style="min-height: 80px"
-                          class="flex w-full resize-y rounded-md border border-input bg-background px-3 py-2 font-mono text-xs leading-relaxed text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        ></textarea>
+                          class="h-8 w-8 cursor-pointer shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                          aria-label="Remove {siteArg.domain}"
+                        >
+                          <Delete size={14} />
+                        </Button>
                       </div>
+
+                      <textarea
+                        value={siteArg.args}
+                        onchange={(e) => {
+                          const val = (e.target as HTMLTextAreaElement).value;
+                          item.onchange(
+                            item.value.map((i: GlobalArg) =>
+                              i.id === siteArg.id ? { ...i, args: val } : i,
+                            ),
+                          );
+                        }}
+                        placeholder={item.argsPlaceholder ?? "--api-key=xyz"}
+                        aria-label="Arguments"
+                        style="min-height: {argsMinHeight()}"
+                        class={ARGS_TEXTAREA_CLASS}
+                      ></textarea>
                     </div>
                   {/each}
                 </div>
