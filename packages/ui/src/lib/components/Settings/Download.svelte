@@ -93,6 +93,7 @@
     title: "Downloads",
     sections: [
       {
+        label: "Configure",
         items: [
           ...(isDesktop
             ? [{ type: "custom" as const, node: downloadPathRow }]
@@ -105,6 +106,11 @@
             onchange: (val: string) => settings.update({ user_agent: val }),
             monospace: true,
           },
+        ],
+      },
+      {
+        label: "Backends",
+        items: [
           {
             type: "switch" as const,
             id: "preserve_mtime",
@@ -112,14 +118,10 @@
             description:
               "Date files from the server's Last-Modified header instead of the download time",
             value: settings.config?.preserve_mtime ?? false,
-            onchange: (v: boolean) =>
-              settings.update({ preserve_mtime: v }),
+            onchange: (v: boolean) => settings.update({ preserve_mtime: v }),
           },
+          { type: "custom" as const, node: backendsRow },
         ],
-      },
-      {
-        label: "Backends",
-        items: [{ type: "custom" as const, node: backendsRow }],
       },
     ],
   }}
