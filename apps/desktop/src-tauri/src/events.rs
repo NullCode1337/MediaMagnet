@@ -19,6 +19,12 @@ struct IdPayload {
 }
 
 #[derive(Serialize, Clone)]
+struct IdFilesPayload {
+    id: String,
+    files: Vec<String>,
+}
+
+#[derive(Serialize, Clone)]
 struct IdValuePayload<T> {
     id: String,
     value: T,
@@ -37,8 +43,8 @@ impl EventSink for TauriEventSink {
             CoreEvent::DownloadStarted { id } => {
                 let _ = app.emit("download-started", IdPayload { id });
             }
-            CoreEvent::DownloadFinished { id } => {
-                let _ = app.emit("download-finished", IdPayload { id });
+            CoreEvent::DownloadFinished { id, files } => {
+                let _ = app.emit("download-finished", IdFilesPayload { id, files });
             }
             CoreEvent::DownloadProgress { id, value } => {
                 let _ = app.emit("download-progress", IdValuePayload { id, value });

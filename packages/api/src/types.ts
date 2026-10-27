@@ -22,7 +22,12 @@ export interface NotificationEvent {
 /** Every stream event the UI listens to, independent of how it is carried. */
 export type TransportEvent =
   | { type: "download-started"; id: string }
-  | { type: "download-finished"; id: string }
+  | {
+      type: "download-finished";
+      id: string;
+      /** Output files relative to the server's download root. */
+      files?: string[];
+    }
   | { type: "download-progress"; id: string; value: number }
   | { type: "download-status"; id: string; value: string }
   | { type: "download-error"; id: string; value: string }

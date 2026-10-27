@@ -101,6 +101,8 @@ async function errorMessage(response: Response): Promise<string> {
 
 export function createHttpTransport(): Transport {
   let token = readStoredToken();
+  /** Jobs this browser started, so only it saves their finished files. */
+  const requestedJobs = new Set<string>();
 
   function promptForToken(): boolean {
     const entered = window.prompt(
@@ -182,6 +184,37 @@ export function createHttpTransport(): Transport {
     return path.split(/[\\/]/).pop() || "download";
   }
 
+  /* Saves a finished job's file through the browser */
+  function saveJobFile(id: string, path: string) {
+    const url = new URL(
+      `${API}/downloads/${encodeURIComponent(id)}/file`,
+      window.location.origin,
+    );
+    url.searchParams.set("path", path);
+    if (token) url.searchParams.set("token", token);
+
+    const link = document.createElement("a");
+    link.href = url.toString();
+    link.download = fileNameOf(path);
+    link.rel = "noopener";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+
+  /* Runs once per job in the tab that started it, never in other tabs. */
+  function autoSaveFinishedJob(id: string, files: unknown) {
+    if (!requestedJobs.delete(id)) return;
+    if (!Array.isArray(files)) return;
+
+    const paths = files.filter(
+      (file): file is string => typeof file === "string" && file.length > 0,
+    );
+    paths.forEach((path, index) => {
+      window.setTimeout(() => saveJobFile(id, path), index * 400);
+    });
+  }
+
   /** The browser's own download prompt names the file, so there is nothing to ask. */
   function saveFile(options: SaveOptions): Promise<string | null> {
     return Promise.resolve(options.defaultPath ?? "download.txt");
@@ -218,7 +251,14 @@ export function createHttpTransport(): Transport {
           content,
         }));
       }
-      await send("POST", "/downloads", body);
+      // Mark it first: a very short job could finish before the POST returns.
+      requestedJobs.add(id);
+      try {
+        await send("POST", "/downloads", body);
+      } catch (err) {
+        requestedJobs.delete(id);
+        throw err;
+      }
     },
     pause: async (id) => {
       await send("POST", `/downloads/${encodeURIComponent(id)}/pause`);
@@ -226,6 +266,7 @@ export function createHttpTransport(): Transport {
     // A finished or cancelled job is gone from the server; the desktop treats
     // that as success, so the browser does too.
     cancel: async (id) => {
+      requestedJobs.delete(id);
       try {
         await send("DELETE", `/downloads/${encodeURIComponent(id)}`);
       } catch (err) {
@@ -233,6 +274,7 @@ export function createHttpTransport(): Transport {
       }
     },
     cancelAll: async () => {
+      requestedJobs.clear();
       await send("DELETE", "/downloads");
     },
 
@@ -332,6 +374,16 @@ export function createHttpTransport(): Transport {
           source.addEventListener(type, (message) => {
             const event = JSON.parse((message as MessageEvent).data) as
               Record<string, unknown>;
+            if (event.type === "download-finished") {
+              autoSaveFinishedJob(String(event.id ?? ""), event.files);
+            } else if (event.type === "download-error") {
+              requestedJobs.delete(String(event.id ?? ""));
+            } else if (
+              event.type === "download-state" &&
+              (event.value === "cancelled" || event.value === "failed")
+            ) {
+              requestedJobs.delete(String(event.id ?? ""));
+            }
             if (event.type === "notification") {
               handler({
                 type: "notification",

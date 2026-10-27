@@ -44,6 +44,7 @@ pub enum CoreEvent {
     },
     DownloadFinished {
         id: String,
+        files: Vec<String>,
     },
     Notification {
         level: NotificationLevel,

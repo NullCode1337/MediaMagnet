@@ -6,17 +6,20 @@ mod auth;
 mod events;
 mod files;
 mod jobs;
+mod retention;
 mod routes;
 mod state;
 
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 
 use mm_core::{Engine, Policy, RuntimeConfig, ToolRuntime};
 
 use crate::assets::StaticAssets;
 use crate::jobs::Jobs;
+use crate::retention::Retention;
 use crate::state::AppState;
 
 pub struct Config {
@@ -26,6 +29,7 @@ pub struct Config {
     pub static_assets: StaticAssets,
     pub token: Option<String>,
     pub allow_custom_args: bool,
+    pub file_ttl: Duration,
     /// Tools shipped beside the executable; `None` discovers them at startup.
     pub binaries_dir: Option<PathBuf>,
 }
@@ -77,6 +81,14 @@ impl Config {
             .map(|v| matches!(v.trim().to_ascii_lowercase().as_str(), "1" | "true" | "yes"))
             .unwrap_or(false);
 
+        // How long an undelivered output may stay in the download root. A
+        // client that fetches it sooner removes it immediately.
+        let file_ttl = std::env::var("MM_FILE_TTL_SECS")
+            .ok()
+            .and_then(|v| v.trim().parse::<u64>().ok())
+            .filter(|secs| *secs > 0)
+            .unwrap_or(3600);
+
         Ok(Self {
             bind,
             data_dir,
@@ -84,6 +96,7 @@ impl Config {
             static_assets,
             token,
             allow_custom_args,
+            file_ttl: Duration::from_secs(file_ttl),
             binaries_dir: bundled.or_else(binaries_dir),
         })
     }
@@ -131,7 +144,15 @@ async fn serve(config: Config) -> Result<(), String> {
         python_path: env_path("MM_PYTHON"),
     }));
 
-    let events = crate::events::EventHub::new();
+    // Completion is recorded by the hub before it broadcasts; this task only
+    // mirrors the remaining state changes into the job list.
+    let jobs = Arc::new(Jobs::default());
+    let retention = Retention::open(
+        config.download_root.clone(),
+        config.file_ttl,
+        app_data_dir.join("job-files.json"),
+    );
+    let events = crate::events::EventHub::new(jobs.clone(), retention.clone());
     let policy = if config.allow_custom_args {
         Policy::server_with_custom_args()
     } else {
@@ -146,10 +167,10 @@ async fn serve(config: Config) -> Result<(), String> {
         download_root: config.download_root.clone(),
         token: config.token.clone(),
         static_assets: config.static_assets.clone(),
-        jobs: Jobs::default(),
+        jobs,
+        retention,
     });
 
-    // Core emits completion and state changes; mirror them into the job list.
     let job_state = state.clone();
     let mut event_rx = state.events.subscribe();
     tokio::spawn(async move {
@@ -159,7 +180,6 @@ async fn serve(config: Config) -> Result<(), String> {
             };
             let next = match value.get("type").and_then(serde_json::Value::as_str) {
                 Some("download-started") => "running",
-                Some("download-finished") => "finished",
                 Some("download-error") => "failed",
                 Some("download-state") => value
                     .get("value")
@@ -179,6 +199,10 @@ async fn serve(config: Config) -> Result<(), String> {
     println!(
         "[MediaMagnet][Server] download root: {}",
         config.download_root.display()
+    );
+    println!(
+        "[MediaMagnet][Server] output files: deleted after delivery or {}s",
+        config.file_ttl.as_secs()
     );
     println!(
         "[MediaMagnet][Server] static assets: {}",

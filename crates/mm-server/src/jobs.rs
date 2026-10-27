@@ -18,6 +18,8 @@ pub struct JobSummary {
     pub id: String,
     pub url: String,
     pub state: String,
+    /// Output files relative to the download root; filled when the job finishes.
+    pub files: Vec<String>,
     /// Unix time in milliseconds; used to order the list.
     pub created_at_ms: u64,
 }
@@ -25,6 +27,7 @@ pub struct JobSummary {
 struct JobRecord {
     request: DownloadRequest,
     state: String,
+    files: Vec<String>,
     created_at_ms: u64,
 }
 
@@ -51,6 +54,7 @@ impl Jobs {
             JobRecord {
                 request,
                 state: "running".to_string(),
+                files: Vec::new(),
                 created_at_ms: now_ms(),
             },
         );
@@ -68,6 +72,16 @@ impl Jobs {
         if let Ok(mut records) = self.records.lock() {
             if let Some(record) = records.get_mut(id) {
                 record.state = state.to_string();
+            }
+        }
+    }
+
+    /// Records completion together with the files the job produced.
+    pub fn set_finished(&self, id: &str, files: Vec<String>) {
+        if let Ok(mut records) = self.records.lock() {
+            if let Some(record) = records.get_mut(id) {
+                record.state = "finished".to_string();
+                record.files = files;
             }
         }
     }
@@ -98,6 +112,7 @@ impl Jobs {
             return None;
         }
         record.state = "running".to_string();
+        record.files.clear();
         Some(record.request.clone())
     }
 }
@@ -107,6 +122,7 @@ fn summarize(record: &JobRecord) -> JobSummary {
         id: record.request.id.clone(),
         url: record.request.url.clone(),
         state: record.state.clone(),
+        files: record.files.clone(),
         created_at_ms: record.created_at_ms,
     }
 }
@@ -173,6 +189,27 @@ mod tests {
         jobs.set_state("a", "paused");
         assert!(jobs.take_for_resume("a").is_some());
         assert_eq!(jobs.summary("a").unwrap().state, "running");
+    }
+
+    #[test]
+    fn finished_jobs_report_their_files() {
+        let jobs = Jobs::default();
+        jobs.insert(request("a"));
+        jobs.set_finished("a", vec!["clip.mp4".into()]);
+
+        let summary = jobs.summary("a").unwrap();
+        assert_eq!(summary.state, "finished");
+        assert_eq!(summary.files, vec!["clip.mp4".to_string()]);
+    }
+
+    #[test]
+    fn resuming_forgets_previous_output_files() {
+        let jobs = Jobs::default();
+        jobs.insert(request("a"));
+        jobs.set_finished("a", vec!["clip.mp4".into()]);
+        jobs.set_state("a", "paused");
+        assert!(jobs.take_for_resume("a").is_some());
+        assert!(jobs.summary("a").unwrap().files.is_empty());
     }
 
     #[test]

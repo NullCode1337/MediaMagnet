@@ -4,6 +4,7 @@ use std::path::{Component, Path, PathBuf};
 use std::process::Stdio;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, BufReader};
@@ -433,6 +434,8 @@ impl Engine {
                 if !settings.user_agent.is_empty() {
                     cmd.args(["--user-agent", &settings.user_agent]);
                 }
+
+                cmd.args(["--print", "after_move:filepath", "--no-quiet"]);
             }
             Backend::GalleryDl => {
                 cmd.args(["-d", "."]);
@@ -463,7 +466,10 @@ impl Engine {
 
         if lc.contains("didg") && lc.contains("ls.i") && !lc.contains("original") {
             self.status(&id, "Skipped: Not original version");
-            self.emit(CoreEvent::DownloadFinished { id });
+            self.emit(CoreEvent::DownloadFinished {
+                id,
+                files: Vec::new(),
+            });
             return;
         }
 
@@ -536,8 +542,9 @@ impl Engine {
         };
 
         let mut succeeded = true;
+        let mut finished_files = Vec::new();
 
-        if let Err(e) = self
+        match self
             .download_url(
                 prepared.0,
                 &request.url,
@@ -548,68 +555,77 @@ impl Engine {
             )
             .await
         {
-            if prepared.1 {
-                println!(
-                    "[MediaMagnet] Download failed ({}), retrying without cookies...",
-                    id
-                );
-                self.status(&id, "FAILED: Retrying without cookies...");
+            Ok(files) => finished_files = files,
+            Err(e) => {
+                if prepared.1 {
+                    println!(
+                        "[MediaMagnet] Download failed ({}), retrying without cookies...",
+                        id
+                    );
+                    self.status(&id, "FAILED: Retrying without cookies...");
 
-                let retry_spec = JobSpec {
-                    with_cookies: false,
-                    ..spec.clone()
-                };
+                    let retry_spec = JobSpec {
+                        with_cookies: false,
+                        ..spec.clone()
+                    };
 
-                match self
-                    .apply_download_args(&request.url, backend, &retry_spec)
-                    .await
-                {
-                    Ok((retry_cmd, _)) => {
-                        if let Err(e) = self
-                            .download_url(
-                                retry_cmd,
-                                &request.url,
-                                backend,
-                                &request.base_dir,
-                                &id,
-                                retry_spec,
-                            )
-                            .await
-                        {
-                            println!(
-                                "[MediaMagnet] Download failed without cookies ({}): {}",
-                                id, e
-                            );
+                    match self
+                        .apply_download_args(&request.url, backend, &retry_spec)
+                        .await
+                    {
+                        Ok((retry_cmd, _)) => {
+                            match self
+                                .download_url(
+                                    retry_cmd,
+                                    &request.url,
+                                    backend,
+                                    &request.base_dir,
+                                    &id,
+                                    retry_spec,
+                                )
+                                .await
+                            {
+                                Ok(files) => finished_files = files,
+                                Err(e) => {
+                                    println!(
+                                        "[MediaMagnet] Download failed without cookies ({}): {}",
+                                        id, e
+                                    );
+                                    self.emit(CoreEvent::DownloadError {
+                                        id: id.clone(),
+                                        value: format!(
+                                            "Download failed: {}",
+                                            with_probe_reason(e.to_string())
+                                        ),
+                                    });
+                                    succeeded = false;
+                                }
+                            }
+                        }
+                        Err(e) => {
                             self.emit(CoreEvent::DownloadError {
                                 id: id.clone(),
-                                value: format!(
-                                    "Download failed: {}",
-                                    with_probe_reason(e.to_string())
-                                ),
+                                value: e.to_string(),
                             });
                             succeeded = false;
                         }
                     }
-                    Err(e) => {
-                        self.emit(CoreEvent::DownloadError {
-                            id: id.clone(),
-                            value: e.to_string(),
-                        });
-                        succeeded = false;
-                    }
+                } else {
+                    println!("[MediaMagnet] Download failed ({}): {}", id, e);
+                    self.emit(CoreEvent::DownloadError {
+                        id: id.clone(),
+                        value: format!("Download failed: {}", with_probe_reason(e.to_string())),
+                    });
+                    succeeded = false;
                 }
-            } else {
-                println!("[MediaMagnet] Download failed ({}): {}", id, e);
-                self.emit(CoreEvent::DownloadError {
-                    id: id.clone(),
-                    value: format!("Download failed: {}", with_probe_reason(e.to_string())),
-                });
-                succeeded = false;
             }
         }
 
         if succeeded {
-            self.emit(CoreEvent::DownloadFinished { id });
+            self.emit(CoreEvent::DownloadFinished {
+                id,
+                files: finished_files,
+            });
         }
     }
 
@@ -621,10 +637,12 @@ impl Engine {
         base_dir: &Path,
         id: &str,
         spec: JobSpec,
-    ) -> Result<()> {
+    ) -> Result<Vec<String>> {
         let id = id.to_string();
         std::fs::create_dir_all(base_dir)?;
         cmd.current_dir(base_dir);
+        let started_at = SystemTime::now();
+        let output_files = Arc::new(Mutex::new(Vec::<String>::new()));
 
         let total_urls = if backend == Backend::GalleryDl {
             println!("\n[MediaMagnet][gallery-dl] Counting total urls...");
@@ -673,6 +691,8 @@ impl Engine {
         let ad_out = already_downloaded.clone();
         let sink_out = self.sink.clone();
         let id_out = id.clone();
+        let base_out = base_dir.to_path_buf();
+        let files_out = output_files.clone();
 
         let out_handle = tokio::spawn(async move {
             match backend {
@@ -732,6 +752,14 @@ impl Engine {
 
                 Backend::YtDlp => {
                     while let Ok(Some(line)) = out_reader.next_line().await {
+                        // `--print after_move:filepath` prints the final path as a
+                        // plain line; keep it out of the status stream.
+                        if !line.trim_start().starts_with('{')
+                            && record_output_file(&files_out, &base_out, &line)
+                        {
+                            println!("{:#}", line);
+                            continue;
+                        }
                         if !line.contains('{') {
                             println!("{:#}", line);
                         }
@@ -788,6 +816,9 @@ impl Engine {
                     let mut downloaded = 0usize;
 
                     while let Ok(Some(line)) = out_reader.next_line().await {
+                        // gallery-dl prints each finished file path on stdout.
+                        record_output_file(&files_out, &base_out, &line);
+
                         sink_out.emit(CoreEvent::DownloadStatus {
                             id: id_out.clone(),
                             value: line.clone(),
@@ -877,6 +908,16 @@ impl Engine {
 
         if backend == Backend::GalleryDl {
             self.postprocess_directlink(base_dir)?;
+
+            // gallery-dl moves direct links after downloading, so the paths the
+            // reader saw are no longer where the file ended up.
+            let mut files = output_files.lock().unwrap_or_else(|e| e.into_inner());
+            for file in files.iter_mut() {
+                if let Some(name) = file.strip_prefix("directlink/") {
+                    let domain = name.split('_').next().unwrap_or("unknown");
+                    *file = format!("{domain}/{name}");
+                }
+            }
         }
 
         if let Some(status) = exit_status {
@@ -893,7 +934,20 @@ impl Engine {
             }
         }
 
-        Ok(())
+        let mut files = output_files
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone();
+
+        // spotdl never prints final paths, and other backends can be quiet when
+        // a file already existed. Fall back to files written during this job.
+        if files.is_empty() {
+            files = scan_recent_files(base_dir, started_at);
+        }
+
+        files.sort();
+        files.dedup();
+        Ok(files)
     }
 
     fn postprocess_directlink(&self, base_dir: &Path) -> Result<()> {
@@ -1126,6 +1180,120 @@ fn strip_ansi_codes(s: &str) -> std::borrow::Cow<'_, str> {
     static RE: std::sync::LazyLock<regex::Regex> =
         std::sync::LazyLock::new(|| regex::Regex::new(r"\x1b\[[0-9;]*m").unwrap());
     RE.replace_all(s, "")
+}
+
+fn record_output_file(files: &Mutex<Vec<String>>, base_dir: &Path, line: &str) -> bool {
+    let line = strip_ansi_codes(line);
+    let line = line.trim();
+    if line.is_empty()
+        || line.starts_with('[')
+        || line.starts_with('#')
+        || line.starts_with('{')
+        || line.contains("://")
+    {
+        return false;
+    }
+
+    let candidate = Path::new(line);
+    let path = if candidate.is_absolute() {
+        candidate.to_path_buf()
+    } else {
+        base_dir.join(candidate)
+    };
+    let (Ok(path), Ok(base)) = (path.canonicalize(), base_dir.canonicalize()) else {
+        return false;
+    };
+    if !path.is_file() {
+        return false;
+    }
+    let Ok(relative) = path.strip_prefix(&base) else {
+        return false;
+    };
+    let relative = relative
+        .components()
+        .map(|part| part.as_os_str().to_string_lossy())
+        .collect::<Vec<_>>()
+        .join("/");
+    if relative.is_empty() {
+        return false;
+    }
+
+    let mut files = files
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    if !files.contains(&relative) {
+        files.push(relative);
+    }
+    true
+}
+
+/// Fallback for backends that do not print paths (spotdl): every file written
+/// after the job started, relative to `base_dir`.
+fn scan_recent_files(base_dir: &Path, since: std::time::SystemTime) -> Vec<String> {
+    let Ok(base) = base_dir.canonicalize() else {
+        return Vec::new();
+    };
+
+    let mut found = Vec::new();
+    let mut stack = vec![(base.clone(), 0usize)];
+    while let Some((dir, depth)) = stack.pop() {
+        if depth > 4 {
+            continue;
+        }
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if name.starts_with('.') {
+                continue;
+            }
+            let path = entry.path();
+            let Ok(metadata) = entry.metadata() else {
+                continue;
+            };
+            if metadata.is_dir() {
+                stack.push((path, depth + 1));
+                continue;
+            }
+            if !metadata.is_file() {
+                continue;
+            }
+
+            let recent = metadata
+                .modified()
+                .ok()
+                .and_then(|modified| modified.checked_add(std::time::Duration::from_secs(2)))
+                .map(|modified| modified >= since)
+                .unwrap_or(false);
+            if !recent {
+                continue;
+            }
+
+            let extension = path
+                .extension()
+                .and_then(|extension| extension.to_str())
+                .unwrap_or("")
+                .to_lowercase();
+            if matches!(
+                extension.as_str(),
+                "part" | "ytdl" | "temp" | "tmp" | "m3u" | "m3u8"
+            ) {
+                continue;
+            }
+
+            if let Ok(relative) = path.strip_prefix(&base) {
+                found.push(
+                    relative
+                        .components()
+                        .map(|part| part.as_os_str().to_string_lossy())
+                        .collect::<Vec<_>>()
+                        .join("/"),
+                );
+            }
+        }
+    }
+    found
 }
 
 #[cfg(test)]

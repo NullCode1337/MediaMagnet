@@ -106,6 +106,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/downloads/{id}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stream a finished job's output file
+         * @description Serves a file the job produced, with
+         *     `Content-Disposition: attachment`, so a browser saves it. A single
+         *     `Range` header is honoured. `files` on `download-finished` lists the
+         *     relative paths a job wrote.
+         *
+         *     A job that produced several files returns `409 multiple_files` unless
+         *     `path` selects one.
+         */
+        get: operations["downloadJobFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/settings": {
         parameters: {
             query?: never;
@@ -260,7 +286,8 @@ export interface paths {
          * @description `path` is relative to the download root and may contain `/`; each
          *     segment is percent-encoded (the `url` field from `listFiles` is ready
          *     to use). A single `Range` header is honoured, so media players can
-         *     seek. The response uses `Content-Disposition: inline`.
+         *     seek. The response uses `Content-Disposition: inline` unless
+         *     `download` asks for an attachment.
          */
         get: operations["downloadFile"];
         put?: never;
@@ -380,6 +407,13 @@ export interface components {
             /** @description Human-readable detail; may change between versions. */
             message: string;
         };
+        MultipleFilesError: {
+            /** @constant */
+            error: "multiple_files";
+            message: string;
+            /** @description The job's files; pass one as `path` to download it. */
+            files: string[];
+        };
         Health: {
             /** @constant */
             status: "ok";
@@ -418,6 +452,11 @@ export interface components {
             url: string;
             /** @enum {string} */
             state: "running" | "paused" | "cancelled" | "failed" | "finished";
+            /**
+             * @description Files the job wrote, relative to the download root. Empty until the
+             *     job finishes; cleared when a paused job is resumed.
+             */
+            files?: string[];
             /**
              * Format: int64
              * @description Unix time in milliseconds when the server accepted the job.
@@ -609,6 +648,11 @@ export interface components {
              */
             type: "download-finished";
             id: string;
+            /**
+             * @description Files the job wrote, relative to the download root. Empty or absent
+             *     when nothing was written.
+             */
+            files?: string[];
         };
         DownloadProgressEvent: {
             /**
@@ -938,6 +982,83 @@ export interface operations {
             };
         };
     };
+    downloadJobFile: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One of the job's `files`, relative to the download root. Required
+                 *     when the job wrote more than one file.
+                 */
+                path?: string;
+                /** @description Bearer token for download navigations that cannot set headers. */
+                token?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Job id chosen by the client when the download was created. */
+                id: components["parameters"]["DownloadId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Whole file. */
+            200: {
+                headers: {
+                    "Accept-Ranges"?: "bytes";
+                    "Content-Disposition"?: string;
+                    "Content-Length"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            /** @description One byte range. */
+            206: {
+                headers: {
+                    "Content-Range"?: string;
+                    "Content-Length"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /**
+             * @description No such download (`no_such_download`), the job has not written a
+             *     file (`no_output_file`), or `path` is not one of its files
+             *     (`no_such_file`).
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The job produced several files (`multiple_files`); `path` selects one. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MultipleFilesError"];
+                };
+            };
+            /** @description The range is unsatisfiable (`bad_range`). */
+            416: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
     getSettings: {
         parameters: {
             query?: never;
@@ -1255,7 +1376,10 @@ export interface operations {
     };
     downloadFile: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description When `1`, `true` or `yes`, use `Content-Disposition: attachment`. */
+                download?: string;
+            };
             header?: never;
             path: {
                 /** @description Percent-encoded relative path. */

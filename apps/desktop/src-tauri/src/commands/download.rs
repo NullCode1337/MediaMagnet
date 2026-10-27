@@ -12,6 +12,8 @@ pub async fn downloader(
 ) -> Result<(), String> {
     let engine = app.engine.clone();
     let base_dir = resolve_download_path(&engine.settings(), &app.host);
+    // Desktop downloads stay on disk. Output retention lives in `mm-server` and
+    // only tracks jobs started through its API; do not reuse that path here.
     let request = DownloadRequest {
         id: download_id,
         url,

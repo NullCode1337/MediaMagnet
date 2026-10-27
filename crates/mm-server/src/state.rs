@@ -6,6 +6,7 @@ use mm_core::Engine;
 use crate::assets::StaticAssets;
 use crate::events::EventHub;
 use crate::jobs::Jobs;
+use crate::retention::Retention;
 
 pub struct AppState {
     pub engine: Arc<Engine>,
@@ -14,5 +15,6 @@ pub struct AppState {
     /// `None` means the server was started without `MM_TOKEN`: the API is open.
     pub token: Option<String>,
     pub static_assets: StaticAssets,
-    pub jobs: Jobs,
+    pub jobs: Arc<Jobs>,
+    pub retention: Retention,
 }

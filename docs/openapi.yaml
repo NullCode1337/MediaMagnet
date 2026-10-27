@@ -249,6 +249,96 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /downloads/{id}/file:
+    get:
+      operationId: downloadJobFile
+      tags: [downloads]
+      summary: Stream a finished job's output file
+      description: |
+        Serves a file the job produced, with
+        `Content-Disposition: attachment`, so a browser saves it. A single
+        `Range` header is honoured. `files` on `download-finished` lists the
+        relative paths a job wrote.
+
+        The file is deleted once a full response has been streamed (a request
+        without `Range`), or `MM_FILE_TTL_SECS` after the job finished if nobody
+        fetches it. Range requests leave the file for that expiry sweep.
+
+        A job that produced several files returns `409 multiple_files` unless
+        `path` selects one.
+      parameters:
+        - $ref: '#/components/parameters/DownloadId'
+        - name: path
+          in: query
+          required: false
+          description: |
+            One of the job's `files`, relative to the download root. Required
+            when the job wrote more than one file.
+          schema:
+            type: string
+        - name: token
+          in: query
+          required: false
+          description: Bearer token for download navigations that cannot set headers.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Whole file.
+          headers:
+            Accept-Ranges:
+              schema:
+                type: string
+                const: bytes
+            Content-Disposition:
+              schema:
+                type: string
+            Content-Length:
+              schema:
+                type: integer
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '206':
+          description: One byte range.
+          headers:
+            Content-Range:
+              schema:
+                type: string
+            Content-Length:
+              schema:
+                type: integer
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: |
+            No such download (`no_such_download`), the job has not written a
+            file (`no_output_file`), or `path` is not one of its files
+            (`no_such_file`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: The job produced several files (`multiple_files`); `path` selects one.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MultipleFilesError'
+        '416':
+          description: The range is unsatisfiable (`bad_range`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /settings:
     get:
       operationId: getSettings
@@ -503,12 +593,19 @@ paths:
         `path` is relative to the download root and may contain `/`; each
         segment is percent-encoded (the `url` field from `listFiles` is ready
         to use). A single `Range` header is honoured, so media players can
-        seek. The response uses `Content-Disposition: inline`.
+        seek. The response uses `Content-Disposition: inline` unless
+        `download` asks for an attachment.
       parameters:
         - name: path
           in: path
           required: true
           description: Percent-encoded relative path.
+          schema:
+            type: string
+        - name: download
+          in: query
+          required: false
+          description: 'When `1`, `true` or `yes`, use `Content-Disposition: attachment`.'
           schema:
             type: string
       responses:
@@ -722,6 +819,21 @@ components:
           type: string
           description: Human-readable detail; may change between versions.
 
+    MultipleFilesError:
+      type: object
+      required: [error, message, files]
+      properties:
+        error:
+          type: string
+          const: multiple_files
+        message:
+          type: string
+        files:
+          type: array
+          description: The job's files; pass one as `path` to download it.
+          items:
+            type: string
+
     Health:
       type: object
       required: [status, version]
@@ -786,6 +898,13 @@ components:
         state:
           type: string
           enum: [running, paused, cancelled, failed, finished]
+        files:
+          type: array
+          description: |
+            Files the job wrote, relative to the download root. Empty until the
+            job finishes; cleared when a paused job is resumed.
+          items:
+            type: string
         created_at_ms:
           type: integer
           format: int64
@@ -1164,6 +1283,13 @@ components:
           const: download-finished
         id:
           type: string
+        files:
+          type: array
+          description: |
+            Files the job wrote, relative to the download root. Empty or absent
+            when nothing was written.
+          items:
+            type: string
 
     DownloadProgressEvent:
       type: object

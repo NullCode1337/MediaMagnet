@@ -28,6 +28,7 @@ pub fn router(state: Arc<AppState>) -> Router {
             get(list_downloads).post(start_download).delete(cancel_all),
         )
         .route("/downloads/{id}", get(get_download).delete(cancel))
+        .route("/downloads/{id}/file", get(output_file))
         .route("/downloads/{id}/pause", post(pause))
         .route("/downloads/{id}/resume", post(resume))
         .route("/settings", get(get_settings).put(update_settings))
@@ -158,6 +159,79 @@ async fn get_download(
             format!("no download with id: {id}"),
         ),
     }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct OutputFileQuery {
+    /// Picks one file when the job produced several.
+    #[serde(default)]
+    pub path: Option<String>,
+}
+
+/// Streams the file a finished job produced, as an attachment. Jobs that wrote
+/// several files need `?path=`; the names are also on `download-finished`.
+async fn output_file(
+    State(state): State<Arc<AppState>>,
+    axum::extract::Path(id): axum::extract::Path<String>,
+    axum::extract::Query(query): axum::extract::Query<OutputFileQuery>,
+    headers: axum::http::HeaderMap,
+) -> Response {
+    let Some(job) = state.jobs.summary(&id) else {
+        return error(
+            StatusCode::NOT_FOUND,
+            "no_such_download",
+            format!("no download with id: {id}"),
+        );
+    };
+
+    let relative = match query.path {
+        Some(path) => {
+            if !job.files.iter().any(|file| file == &path) {
+                return error(
+                    StatusCode::NOT_FOUND,
+                    "no_such_file",
+                    format!("download {id} produced no file: {path}"),
+                );
+            }
+            path
+        }
+        None => match job.files.as_slice() {
+            [] => {
+                return error(
+                    StatusCode::NOT_FOUND,
+                    "no_output_file",
+                    format!("download {id} has no recorded output file; is it still running?"),
+                )
+            }
+            [only] => only.clone(),
+            many => {
+                return (
+                    StatusCode::CONFLICT,
+                    Json(json!({
+                        "error": "multiple_files",
+                        "message": format!(
+                            "download {id} produced {} files; pass ?path=",
+                            many.len()
+                        ),
+                        "files": many,
+                    })),
+                )
+                    .into_response()
+            }
+        },
+    };
+
+    files::serve(
+        &state.download_root,
+        &relative,
+        headers,
+        files::Disposition::Attachment,
+        Some(files::DeleteAfter {
+            retention: state.retention.clone(),
+            job_id: id,
+        }),
+    )
+    .await
 }
 
 /// Replays the stored request of a paused job. Settings, cookies and the URL

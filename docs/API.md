@@ -28,6 +28,7 @@ Pre-built standalone archives are attached to `server-v*` releases. Locally,
 | `MM_BIND` | `0.0.0.0:8080` | Listen address. |
 | `MM_DATA_DIR` | `$XDG_DATA_HOME/mediamagnet` | Settings, cookies and runtime data. |
 | `MM_DOWNLOAD_ROOT` | `$MM_DATA_DIR/downloads` | Directory that `/files` serves from and downloads are written to. |
+| `MM_FILE_TTL_SECS` | `3600` | Seconds an undelivered job output may remain before it is deleted. |
 | `MM_STATIC_DIR` | embedded UI | Serve the web UI from this directory instead. |
 | `MM_TOKEN` | unset | When set, every request needs this bearer token. |
 | `MM_ALLOW_CUSTOM_ARGS` | off | Allows user-supplied tool arguments; see [Policy](#policy). |
@@ -100,6 +101,37 @@ Resuming replays the URL, settings and cookies the job was created with. A
 second request with the id of a running or paused job returns `409
 duplicate_download`; finished and cancelled ids may be reused.
 
+### Output file
+
+When a job finishes, `download-finished` carries the files it wrote and the job
+record lists the same paths:
+
+```sh
+curl -s http://localhost:8080/api/v1/downloads/job-1
+# {"id":"job-1","url":"https://...","state":"finished",
+#  "files":["Video.mp4"],"created_at_ms":...}
+
+# Stream the file as an attachment (202 before the job finishes has no file).
+curl -OJ http://localhost:8080/api/v1/downloads/job-1/file
+```
+
+A job that wrote several files (a playlist or gallery) answers `409
+multiple_files` with the full `files` list; pass one back as `?path=`. The byte
+range and `Content-Disposition` behaviour is the same as
+[`/files`](#files), except the disposition is `attachment`.
+
+Server job outputs are not kept in the download root. Once a file has been
+streamed here in full (a request without a `Range` header), it is deleted. A
+file that nobody fetches is deleted `MM_FILE_TTL_SECS` after the job finished
+(one hour by default). A range request does not trigger deletion, because it may
+be one seek in a longer session; the expiry sweep still removes the file. Files
+recorded by a previous server process are removed at startup, since their job
+records did not survive the restart.
+
+The web UI uses this: the tab that created a job saves its output through the
+browser when `download-finished` arrives. API clients should fetch through this
+endpoint rather than `/files`, because the file disappears after delivery.
+
 ### Per-job settings and cookies
 
 A job may carry its own settings and cookies. They are used for that job only
@@ -139,7 +171,7 @@ the OpenAPI spec:
 | Event | Data |
 | --- | --- |
 | `download-started` | `{id}` |
-| `download-finished` | `{id}` |
+| `download-finished` | `{id, files}` — `files` are paths relative to the download root |
 | `download-progress` | `{id, value}` — percentage |
 | `download-status` | `{id, value}` — status line |
 | `download-error` | `{id, value}` — message |
@@ -239,7 +271,8 @@ curl -s 'http://localhost:8080/api/v1/files?path='
 Each entry's `url` is ready to use. `GET /files/{path}` serves the file with
 `Accept-Ranges: bytes` and `Content-Disposition: inline`, honouring one `Range`
 header (`206`); an invalid range returns `416` with `Content-Range: bytes */N`.
-Paths are resolved inside the download root; traversal is rejected.
+Add `?download=1` for `Content-Disposition: attachment`. Paths are resolved
+inside the download root; traversal is rejected.
 
 `GET /paths/download-root` returns the root path, and `GET /paths/disk-usage`
 returns `{"used_percent": 63.2}` for its filesystem.

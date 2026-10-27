@@ -131,6 +131,7 @@ package:server` additionally produces `target/package/mediamagnet-server-<versio
 | `MM_BIND` | `0.0.0.0:8080` | Listen address. |
 | `MM_DATA_DIR` | `$XDG_DATA_HOME/mediamagnet` | Settings, cookies and runtime data. |
 | `MM_DOWNLOAD_ROOT` | `$MM_DATA_DIR/downloads` | Download directory, also served by `/files`. |
+| `MM_FILE_TTL_SECS` | `3600` | Seconds an undelivered job output may remain before the server deletes it. |
 | `MM_STATIC_DIR` | embedded UI | Serve the web UI from this directory instead. |
 | `MM_TOKEN` | unset | Require this bearer token on every request. |
 | `MM_ALLOW_CUSTOM_ARGS` | off | Accept user-supplied tool arguments (deny-list filtered). When off, jobs carrying them fail; see [the API docs](docs/API.md#policy). |

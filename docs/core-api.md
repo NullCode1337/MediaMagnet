@@ -63,15 +63,22 @@ pub enum CoreEvent {
     DownloadProgress { id, value: f64 },
     DownloadStatus   { id, value: String },
     DownloadError    { id, value: String },
-    DownloadFinished { id },
+    DownloadFinished { id, files: Vec<String> }, // paths relative to base_dir
     Notification     { level: NotificationLevel, message: String }, // info|success|warning|error
 }
 ```
 
 The desktop crate maps these to its existing IPC events (`download-progress`,
-`download-status`, …) in `apps/desktop/src-tauri/src/events.rs`; the server will map
-the same enum onto SSE in Phase 3. `DownloadState` is additive — it lets a client
-learn that a job was paused/cancelled without parsing status text.
+`download-status`, …) in `apps/desktop/src-tauri/src/events.rs`; the server maps
+the same enum onto SSE. `DownloadState` is additive — it lets a client learn
+that a job was paused/cancelled without parsing status text.
+
+`DownloadFinished.files` lists what the job wrote. yt-dlp reports it with
+`--print after_move:filepath` and gallery-dl prints finished paths on stdout;
+both are checked against the filesystem and stored relative to `base_dir`
+(`/` separators). When a backend prints nothing (spotdl) core falls back to
+files modified after the job started. The server turns these into
+`download-finished.files` and `GET /downloads/{id}/file`.
 
 ## Settings
 

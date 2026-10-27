@@ -4,18 +4,27 @@ use mm_core::events::{CoreEvent, EventSink, SharedEventSink};
 use serde_json::{json, Value};
 use tokio::sync::broadcast;
 
+use crate::jobs::Jobs;
+use crate::retention::Retention;
+
 const CHANNEL_CAPACITY: usize = 512;
 
 /// Fans core events out to every connected SSE client.
 #[derive(Clone)]
 pub struct EventHub {
     tx: broadcast::Sender<Value>,
+    jobs: Arc<Jobs>,
+    retention: Retention,
 }
 
 impl EventHub {
-    pub fn new() -> Self {
+    pub fn new(jobs: Arc<Jobs>, retention: Retention) -> Self {
         let (tx, _) = broadcast::channel(CHANNEL_CAPACITY);
-        Self { tx }
+        Self {
+            tx,
+            jobs,
+            retention,
+        }
     }
 
     pub fn sink(&self) -> SharedEventSink {
@@ -27,14 +36,32 @@ impl EventHub {
     }
 
     fn publish(&self, event: CoreEvent) {
-        // `send` only fails when nobody is listening, which is not an error here.
-        let _ = self.tx.send(to_transport_event(event));
-    }
-}
+        let value = to_transport_event(event);
 
-impl Default for EventHub {
-    fn default() -> Self {
-        Self::new()
+        // Record the output files before anyone hears about them, so a client
+        // reacting to `download-finished` can fetch them immediately.
+        if value.get("type").and_then(Value::as_str) == Some("download-finished") {
+            let files: Vec<String> = value
+                .get("files")
+                .and_then(Value::as_array)
+                .map(|files| {
+                    files
+                        .iter()
+                        .filter_map(Value::as_str)
+                        .map(str::to_string)
+                        .collect()
+                })
+                .unwrap_or_default();
+            if let Some(id) = value.get("id").and_then(Value::as_str) {
+                // Record ownership and start the expiry clock before anyone
+                // can fetch the file.
+                self.retention.record(id, &files);
+                self.jobs.set_finished(id, files);
+            }
+        }
+
+        // `send` only fails when nobody is listening, which is not an error here.
+        let _ = self.tx.send(value);
     }
 }
 
@@ -53,7 +80,9 @@ impl EventSink for HubSink {
 pub fn to_transport_event(event: CoreEvent) -> Value {
     match event {
         CoreEvent::DownloadStarted { id } => json!({ "type": "download-started", "id": id }),
-        CoreEvent::DownloadFinished { id } => json!({ "type": "download-finished", "id": id }),
+        CoreEvent::DownloadFinished { id, files } => {
+            json!({ "type": "download-finished", "id": id, "files": files })
+        }
         CoreEvent::DownloadProgress { id, value } => {
             json!({ "type": "download-progress", "id": id, "value": value })
         }
@@ -89,6 +118,18 @@ mod tests {
         assert_eq!(event["id"], "a");
         assert_eq!(event["value"], "paused");
         assert!(event.get("state").is_none());
+    }
+
+    #[test]
+    fn finished_event_carries_output_files() {
+        let event = to_transport_event(CoreEvent::DownloadFinished {
+            id: "a".into(),
+            files: vec!["clip.mp4".into(), "set/one.jpg".into()],
+        });
+        assert_eq!(event["type"], "download-finished");
+        assert_eq!(event["id"], "a");
+        assert_eq!(event["files"][0], "clip.mp4");
+        assert_eq!(event["files"][1], "set/one.jpg");
     }
 
     #[test]
