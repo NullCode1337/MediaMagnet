@@ -28,6 +28,7 @@ export interface Config {
 
   // yt-dlp
   yt_format: string;
+  yt_recode_format: string;
   yt_output_template: string;
   yt_embed_thumbnail: boolean;
   yt_embed_subs: boolean;
@@ -92,7 +93,8 @@ export const DEFAULT_CONFIG: Config = {
   download_path: "",
   user_agent: "",
 
-  yt_format: "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+  yt_format: "bv*+ba/b",
+  yt_recode_format: "",
   yt_output_template: "%(title)s.%(ext)s",
   yt_embed_thumbnail: false,
   yt_embed_subs: false,

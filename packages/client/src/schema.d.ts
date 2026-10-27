@@ -485,8 +485,13 @@ export interface components {
             accent_kind?: "hue" | "black" | "white";
             /** @description Default empty. */
             user_agent?: string;
-            /** @description Default `bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best`. */
+            /** @description Default `bv*+ba/b`. */
             yt_format?: string;
+            /**
+             * @description Post-processing conversion applied to the downloaded file. Default empty (no conversion).
+             * @enum {string}
+             */
+            yt_recode_format?: "" | "mp4" | "mkv" | "webm" | "mp3" | "m4a" | "opus" | "flac" | "wav";
             /** @description Default `%(title)s.%(ext)s`. */
             yt_output_template?: string;
             /** @description Default `false`. */
@@ -519,6 +524,7 @@ export interface components {
             accent_kind: "hue" | "black" | "white";
             user_agent: string;
             yt_format: string;
+            yt_recode_format: string;
             yt_output_template: string;
             yt_embed_thumbnail: boolean;
             yt_embed_subs: boolean;

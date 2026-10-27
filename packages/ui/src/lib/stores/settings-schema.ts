@@ -40,6 +40,7 @@ const FIELD_RULES: Record<keyof Config, FieldRule> = {
   user_agent: { kind: "string" },
 
   yt_format: { kind: "string" },
+  yt_recode_format: { kind: "string" },
   yt_output_template: { kind: "string" },
   yt_embed_thumbnail: { kind: "boolean" },
   yt_embed_subs: { kind: "boolean" },

@@ -908,7 +908,11 @@ components:
           description: Default empty.
         yt_format:
           type: string
-          description: Default `bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best`.
+          description: Default `bv*+ba/b`.
+        yt_recode_format:
+          type: string
+          enum: ["", mp4, mkv, webm, mp3, m4a, opus, flac, wav]
+          description: Post-processing conversion applied to the downloaded file. Default empty (no conversion).
         yt_output_template:
           type: string
           description: Default `%(title)s.%(ext)s`.
@@ -957,6 +961,7 @@ components:
         - accent_kind
         - user_agent
         - yt_format
+        - yt_recode_format
         - yt_output_template
         - yt_embed_thumbnail
         - yt_embed_subs
@@ -983,6 +988,8 @@ components:
         user_agent:
           type: string
         yt_format:
+          type: string
+        yt_recode_format:
           type: string
         yt_output_template:
           type: string

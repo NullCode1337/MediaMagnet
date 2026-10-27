@@ -64,7 +64,7 @@
         <img
           src={logo}
           alt="MediaMagnet logo"
-          class="size-20 shrink-0 rounded-2xl shadow-md"
+          class="size-20 shrink-0 rounded-2xl"
         />
         <div class="flex min-w-0 flex-col gap-2">
           <div

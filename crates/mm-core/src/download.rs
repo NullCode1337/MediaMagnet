@@ -405,6 +405,10 @@ impl Engine {
                         cmd.args(["-f", &settings.yt_format]);
                     }
 
+                    if let Some(args) = recode_args(&settings.yt_recode_format) {
+                        cmd.args(args);
+                    }
+
                     if settings.yt_embed_thumbnail {
                         cmd.arg("--embed-thumbnail");
                     }
@@ -1098,6 +1102,22 @@ fn unique_suffix() -> String {
     format!("{nanos:x}-{:x}", COUNTER.fetch_add(1, Ordering::Relaxed))
 }
 
+// Extra yt-dlp arguments for a post-processing conversion,
+// or "None" to keep the downloaded streams as they are
+fn recode_args(format: &str) -> Option<&'static [&'static str]> {
+    match format.trim().to_lowercase().as_str() {
+        "mp4" => Some(&["--recode-video", "mp4"]),
+        "mkv" => Some(&["--recode-video", "mkv"]),
+        "webm" => Some(&["--recode-video", "webm"]),
+        "mp3" => Some(&["-x", "--audio-format", "mp3", "--audio-quality", "0"]),
+        "m4a" => Some(&["-x", "--audio-format", "m4a", "--audio-quality", "0"]),
+        "opus" => Some(&["-x", "--audio-format", "opus", "--audio-quality", "0"]),
+        "flac" => Some(&["-x", "--audio-format", "flac", "--audio-quality", "0"]),
+        "wav" => Some(&["-x", "--audio-format", "wav"]),
+        _ => None,
+    }
+}
+
 fn contains_separator(template: &str) -> bool {
     template.contains('/') || template.contains('\\')
 }
@@ -1135,6 +1155,18 @@ mod tests {
             "a"
         );
         assert!(matching_cookie(&cookies, "https://vimeo.com/1").is_none());
+    }
+
+    #[test]
+    fn recode_accepts_known_formats_and_drops_the_rest() {
+        assert_eq!(recode_args("MP4"), Some(&["--recode-video", "mp4"][..]));
+        assert_eq!(
+            recode_args(" mp3 "),
+            Some(&["-x", "--audio-format", "mp3", "--audio-quality", "0"][..])
+        );
+        assert!(recode_args("").is_none());
+        assert!(recode_args("avi").is_none());
+        assert!(recode_args("--exec").is_none());
     }
 
     #[test]

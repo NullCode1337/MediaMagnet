@@ -29,6 +29,7 @@ pub struct Settings {
 
     // yt-dlp backend options
     pub yt_format: String,
+    pub yt_recode_format: String,
     pub yt_output_template: String,
     pub yt_embed_thumbnail: bool,
     pub yt_embed_subs: bool,
@@ -69,7 +70,8 @@ impl Default for Settings {
             accent_hue: 260,
             accent_kind: "hue".to_string(),
             custom_titlebar_type: "system".to_string(),
-            yt_format: "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best".to_string(),
+            yt_format: "bv*+ba/b".to_string(),
+            yt_recode_format: String::new(),
             yt_output_template: "%(title)s.%(ext)s".to_string(),
 
             always_on_top: false,
@@ -123,6 +125,7 @@ const KNOWN_KEYS: &[&str] = &[
     "download_path",
     "user_agent",
     "yt_format",
+    "yt_recode_format",
     "yt_output_template",
     "yt_embed_thumbnail",
     "yt_embed_subs",
@@ -170,6 +173,7 @@ fn field_type(key: &str) -> Option<Type> {
         | "download_path"
         | "user_agent"
         | "yt_format"
+        | "yt_recode_format"
         | "yt_output_template"
         | "yt_global_args"
         | "gdl_global_args"
@@ -284,8 +288,24 @@ pub fn sanitize_settings(value: &Value) -> (Value, SanitizeReport) {
     (Value::Object(out), report)
 }
 
+const LEGACY_YT_FORMAT: &str = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best";
+const LEGACY_SAVED_VERSIONS: u32 = 1;
+
 fn migrate(value: &mut Value, from: u32) {
-    let _ = (value, from);
+    if from <= LEGACY_SAVED_VERSIONS {
+        if let Some(obj) = value.as_object_mut() {
+            let legacy_default = obj
+                .get("yt_format")
+                .and_then(Value::as_str)
+                .is_some_and(|format| format == LEGACY_YT_FORMAT);
+            if legacy_default {
+                obj.insert(
+                    "yt_format".to_string(),
+                    Value::from(Settings::default().yt_format),
+                );
+            }
+        }
+    }
 }
 
 fn prepare_settings_value(raw: &Value) -> (Value, SanitizeReport) {
@@ -489,6 +509,23 @@ mod tests {
         assert!(!incoming.always_on_top);
         assert_eq!(incoming.download_path, "");
         assert_eq!(incoming.user_agent, "x");
+    }
+
+    #[test]
+    fn legacy_format_default_is_migrated_but_a_custom_choice_is_kept() {
+        let legacy = serde_json::json!({
+            "settings_version": 1,
+            "yt_format": LEGACY_YT_FORMAT,
+        });
+        let settings = Settings::from_value(&legacy).unwrap();
+        assert_eq!(settings.yt_format, Settings::default().yt_format);
+
+        let custom = serde_json::json!({
+            "settings_version": 1,
+            "yt_format": "worst",
+        });
+        let settings = Settings::from_value(&custom).unwrap();
+        assert_eq!(settings.yt_format, "worst");
     }
 
     #[test]
