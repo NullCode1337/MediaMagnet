@@ -164,9 +164,9 @@
 
   <div class="flex flex-col gap-3">
     {#each config.sections as section, sindex (sindex)}
-      <div class="flex flex-col gap-1">
+      <div class="flex flex-col gap-3">
         {#if section.label && !section.headerAction}
-          <div class="px-2">
+          <div class="px-2 pt-1">
             <h2 class="text-xs font-bold tracking-wide text-primary">
               {section.label}
             </h2>

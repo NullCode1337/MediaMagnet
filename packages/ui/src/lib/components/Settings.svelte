@@ -119,17 +119,19 @@
         : 'flex flex-col w-60 border-r border-sidebar-border p-6 gap-1 h-full overflow-y-auto scrollbar-thin'}"
     >
       {#if isMobile}
-        <div class="flex items-center h-19 bg-muted/40 shrink-0">
+        <div class="flex items-center h-19 bg-background shrink-0">
           <span class="font-semibold mx-6 text-lg">Settings</span>
         </div>
 
-        <div class="flex-1 overflow-y-auto bg-muted/40 px-4 py-1 space-y-6">
+        <div
+          class="flex-1 overflow-y-auto bg-background px-4 pt-1 pb-8 space-y-6"
+        >
           <div>
             <p class="text-xs text-muted-foreground font-bold px-1 ml-2 mb-2">
               Configuration
             </p>
             <div
-              class="rounded-2xl overflow-hidden bg-background divide-y divide-border/60"
+              class="rounded-2xl overflow-hidden bg-accent/40 divide-y divide-border/60"
             >
               {#each CONFIG_TABS as tab (tab.id)}
                 <button
@@ -137,7 +139,7 @@
                     activeTab = tab.id;
                     mobileView = "content";
                   }}
-                  class="w-full flex items-center gap-5 px-5 py-6 text-sm text-foreground hover:bg-muted/50 active:bg-muted transition-colors cursor-pointer"
+                  class="w-full flex items-center gap-5 px-5 py-6 text-sm text-accent-foreground hover:bg-accent/80 active:bg-accent transition-colors cursor-pointer"
                 >
                   <tab.icon size={20} class="text-muted-foreground shrink-0" />
                   <span class="font-medium">{tab.label}</span>
@@ -151,7 +153,7 @@
               Backend
             </p>
             <div
-              class="rounded-2xl overflow-hidden bg-background divide-y divide-border/60"
+              class="rounded-2xl overflow-hidden bg-accent/40 divide-y divide-border/60"
             >
               {#each BACKEND_TABS as tab (tab.id)}
                 <button
@@ -159,7 +161,7 @@
                     activeTab = tab.id;
                     mobileView = "content";
                   }}
-                  class="w-full flex items-center gap-5 px-5 py-6 text-sm text-foreground hover:bg-muted/50 active:bg-muted transition-colors cursor-pointer"
+                  class="w-full flex items-center gap-5 px-5 py-6 text-sm text-accent-foreground hover:bg-accent/80 active:bg-accent transition-colors cursor-pointer"
                 >
                   <tab.icon size={20} class="text-muted-foreground shrink-0" />
                   <span class="font-medium">{tab.label}</span>
@@ -173,7 +175,7 @@
               About
             </p>
             <div
-              class="rounded-2xl overflow-hidden bg-background divide-y divide-border/60"
+              class="rounded-2xl overflow-hidden bg-accent/40 divide-y divide-border/60"
             >
               {#each ABOUT_TABS as tab (tab.id)}
                 <button
@@ -181,7 +183,7 @@
                     activeTab = tab.id;
                     mobileView = "content";
                   }}
-                  class="w-full flex items-center gap-5 px-5 py-6 text-sm text-foreground hover:bg-muted/50 active:bg-muted transition-colors cursor-pointer"
+                  class="w-full flex items-center gap-5 px-5 py-6 text-sm text-accent-foreground hover:bg-accent/80 active:bg-accent transition-colors cursor-pointer"
                 >
                   <tab.icon size={20} class="text-muted-foreground shrink-0" />
                   <span class="font-medium">{tab.label}</span>
