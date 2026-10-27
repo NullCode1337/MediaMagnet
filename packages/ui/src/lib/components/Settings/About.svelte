@@ -36,7 +36,7 @@
     },
     {
       label: "Report an issue",
-      value: "github.com/NullCode1337/MediaMagnet/issues",
+      value: "MediaMagnet/issues",
       href: `${REPO}/issues`,
       icon: Icons.Bug,
     },
@@ -46,17 +46,6 @@
       href: `${REPO}/blob/main/LICENSE`,
       icon: Icons.Scale,
     },
-  ];
-
-  const poweredBy = [
-    { label: "yt-dlp", href: "https://github.com/yt-dlp/yt-dlp" },
-    { label: "gallery-dl", href: "https://github.com/mikf/gallery-dl" },
-    {
-      label: "spotdl",
-      href: "https://github.com/spotDL/spotify-downloader",
-    },
-    { label: "Tauri", href: "https://tauri.app" },
-    { label: "Svelte", href: "https://svelte.dev" },
   ];
 </script>
 
@@ -75,7 +64,7 @@
         <img
           src={logo}
           alt="MediaMagnet logo"
-          class="size-20 shrink-0 rounded-2xl shadow-md ring-1 ring-border/50"
+          class="size-20 shrink-0 rounded-2xl shadow-md"
         />
         <div class="flex min-w-0 flex-col gap-2">
           <div
@@ -128,36 +117,5 @@
         </button>
       {/each}
     </div>
-
-    <div class="overflow-hidden rounded-2xl bg-muted/40 shadow-sm">
-      <p class="px-4 pt-4 text-xs font-bold tracking-wide text-primary">
-        POWERED BY
-      </p>
-      <div class="flex flex-wrap gap-2 px-4 pb-4 pt-3">
-        {#each poweredBy as item (item.label)}
-          <button
-            type="button"
-            onclick={() => transport.openUrl(item.href)}
-            class="cursor-pointer rounded-full border border-border/60 bg-background px-3 py-1.5 text-xs font-medium text-foreground/80 transition-colors hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
-          >
-            {item.label}
-          </button>
-        {/each}
-      </div>
-    </div>
-
-    <p
-      class="px-1 pb-2 text-center text-[11px] leading-relaxed text-muted-foreground/60"
-    >
-      Made by
-      <button
-        type="button"
-        onclick={() => transport.openUrl(MAINTAINER)}
-        class="cursor-pointer underline underline-offset-2 hover:text-foreground"
-      >
-        NullCode
-      </button>
-      · © 2026 MediaMagnet · GNU AGPL-3.0
-    </p>
   </div>
 </div>
