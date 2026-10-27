@@ -19,7 +19,7 @@
               "Pass custom arguments directly to the gallery-dl CLI.",
             value: settings.config?.gdl_global_args ?? "",
             onchange: (v: string) => settings.update({ gdl_global_args: v }),
-            placeholder: "--cookies cookies.txt --no-mtime",
+            placeholder: "--cookies cookies.txt --write-metadata",
           },
         ],
       },

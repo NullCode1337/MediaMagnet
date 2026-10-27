@@ -120,6 +120,10 @@ export interface paths {
          *     `Range` header is honoured. `files` on `download-finished` lists the
          *     relative paths a job wrote.
          *
+         *     The file is deleted once a full response has been streamed (a request
+         *     without `Range`), or `MM_FILE_TTL_SECS` after the job finished if nobody
+         *     fetches it. Range requests leave the file for that expiry sweep.
+         *
          *     A job that produced several files returns `409 multiple_files` unless
          *     `path` selects one.
          */
@@ -524,6 +528,12 @@ export interface components {
             accent_kind?: "hue" | "black" | "white";
             /** @description Default empty. */
             user_agent?: string;
+            /**
+             * @description Keep the server's `Last-Modified` date on downloaded files instead
+             *     of the download time. Applies to yt-dlp (`--mtime`) and gallery-dl
+             *     (its default). Default `false`, which dates files by download time.
+             */
+            preserve_mtime?: boolean;
             /** @description Default `bv*+ba/b`. */
             yt_format?: string;
             /**
@@ -562,6 +572,7 @@ export interface components {
             /** @enum {string} */
             accent_kind: "hue" | "black" | "white";
             user_agent: string;
+            preserve_mtime: boolean;
             yt_format: string;
             yt_recode_format: string;
             yt_output_template: string;

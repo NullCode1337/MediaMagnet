@@ -1025,6 +1025,12 @@ components:
         user_agent:
           type: string
           description: Default empty.
+        preserve_mtime:
+          type: boolean
+          description: |
+            Keep the server's `Last-Modified` date on downloaded files instead
+            of the download time. Applies to yt-dlp (`--mtime`) and gallery-dl
+            (its default). Default `false`, which dates files by download time.
         yt_format:
           type: string
           description: Default `bv*+ba/b`.
@@ -1079,6 +1085,7 @@ components:
         - accent_hue
         - accent_kind
         - user_agent
+        - preserve_mtime
         - yt_format
         - yt_recode_format
         - yt_output_template
@@ -1106,6 +1113,8 @@ components:
           enum: [hue, black, white]
         user_agent:
           type: string
+        preserve_mtime:
+          type: boolean
         yt_format:
           type: string
         yt_recode_format:

@@ -25,6 +25,7 @@ export interface Config {
   // download
   download_path: string;
   user_agent: string;
+  preserve_mtime: boolean;
 
   // yt-dlp
   yt_format: string;
@@ -92,6 +93,7 @@ export const DEFAULT_CONFIG: Config = {
 
   download_path: "",
   user_agent: "",
+  preserve_mtime: false,
 
   yt_format: "bv*+ba/b",
   yt_recode_format: "",

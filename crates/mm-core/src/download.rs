@@ -18,6 +18,15 @@ use crate::runtime::{hide_console, Tool, ToolRuntime};
 use crate::settings::{Settings, SiteArguments};
 
 const MAX_CONCURRENT_DOWNLOADS: usize = 5;
+
+// both backends have it flipped
+fn mtime_flag(backend: Backend, preserve: bool) -> Option<&'static str> {
+    match (backend, preserve) {
+        (Backend::YtDlp, true) => Some("--mtime"),
+        (Backend::GalleryDl, false) => Some("--no-mtime"),
+        _ => None,
+    }
+}
 const DEFAULT_OUTPUT_TEMPLATE: &str = "%(title)s.%(ext)s";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -436,9 +445,15 @@ impl Engine {
                 }
 
                 cmd.args(["--print", "after_move:filepath", "--no-quiet"]);
+                if let Some(flag) = mtime_flag(backend, settings.preserve_mtime) {
+                    cmd.arg(flag);
+                }
             }
             Backend::GalleryDl => {
                 cmd.args(["-d", "."]);
+                if let Some(flag) = mtime_flag(backend, settings.preserve_mtime) {
+                    cmd.arg(flag);
+                }
                 self.apply_args(
                     &mut cmd,
                     url,
@@ -1340,5 +1355,23 @@ mod tests {
     #[test]
     fn empty_domains_never_match() {
         assert!(matching_cookie(&[cookie("  ", "x")], "https://example.com").is_none());
+    }
+
+    #[test]
+    fn mtime_flags_follow_the_setting() {
+        let flags = |preserve| {
+            (
+                mtime_flag(Backend::YtDlp, preserve),
+                mtime_flag(Backend::GalleryDl, preserve),
+            )
+        };
+
+        // Default: download time. yt-dlp already does that; gallery-dl needs `--no-mtime`.
+        assert_eq!(flags(false), (None, Some("--no-mtime")));
+        // Original date: the mirror image.
+        assert_eq!(flags(true), (Some("--mtime"), None));
+        // spotdl has no equivalent option in either mode.
+        assert_eq!(mtime_flag(Backend::SpotDl, false), None);
+        assert_eq!(mtime_flag(Backend::SpotDl, true), None);
     }
 }

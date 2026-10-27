@@ -137,7 +137,7 @@
             description: "Pass custom arguments directly to the yt-dlp CLI.",
             value: settings.config?.yt_global_args ?? "",
             onchange: (v: string) => settings.update({ yt_global_args: v }),
-            placeholder: "--cookies-from-browser chrome --no-mtime",
+            placeholder: "--cookies-from-browser chrome --embed-metadata",
           },
         ],
       },

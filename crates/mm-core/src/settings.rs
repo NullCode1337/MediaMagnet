@@ -26,6 +26,7 @@ pub struct Settings {
     // download options
     pub download_path: String,
     pub user_agent: String,
+    pub preserve_mtime: bool,
 
     // yt-dlp backend options
     pub yt_format: String,
@@ -65,6 +66,7 @@ impl Default for Settings {
 
             download_path: String::new(),
             user_agent: String::new(),
+            preserve_mtime: false,
             dark_mode: true,
             amoled_mode: false,
             accent_hue: 260,
@@ -124,6 +126,7 @@ const KNOWN_KEYS: &[&str] = &[
     "clear_cookies_on_exit",
     "download_path",
     "user_agent",
+    "preserve_mtime",
     "yt_format",
     "yt_recode_format",
     "yt_output_template",
@@ -161,6 +164,7 @@ fn field_type(key: &str) -> Option<Type> {
         | "custom_titlebar"
         | "native_notifications"
         | "clear_cookies_on_exit"
+        | "preserve_mtime"
         | "yt_embed_thumbnail"
         | "yt_embed_subs"
         | "yt_restrict_filenames" => Some(Type::Bool),

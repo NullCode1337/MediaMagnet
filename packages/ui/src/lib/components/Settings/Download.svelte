@@ -105,6 +105,16 @@
             onchange: (val: string) => settings.update({ user_agent: val }),
             monospace: true,
           },
+          {
+            type: "switch" as const,
+            id: "preserve_mtime",
+            label: "Keep Original Date",
+            description:
+              "Date files from the server's Last-Modified header instead of the download time",
+            value: settings.config?.preserve_mtime ?? false,
+            onchange: (v: boolean) =>
+              settings.update({ preserve_mtime: v }),
+          },
         ],
       },
       {
