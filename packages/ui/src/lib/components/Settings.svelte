@@ -116,7 +116,7 @@
         ? mobileView === 'list'
           ? 'flex flex-col w-full h-full overflow-hidden'
           : 'hidden'
-        : 'flex flex-col w-60 border-r border-sidebar-border p-6 gap-1 h-full'}"
+        : 'flex flex-col w-60 border-r border-sidebar-border p-6 gap-1 h-full overflow-y-auto scrollbar-thin'}"
     >
       {#if isMobile}
         <div class="flex items-center h-19 bg-muted/40 shrink-0">
