@@ -5,6 +5,11 @@
   import { settings } from "$lib/stores/settings.svelte";
   import { transport } from "$lib/stores/transport.svelte";
   import Section from "$lib/components/Settings/SECTION.svelte";
+  import {
+    preserveMtimeSetting,
+    userAgentSetting,
+  } from "$lib/components/Settings/fields";
+  import { DEFAULT_CONFIG } from "@mediamagnet/api";
 
   let {
     selectDirectory,
@@ -14,6 +19,9 @@
 
   // The server chooses the download root; the client cannot set a path.
   const isDesktop = transport.kind === "desktop";
+  const config = $derived(settings.config ?? DEFAULT_CONFIG);
+  const update = (patch: Partial<typeof DEFAULT_CONFIG>) =>
+    settings.update(patch);
 
   let updating = $state(false);
   let showLog = $state(false);
@@ -98,28 +106,13 @@
           ...(isDesktop
             ? [{ type: "custom" as const, node: downloadPathRow }]
             : []),
-          {
-            type: "input" as const,
-            id: "user_agent",
-            label: "User Agent",
-            value: settings.config?.user_agent ?? "",
-            onchange: (val: string) => settings.update({ user_agent: val }),
-            monospace: true,
-          },
+          userAgentSetting(config, update),
         ],
       },
       {
         label: "Backends",
         items: [
-          {
-            type: "switch" as const,
-            id: "preserve_mtime",
-            label: "Keep Original Date",
-            description:
-              "Date files from the server's Last-Modified header instead of the download time",
-            value: settings.config?.preserve_mtime ?? false,
-            onchange: (v: boolean) => settings.update({ preserve_mtime: v }),
-          },
+          preserveMtimeSetting(config, update),
           { type: "custom" as const, node: backendsRow },
         ],
       },
