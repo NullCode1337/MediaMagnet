@@ -1,7 +1,7 @@
 # Maintainer: NullCode1337 <contact.nullcode+4323@proton.me>
 
 pkgname=mediamagnet-git
-pkgver=0.6.0
+pkgver=0.6.1
 pkgrel=1
 pkgdesc="Download any and all media"
 arch=('x86_64' 'aarch64')

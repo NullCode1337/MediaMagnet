@@ -1,7 +1,7 @@
 {
   "name": "@mediamagnet/client",
   "private": true,
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Typed client for the MediaMagnet REST API",
   "type": "module",
   "exports": {

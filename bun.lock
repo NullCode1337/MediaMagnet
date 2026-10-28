@@ -27,14 +27,14 @@
     },
     "apps/desktop": {
       "name": "@mediamagnet/desktop",
-      "version": "0.6.0",
+      "version": "0.6.1",
       "devDependencies": {
         "@tauri-apps/cli": "^2.10.1",
       },
     },
     "apps/web": {
       "name": "@mediamagnet/web",
-      "version": "0.6.0",
+      "version": "0.6.1",
       "dependencies": {
         "@lucide/svelte": "^1.14.0",
         "@mediamagnet/api": "workspace:*",
@@ -61,11 +61,11 @@
     },
     "packages/api": {
       "name": "@mediamagnet/api",
-      "version": "0.6.0",
+      "version": "0.6.1",
     },
     "packages/client": {
       "name": "@mediamagnet/client",
-      "version": "0.6.0",
+      "version": "0.6.1",
       "dependencies": {
         "openapi-fetch": "^0.15.0",
       },
@@ -75,7 +75,7 @@
     },
     "packages/ui": {
       "name": "@mediamagnet/ui",
-      "version": "0.6.0",
+      "version": "0.6.1",
       "dependencies": {
         "@mediamagnet/api": "workspace:*",
       },

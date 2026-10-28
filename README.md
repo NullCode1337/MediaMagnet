@@ -86,8 +86,8 @@ Then open <http://localhost:8080>. Downloads and settings live in the `/data` vo
 Download the archive for your platform from a `server-v*` release, extract it and run the binary:
 
 ```bash
-tar -xzf mediamagnet-server-0.6.0-x86_64-unknown-linux-gnu-tools.tar.gz
-./mediamagnet-server-0.6.0-x86_64-unknown-linux-gnu-tools/mediamagnet-server
+tar -xzf mediamagnet-server-0.6.1-x86_64-unknown-linux-gnu-tools.tar.gz
+./mediamagnet-server-0.6.1-x86_64-unknown-linux-gnu-tools/mediamagnet-server
 ```
 
 Two variants are published:

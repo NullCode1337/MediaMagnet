@@ -1,6 +1,6 @@
 # MediaMagnet: audit of the current implementation
 
-Source: `/home/nullcode1337/Documents/MediaMagnet-old` (read-only), version `0.6.0`.
+Source: `/home/nullcode1337/Documents/MediaMagnet-old` (read-only), version `0.6.1`.
 Everything below is derived from reading every file under `src-tauri/src`, `src/`, the Tauri
 config/capabilities, `PKGBUILD`, `package.json` and `.github/workflows/release.yml`.
 

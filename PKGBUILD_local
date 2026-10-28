@@ -4,7 +4,7 @@
 #   makepkg -p PKGBUILD_local
 
 pkgname=mediamagnet-git
-pkgver=0.6.0
+pkgver=0.6.1
 pkgrel=1
 pkgdesc="Download any and all media"
 arch=('x86_64' 'aarch64')
