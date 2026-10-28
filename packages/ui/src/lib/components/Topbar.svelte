@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ListPlus } from "@lucide/svelte";
+  import { Plus } from "@lucide/svelte";
   import logo from "$lib/assets/favicon.png";
   import { Button } from "$lib/components/ui/button";
   import SettingsDialog from "./Settings.svelte";
@@ -29,7 +29,7 @@
 
   <nav class="flex items-center gap-1">
     <Button variant="ghost" onclick={onAddTask} class={navButton}>
-      <ListPlus class="size-5" />
+      <Plus class="size-5" />
       Add Task
     </Button>
 

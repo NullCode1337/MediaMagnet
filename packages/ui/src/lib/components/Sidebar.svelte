@@ -7,6 +7,7 @@
     FolderOpen,
     Download,
     CirclePlus,
+    Plus,
     ListPlus,
     Settings,
     type LucideIcon,
@@ -177,14 +178,14 @@
         ></div>
 
         {@render SidebarButton(
-          CirclePlus,
+          ListPlus,
           "New Link",
           uiState.activeTab === "home",
           () => (uiState.activeTab = "home"),
           true,
         )}
 
-        {@render SidebarButton(ListPlus, "Add Task", false, onAddTask)}
+        {@render SidebarButton(Plus, "Add Task", false, onAddTask)}
 
         {@render SidebarButton(
           Download,
