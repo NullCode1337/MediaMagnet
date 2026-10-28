@@ -15,7 +15,7 @@
 
   import AddTask from "$lib/components/AddTask.svelte";
   import Sidebar from "$lib/components/Sidebar.svelte";
-  import TopBar from "$lib/components/TopBar.svelte";
+  import Topbar from "$lib/components/Topbar.svelte";
   import Downloader from "$lib/components/Downloader.svelte";
   import Settings from "$lib/components/Settings.svelte";
   import Titlebar from "$lib/components/Titlebar.svelte";
@@ -355,7 +355,7 @@
       <Titlebar {currentPlatform} />
     </div>
   {:else}
-    <TopBar {currentPlatform} onAddTask={() => (addTaskOpen = true)} />
+    <Topbar {currentPlatform} onAddTask={() => (addTaskOpen = true)} />
   {/if}
 
   <AddTask bind:open={addTaskOpen} {addTasks} />
