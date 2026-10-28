@@ -429,10 +429,10 @@
       >
         <header
           class="hidden sm:flex h-20 items-center px-8 bg-background/50 sticky top-0 z-10 gap-4 shrink-0
-            {transport.kind === "http" ? 'justify-center' : ''}"
+            {transport.kind === 'http' ? 'justify-center' : ''}"
         >
           <div
-            class="flex items-center gap-2 px-2 {transport.kind === "http"
+            class="flex items-center gap-2 px-2 {transport.kind === 'http'
               ? 'w-full max-w-2xl'
               : 'flex-1 max-w-full mx-auto sm:max-w-5xl'}"
           >

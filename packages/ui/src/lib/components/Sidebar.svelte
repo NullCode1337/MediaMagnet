@@ -133,7 +133,7 @@
 {/snippet}
 
 <aside
-  class="max-sm:z-100 max-sm:mb-10 pointer-events-none sm:pointer-events-auto flex items-center justify-center rounded-2xl border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-xl px-3 py-2 h-20 w-auto shrink-0
+  class="max-sm:z-40 max-sm:mb-10 pointer-events-none sm:pointer-events-auto flex items-center justify-center rounded-2xl border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-xl px-3 py-2 h-20 w-auto shrink-0
     fixed bottom-4 left-1/2 -translate-x-1/2
     sm:relative sm:bottom-0 sm:left-0 sm:translate-x-0 sm:flex-col sm:h-full sm:rounded-none sm:border-r sm:shadow-none sm:p-0
     transition-all duration-300 ease-in-out
@@ -184,12 +184,7 @@
           true,
         )}
 
-        {@render SidebarButton(
-          ListPlus,
-          "Add Task",
-          false,
-          onAddTask,
-        )}
+        {@render SidebarButton(ListPlus, "Add Task", false, onAddTask)}
 
         {@render SidebarButton(
           Download,

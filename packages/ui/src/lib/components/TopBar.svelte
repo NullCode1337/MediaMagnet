@@ -4,7 +4,10 @@
   import { Button } from "$lib/components/ui/button";
   import SettingsDialog from "./Settings.svelte";
 
-  let { currentPlatform, onAddTask }: {
+  let {
+    currentPlatform,
+    onAddTask,
+  }: {
     currentPlatform: string;
     onAddTask: () => void;
   } = $props();

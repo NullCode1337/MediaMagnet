@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from "svelte";
   import * as Dialog from "$lib/components/ui/dialog";
   import { Button } from "$lib/components/ui/button";
   import SettingsSections from "$lib/components/Settings/SettingsSections.svelte";
@@ -79,6 +80,11 @@
     local = structuredClone(base);
   }
 
+  $effect(() => {
+    if (!open) return;
+    untrack(reset);
+  });
+
   function overrides(): Partial<Config> {
     const current = $state.snapshot(local) as Config;
     const patch: Record<string, unknown> = {};
@@ -117,12 +123,7 @@
   }
 </script>
 
-<Dialog.Root
-  bind:open
-  onOpenChange={(isOpen) => {
-    if (isOpen) reset();
-  }}
->
+<Dialog.Root bind:open>
   <Dialog.Content class="sm:max-w-xl! gap-0 bg-sidebar">
     <Dialog.Header class="pb-4">
       <Dialog.Title>Add Task</Dialog.Title>
