@@ -1,5 +1,13 @@
 export type AccentKind = "hue" | "black" | "white";
 
+export type DownloadBackend = "yt-dlp" | "gallery-dl" | "spotdl";
+
+/** Per-job choices; absent fields fall back to the host's global settings. */
+export interface DownloadOptions {
+  backend?: DownloadBackend | null;
+  overrides?: Partial<Config> | null;
+}
+
 export interface SiteArg {
   id: string;
   domain: string;
@@ -120,6 +128,8 @@ export interface DownloadTask {
   isDownloading: boolean;
   isPaused: boolean;
   error: string | null;
+  backend?: DownloadBackend | null;
+  overrides?: Partial<Config> | null;
 }
 
 export interface HistoryItem {
@@ -128,4 +138,6 @@ export interface HistoryItem {
   timestamp: string;
   status: "success" | "error";
   error?: string;
+  backend?: DownloadBackend | null;
+  overrides?: Partial<Config> | null;
 }

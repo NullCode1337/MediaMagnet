@@ -1,8 +1,13 @@
 <script lang="ts">
+  import { ListPlus } from "@lucide/svelte";
   import logo from "$lib/assets/favicon.png";
+  import { Button } from "$lib/components/ui/button";
   import SettingsDialog from "./Settings.svelte";
 
-  let { currentPlatform } = $props();
+  let { currentPlatform, onAddTask }: {
+    currentPlatform: string;
+    onAddTask: () => void;
+  } = $props();
   let menuOpen = $state(false);
 
   const navButton =
@@ -20,6 +25,11 @@
   </div>
 
   <nav class="flex items-center gap-1">
+    <Button variant="ghost" onclick={onAddTask} class={navButton}>
+      <ListPlus class="size-5" />
+      Add Task
+    </Button>
+
     <SettingsDialog
       isCollapsed={false}
       bind:menuOpen

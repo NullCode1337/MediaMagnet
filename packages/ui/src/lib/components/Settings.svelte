@@ -402,10 +402,10 @@
       showCloseButton={!isMobile}
       class="p-0 flex flex-col transition-all max-sm:z-60
       {isFullscreen
-        ? `w-screen! max-w-none! max-h-none! rounded-none! left-0! translate-x-0! translate-y-0!
-           ${uiState.showCustom ? 'top-10! h-[calc(100vh-2.5rem)]!' : 'top-0! h-screen!'}`
+        ? `w-screen! max-w-none! max-h-none! rounded-none! m-0!
+           ${uiState.showCustom ? 'top-10! h-[calc(100vh-2.5rem)]!' : 'h-screen!'}`
         : `max-w-250! w-full! h-[89vh]! rounded-2xl! backdrop:backdrop-blur-md
-           ${uiState.showCustom ? 'top-[calc(50%+20px)]!' : 'top-[50%]!'}`}"
+           ${uiState.showCustom ? 'top-10!' : ''}`}"
       style="padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right);"
     >
       {@render innerContent()}

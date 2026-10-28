@@ -4,6 +4,7 @@ import {
   type AnyConfig,
   type AskOptions,
   type CookieInput,
+  type DownloadOptions,
   type OpenOptions,
   type SaveOptions,
   type ToolUpdateResult,
@@ -238,12 +239,14 @@ export function createHttpTransport(): Transport {
       window.open(url, "_blank", "noopener,noreferrer");
     },
 
-    download: async (url, id) => {
+    download: async (url, id, options?: DownloadOptions) => {
       // Settings and cookies live in this browser; the job carries them so the
       // server applies them without a shared settings file.
       const body: Record<string, unknown> = { url, id };
       const settings = storedConfig();
       if (settings) body.settings = settings;
+      if (options?.backend) body.backend = options.backend;
+      if (options?.overrides) body.overrides = options.overrides;
       const cookies = storedCookies();
       if (Object.keys(cookies).length > 0) {
         body.cookies = Object.entries(cookies).map(([domain, content]) => ({

@@ -16,6 +16,7 @@ import type {
   AnyConfig,
   AskOptions,
   CookieInput,
+  DownloadOptions,
   OpenOptions,
   SaveOptions,
   ToolUpdateResult,
@@ -98,8 +99,13 @@ export function createDesktopTransport(): Transport {
     appVersion: () => getVersion(),
     openUrl: (url) => openUrl(url),
 
-    download: (url, id) =>
-      invoke("downloader", { url, downloadId: id }),
+    download: (url, id, options?: DownloadOptions) =>
+      invoke("downloader", {
+        url,
+        downloadId: id,
+        backend: options?.backend ?? null,
+        overrides: options?.overrides ?? null,
+      }),
     pause: (id) => invoke("pause_download", { downloadId: id }),
     cancel: (id, url) =>
       invoke("cancel_download", { downloadId: id, url }),

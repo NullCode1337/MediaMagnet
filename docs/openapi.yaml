@@ -23,14 +23,18 @@ info:
 
     ## Per-job configuration
 
-    `POST /downloads` accepts the same settings shape as `PUT /settings` and an
-    optional list of cookies. When either is present the job uses it instead of
-    the server's stored configuration; the server's files and cookie store are
-    not modified. This lets a browser client keep its configuration in
+    `POST /downloads` accepts the same settings shape as `PUT /settings`, a
+    sparse `overrides` patch and an optional list of cookies. When either
+    settings or overrides is present the job uses it instead of the server's
+    stored configuration; the server's files and cookie store are not
+    modified. This lets a browser client keep its configuration in
     `localStorage` while still producing identical downloads.
 
     Omitted settings fields fall back to defaults, not to the server's current
     values. Clients should send the complete object they want the job to use.
+    `overrides` is different: it is applied over `settings` (or the server's
+    settings when `settings` is absent), so only changed fields need sending.
+    Overrides are stored with the job and reused by resume.
 
     ## Policy
 
@@ -109,8 +113,9 @@ paths:
         '400':
           description: |
             `invalid_url` (missing, or not http/https), `invalid_settings`
-            (settings could not be sanitised) or `invalid_cookie` (a job cookie
-            domain is not a single path segment).
+            (settings could not be sanitised), `invalid_cookie` (a job cookie
+            domain is not a single path segment) or `invalid_overrides` (the
+            patch is not an object).
           content:
             application/json:
               schema:
@@ -121,6 +126,14 @@ paths:
           description: |
             `duplicate_download`: the id belongs to a job that is still running
             or paused. Finished and cancelled ids may be reused.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: |
+            `backend_unavailable`: the forced `backend` is not installed on the
+            server.
           content:
             application/json:
               schema:
@@ -182,9 +195,9 @@ paths:
       tags: [downloads]
       summary: Resume a paused download
       description: |
-        Replays the URL, settings and cookies the job was created with. A job
-        that was started with the server's own settings or cookie store uses
-        the current server values.
+        Replays the URL, backend, overrides, settings and cookies the job was
+        created with. A job that was started with the server's own settings or
+        cookie store uses the current server values.
       parameters:
         - $ref: '#/components/parameters/DownloadId'
       responses:
@@ -858,6 +871,21 @@ components:
           description: Client-chosen job id. Empty or absent means the server assigns one.
         settings:
           $ref: '#/components/schemas/SettingsInput'
+        backend:
+          type: string
+          enum: [yt-dlp, gallery-dl, spotdl]
+          description: |
+            Forces a backend for this job. Absent detects it from the URL:
+            Spotify links use spotdl, yt-dlp is probed, then gallery-dl.
+        overrides:
+          type: object
+          additionalProperties: true
+          description: |
+            Sparse patch of `SettingsInput` fields, applied over `settings` (or
+            the server's settings). Invalid values are dropped, not defaulted.
+            Stored with the job so resume reuses it.
+          examples:
+            - yt_format: 'bv*[height<=720]+ba/b[height<=720]'
         cookies:
           type: array
           description: |

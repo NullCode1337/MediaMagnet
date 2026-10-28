@@ -1,5 +1,6 @@
 use mm_core::host::resolve_download_path;
-use mm_core::DownloadRequest;
+use mm_core::{Backend, DownloadRequest};
+use serde_json::Value;
 use tauri::State;
 
 use crate::app::App;
@@ -9,18 +10,27 @@ pub async fn downloader(
     app: State<'_, App>,
     url: String,
     download_id: String,
+    backend: Option<Backend>,
+    overrides: Option<Value>,
 ) -> Result<(), String> {
     let engine = app.engine.clone();
+    if let Some(backend) = backend {
+        engine
+            .ensure_backend(backend)
+            .await
+            .map_err(|e| e.to_string())?;
+    }
     let base_dir = resolve_download_path(&engine.settings(), &app.host);
     // Desktop downloads stay on disk. Output retention lives in `mm-server` and
     // only tracks jobs started through its API; do not reuse that path here.
     let request = DownloadRequest {
         id: download_id,
         url,
-        backend: None,
+        backend,
         base_dir,
         settings: None,
         cookies: None,
+        overrides,
     };
     tokio::spawn(async move {
         engine.run_job(request).await;

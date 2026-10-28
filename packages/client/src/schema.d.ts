@@ -77,9 +77,9 @@ export interface paths {
         put?: never;
         /**
          * Resume a paused download
-         * @description Replays the URL, settings and cookies the job was created with. A job
-         *     that was started with the server's own settings or cookie store uses
-         *     the current server values.
+         * @description Replays the URL, backend, overrides, settings and cookies the job was
+         *     created with. A job that was started with the server's own settings or
+         *     cookie store uses the current server values.
          */
         post: operations["resumeDownload"];
         delete?: never;
@@ -433,6 +433,23 @@ export interface components {
             /** @description Client-chosen job id. Empty or absent means the server assigns one. */
             id?: string;
             settings?: components["schemas"]["SettingsInput"];
+            /**
+             * @description Forces a backend for this job. Absent detects it from the URL:
+             *     Spotify links use spotdl, yt-dlp is probed, then gallery-dl.
+             * @enum {string}
+             */
+            backend?: "yt-dlp" | "gallery-dl" | "spotdl";
+            /**
+             * @description Sparse patch of `SettingsInput` fields, applied over `settings` (or
+             *     the server's settings). Invalid values are dropped, not defaulted.
+             *     Stored with the job so resume reuses it.
+             * @example {
+             *       "yt_format": "bv*[height<=720]+ba/b[height<=720]"
+             *     }
+             */
+            overrides?: {
+                [key: string]: unknown;
+            };
             /**
              * @description Job-local cookie profiles. When present, these are the only cookies
              *     considered; the server's cookie store is not consulted and is not
@@ -802,8 +819,9 @@ export interface operations {
             };
             /**
              * @description `invalid_url` (missing, or not http/https), `invalid_settings`
-             *     (settings could not be sanitised) or `invalid_cookie` (a job cookie
-             *     domain is not a single path segment).
+             *     (settings could not be sanitised), `invalid_cookie` (a job cookie
+             *     domain is not a single path segment) or `invalid_overrides` (the
+             *     patch is not an object).
              */
             400: {
                 headers: {
@@ -819,6 +837,18 @@ export interface operations {
              *     or paused. Finished and cancelled ids may be reused.
              */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /**
+             * @description `backend_unavailable`: the forced `backend` is not installed on the
+             *     server.
+             */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -79,7 +79,20 @@ curl -i -X DELETE http://localhost:8080/api/v1/downloads/job-1         # 204
 curl -i -X DELETE http://localhost:8080/api/v1/downloads               # 204, cancels all
 ```
 
-The backend (yt-dlp, gallery-dl, spotdl) is detected from the URL.
+The backend (yt-dlp, gallery-dl, spotdl) is detected from the URL. Force one
+with `"backend"`, and change individual settings for this job only with a
+sparse `"overrides"` patch:
+
+```sh
+curl -s -X POST http://localhost:8080/api/v1/downloads \
+  -H 'Content-Type: application/json' \
+  -d '{"url":"https://...","id":"job-2","backend":"yt-dlp","overrides":{"yt_format":"bv*[height<=720]+ba/b[height<=720]"}}'
+# 202 {"id":"job-2"}
+```
+
+Overrides apply over `settings` (or the server's settings when `settings` is
+absent) and are stored with the job, so resume reuses them. A forced backend
+that is not installed returns `503 backend_unavailable`.
 
 ### Tracking and resuming
 
@@ -97,7 +110,8 @@ Records live in memory, oldest first, and nothing survives a restart. At most
 100 are kept; finished records are pruned first. `state` is `running`,
 `paused`, `cancelled`, `failed` or `finished`.
 
-Resuming replays the URL, settings and cookies the job was created with. A
+Resuming replays the URL, backend, overrides, settings and cookies the job was
+created with. A
 second request with the id of a running or paused job returns `409
 duplicate_download`; finished and cancelled ids may be reused.
 

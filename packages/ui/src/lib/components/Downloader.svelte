@@ -3,7 +3,11 @@
   import * as Dialog from "$lib/components/ui/dialog";
   import { Progress } from "$lib/components/ui/progress";
   import { Button } from "$lib/components/ui/button";
-  import type { DownloadTask, HistoryItem } from "@mediamagnet/api";
+  import type {
+    DownloadOptions,
+    DownloadTask,
+    HistoryItem,
+  } from "@mediamagnet/api";
   import { transport } from "$lib/stores/transport.svelte";
   import { toast } from "svelte-sonner";
   import {
@@ -33,7 +37,7 @@
     resumeTask: (id: string, url: string) => void;
     cancelTask: (id: string, url: string) => void;
     stopAllDownloads: () => void;
-    retryDownload: (url: string) => void;
+    retryDownload: (url: string, options?: DownloadOptions) => void;
   } = $props();
 
   let active = $derived(tasks.filter((t) => t.isDownloading).length);
@@ -67,9 +71,12 @@
       .slice(-2);
   }
 
-  function handleRetry(url: string) {
-    history = history.filter((h) => h.url !== url);
-    retryDownload(url);
+  function handleRetry(item: HistoryItem) {
+    history = history.filter((h) => h.url !== item.url);
+    retryDownload(item.url, {
+      backend: item.backend ?? null,
+      overrides: item.overrides ?? null,
+    });
     closeDialog();
     toast("Retrying download…");
   }
@@ -228,7 +235,7 @@
         title="Retry download"
         onclick={(e) => {
           e.stopPropagation();
-          handleRetry(item.url);
+          handleRetry(item);
         }}
       >
         <RotateCcw size={13} />
@@ -354,7 +361,7 @@
             class="text-destructive border border-destructive/20 rounded-xl px-3 py-2.5 flex flex-col gap-1.5"
           >
             {#each getError(selectedItem.error) as line (line)}
-              <span class="text-sm font-bold break-words">{line}</span>
+              <span class="text-sm font-bold wrap-break-word">{line}</span>
             {/each}
           </div>
         </div>
@@ -371,7 +378,7 @@
       </Button>
       <Button
         class="flex-1 gap-2 rounded-xl cursor-pointer"
-        onclick={() => selectedItem && handleRetry(selectedItem.url)}
+        onclick={() => selectedItem && handleRetry(selectedItem)}
       >
         <RotateCcw size={14} /> Retry Download
       </Button>

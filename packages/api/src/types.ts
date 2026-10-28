@@ -1,4 +1,4 @@
-import type { AnyConfig } from "./config";
+import type { AnyConfig, DownloadOptions } from "./config";
 
 export interface CookieInput {
   type: "FilePath" | "Content";
@@ -58,7 +58,7 @@ export interface Transport extends Environment {
   openUrl(url: string): Promise<void>;
 
   // downloads
-  download(url: string, id: string): Promise<void>;
+  download(url: string, id: string, options?: DownloadOptions): Promise<void>;
   pause(id: string): Promise<void>;
   cancel(id: string, url: string): Promise<void>;
   cancelAll(): Promise<void>;

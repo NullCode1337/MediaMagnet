@@ -14,7 +14,7 @@ use serde_json::{json, Value};
 
 use mm_core::cookies::CookieInput;
 use mm_core::host::disk_usage;
-use mm_core::{DownloadRequest, JobCookie, Settings, Tool, ToolSource};
+use mm_core::{Backend, DownloadRequest, JobCookie, Settings, Tool, ToolSource};
 
 use crate::auth::require_token;
 use crate::files;
@@ -82,6 +82,12 @@ pub struct DownloadBody {
     /// Cookies from that client's store; absent uses the server's cookie store.
     #[serde(default)]
     pub cookies: Option<Vec<JobCookie>>,
+    /// Forces a backend for this job; absent detects it from the URL.
+    #[serde(default)]
+    pub backend: Option<Backend>,
+    /// Sparse settings patch applied over `settings` (or the server's) for this job.
+    #[serde(default)]
+    pub overrides: Option<Value>,
 }
 
 /// Job ids come from the client so the desktop and browser flows stay identical.
@@ -113,6 +119,24 @@ async fn start_download(
             }
         }
     }
+    if let Some(overrides) = &body.overrides {
+        if !overrides.is_object() {
+            return error(
+                StatusCode::BAD_REQUEST,
+                "invalid_overrides",
+                "overrides must be an object",
+            );
+        }
+    }
+    if let Some(backend) = body.backend {
+        if let Err(e) = state.engine.ensure_backend(backend).await {
+            return error(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "backend_unavailable",
+                e.to_string(),
+            );
+        }
+    }
 
     let id = body
         .id
@@ -122,10 +146,11 @@ async fn start_download(
     let request = DownloadRequest {
         id: id.clone(),
         url,
-        backend: None,
+        backend: body.backend,
         base_dir: state.download_root.clone(),
         settings,
         cookies: body.cookies,
+        overrides: body.overrides,
     };
     if !state.jobs.insert(request.clone()) {
         return error(

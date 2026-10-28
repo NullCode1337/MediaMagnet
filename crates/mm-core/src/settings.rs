@@ -449,6 +449,22 @@ impl Settings {
         serde_json::to_value(self).expect("settings serialise")
     }
 
+    /// Applies a sparse patch over `base`. Invalid values are dropped rather
+    /// than defaulted, so a stray client field cannot reset a setting.
+    pub fn with_overrides(base: &Settings, overrides: &Value) -> Result<Self, String> {
+        if !overrides.is_object() {
+            return Err("overrides must be an object".into());
+        }
+        let (patch, _) = sanitize_settings(overrides);
+        let Value::Object(mut merged) = base.to_value() else {
+            return Err("base settings did not serialise to an object".into());
+        };
+        if let Value::Object(patch) = patch {
+            merged.extend(patch);
+        }
+        Self::from_value(&Value::Object(merged))
+    }
+
     /// Canonical settings minus desktop-only fields, with values a server would use.
     pub fn server_view(&self) -> Value {
         let mut value = match self.to_value() {
@@ -513,6 +529,25 @@ mod tests {
         assert!(!incoming.always_on_top);
         assert_eq!(incoming.download_path, "");
         assert_eq!(incoming.user_agent, "x");
+    }
+
+    #[test]
+    fn overrides_merge_over_base_and_drop_invalid_values() {
+        let base = Settings {
+            yt_format: "worst".into(),
+            ..Settings::default()
+        };
+        let overrides = serde_json::json!({
+            "yt_format": "best",
+            "yt_embed_subs": true,
+            "accent_hue": "nope",
+            "bogus": 1,
+        });
+        let merged = Settings::with_overrides(&base, &overrides).unwrap();
+        assert_eq!(merged.yt_format, "best");
+        assert!(merged.yt_embed_subs);
+        assert_eq!(merged.accent_hue, base.accent_hue);
+        assert!(Settings::with_overrides(&base, &serde_json::json!([])).is_err());
     }
 
     #[test]

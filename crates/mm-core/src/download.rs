@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
@@ -87,6 +88,9 @@ pub struct DownloadRequest {
     /// Client-supplied cookies for this job; `None` uses the host's cookie store.
     /// `Some` never falls back to the host's cookies.
     pub cookies: Option<Vec<JobCookie>>,
+    /// Sparse settings patch applied over `settings` (or the host's settings)
+    /// when the job runs, so a retry or resume keeps its per-task choices.
+    pub overrides: Option<Value>,
 }
 
 /// Where a job's cookies come from: the host's cookie directory, or a file
@@ -169,6 +173,14 @@ impl Engine {
 
     pub fn runtime(&self) -> &ToolRuntime {
         &self.runtime
+    }
+
+    pub async fn ensure_backend(&self, backend: Backend) -> Result<()> {
+        self.runtime
+            .resolve(backend.tool())
+            .await
+            .map(|_| ())
+            .map_err(|e| Error::Msg(format!("{} backend unavailable: {}", backend.as_str(), e)))
     }
 
     /// Materialises the client's cookie for this URL into a temp file. The
@@ -508,7 +520,20 @@ impl Engine {
         };
         self.status(&id, "Starting...");
 
-        let settings = request.settings.clone().unwrap_or_else(|| self.settings());
+        let base = request.settings.clone().unwrap_or_else(|| self.settings());
+        let settings = match request.overrides.as_ref() {
+            Some(overrides) => match Settings::with_overrides(&base, overrides) {
+                Ok(settings) => settings,
+                Err(e) => {
+                    self.emit(CoreEvent::DownloadError {
+                        id,
+                        value: format!("Invalid overrides: {e}"),
+                    });
+                    return;
+                }
+            },
+            None => base,
+        };
         let cookies = match request.cookies.as_deref() {
             Some(list) => match self.write_job_cookies(list, &request.url) {
                 Ok(file) => CookieSource {

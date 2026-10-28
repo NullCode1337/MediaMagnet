@@ -7,6 +7,7 @@
     FolderOpen,
     Download,
     CirclePlus,
+    ListPlus,
     Settings,
     type LucideIcon,
   } from "@lucide/svelte";
@@ -17,16 +18,28 @@
   import SettingsDialog from "./Settings.svelte";
 
   let menuOpen = $state(false);
-  let { isCollapsed = $bindable(), diskUsage, currentPlatform } = $props();
+  let {
+    isCollapsed = $bindable(),
+    diskUsage,
+    currentPlatform,
+    onAddTask,
+  }: {
+    isCollapsed: boolean;
+    diskUsage: number;
+    currentPlatform: string;
+    onAddTask: () => void;
+  } = $props();
 
   let sf = $state(0);
   let tabindex = $derived(
     uiState.activeTab === "home"
       ? 0
-      : uiState.activeTab === "downloads" ? 1 : 2,
+      : uiState.activeTab === "downloads"
+        ? 2
+        : 3,
   );
   let pilloffset = $derived(
-    Math.max(0, Math.min(104, (tabindex + (sf as number)) * 52)),
+    Math.max(0, Math.min(156, (tabindex + (sf as number)) * 52)),
   );
 
   let barVisible = $state(true);
@@ -73,7 +86,9 @@
       }
     };
 
-    document.addEventListener("touchstart", handleTouchStart, { passive: true });
+    document.addEventListener("touchstart", handleTouchStart, {
+      passive: true,
+    });
     document.addEventListener("touchmove", handleTouchMove, { passive: true });
     document.addEventListener("touchend", handleTouchEnd, { passive: true });
     document.addEventListener("wheel", handleWheel, { passive: true });
@@ -167,6 +182,13 @@
           uiState.activeTab === "home",
           () => (uiState.activeTab = "home"),
           true,
+        )}
+
+        {@render SidebarButton(
+          ListPlus,
+          "Add Task",
+          false,
+          onAddTask,
         )}
 
         {@render SidebarButton(

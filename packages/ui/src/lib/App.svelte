@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { ModeWatcher, mode } from "mode-watcher";
   import type {
+    DownloadOptions,
     DownloadTask,
     HistoryItem,
     TransportEvent,
@@ -12,6 +13,7 @@
 
   import { Clipboard, Play, Plus } from "@lucide/svelte";
 
+  import AddTask from "$lib/components/AddTask.svelte";
   import Sidebar from "$lib/components/Sidebar.svelte";
   import TopBar from "$lib/components/TopBar.svelte";
   import Downloader from "$lib/components/Downloader.svelte";
@@ -27,6 +29,7 @@
   // eslint-disable-next-line svelte/prefer-writable-derived
   let isCollapsed = $state(false);
   let urlInput = $state("");
+  let addTaskOpen = $state(false);
   let diskUsage = $state(0);
   let currentPlatform = $state("");
 
@@ -61,13 +64,17 @@
     tasks = tasks.filter((t) => t.id !== id);
   }
 
-  async function startDownload(input: string, existingId?: string) {
+  async function startDownload(
+    input: string,
+    existingId?: string,
+    options?: DownloadOptions,
+  ): Promise<string | null> {
     const urlRegex = /https?:\/\/[^\s,)"]+/gi;
     const matches = input.trim().match(urlRegex);
 
     if (!matches || matches.length === 0) {
       await transport.notify("No valid URLs found in input");
-      return;
+      return "No valid URLs found in input";
     }
 
     for (const url of matches) {
@@ -103,20 +110,43 @@
             isDownloading: true,
             isPaused: false,
             error: null,
+            backend: options?.backend ?? null,
+            overrides: options?.overrides ?? null,
           },
         ];
       }
 
-      transport.download(url, id).catch((e: unknown) => {
+      try {
+        await transport.download(url, id, options);
+      } catch (e) {
+        const error = String(e);
         updateTask(id, {
-          error: String(e),
+          error,
           isDownloading: false,
           isPaused: false,
         });
-      });
+        return error;
+      }
 
       uiState.activeTab = "downloads";
     }
+
+    return null;
+  }
+
+  async function addTasks(
+    urls: string[],
+    options: DownloadOptions,
+  ): Promise<string | null> {
+    for (const url of urls) {
+      const failure = await startDownload(url, undefined, options);
+      if (failure) return failure;
+    }
+    return null;
+  }
+
+  async function retryDownload(url: string, options?: DownloadOptions) {
+    await startDownload(url, undefined, options);
   }
 
   async function pasteOrDownload() {
@@ -150,7 +180,10 @@
   async function resumeDownload(id: string) {
     const task = tasks.find((t) => t.id === id);
     if (task) {
-      await startDownload(task.url, id);
+      await startDownload(task.url, id, {
+        backend: task.backend ?? null,
+        overrides: task.overrides ?? null,
+      });
     }
   }
 
@@ -179,6 +212,7 @@
     url: string,
     status: "success" | "error",
     error?: string,
+    source?: DownloadTask,
   ) {
     history = [
       {
@@ -187,6 +221,8 @@
         timestamp: new Date().toLocaleTimeString(),
         status,
         error,
+        backend: source?.backend ?? null,
+        overrides: source?.overrides ?? null,
       },
       ...history,
     ].slice(0, 20);
@@ -228,7 +264,7 @@
           isDownloading: false,
           status: "Error",
         });
-        addToHistory(task?.url ?? event.id, "error", event.value);
+        addToHistory(task?.url ?? event.id, "error", event.value, task);
         break;
       }
 
@@ -236,7 +272,7 @@
         const task = tasks.find((t) => t.id === event.id);
         if (task?.isPaused) return;
         if (task) {
-          addToHistory(task.url, "success");
+          addToHistory(task.url, "success", undefined, task);
         }
         updateTask(event.id, {
           isDownloading: false,
@@ -319,8 +355,10 @@
       <Titlebar {currentPlatform} />
     </div>
   {:else}
-    <TopBar {currentPlatform} />
+    <TopBar {currentPlatform} onAddTask={() => (addTaskOpen = true)} />
   {/if}
+
+  <AddTask bind:open={addTaskOpen} {addTasks} />
 
   {#if uiState.headless}
     <div class="relative flex items-center justify-center h-full w-full">
@@ -368,11 +406,21 @@
   {:else}
     <div class="flex flex-1 w-full min-h-0 overflow-hidden relative">
       {#if transport.kind === "desktop"}
-        <Sidebar bind:isCollapsed {diskUsage} {currentPlatform} />
+        <Sidebar
+          bind:isCollapsed
+          {diskUsage}
+          {currentPlatform}
+          onAddTask={() => (addTaskOpen = true)}
+        />
       {:else}
         <!-- the website navigates from the top bar; keep the mobile pill -->
         <div class="contents sm:hidden">
-          <Sidebar bind:isCollapsed {diskUsage} {currentPlatform} />
+          <Sidebar
+            bind:isCollapsed
+            {diskUsage}
+            {currentPlatform}
+            onAddTask={() => (addTaskOpen = true)}
+          />
         </div>
       {/if}
 
@@ -480,7 +528,7 @@
                   resumeTask={resumeDownload}
                   cancelTask={cancelDownload}
                   {stopAllDownloads}
-                  retryDownload={startDownload}
+                  {retryDownload}
                 />
               </div>
             </div>
@@ -503,7 +551,7 @@
                 resumeTask={resumeDownload}
                 cancelTask={cancelDownload}
                 {stopAllDownloads}
-                retryDownload={startDownload}
+                {retryDownload}
               />
             </div>
           </div>

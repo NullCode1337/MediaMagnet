@@ -166,6 +166,7 @@ mod tests {
             base_dir: PathBuf::from("/tmp"),
             settings: None,
             cookies: None,
+            overrides: None,
         }
     }
 
