@@ -34,7 +34,7 @@
   let sf = $state(0);
   let tabindex = $derived(
     uiState.activeTab === "home"
-      ? 0
+      ? 1
       : uiState.activeTab === "downloads"
         ? 2
         : 3,
@@ -134,7 +134,7 @@
 {/snippet}
 
 <aside
-  class="max-sm:z-40 max-sm:mb-10 pointer-events-none sm:pointer-events-auto flex items-center justify-center rounded-2xl border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-xl px-3 py-2 h-20 w-auto shrink-0
+  class="max-sm:z-40 pointer-events-none sm:pointer-events-auto flex items-center justify-center rounded-2xl border border-sidebar-border bg-sidebar max-sm:bg-mobile-pill max-sm:backdrop-blur-md text-sidebar-foreground shadow-xl px-3 py-2 h-20 w-auto shrink-0
     fixed bottom-4 left-1/2 -translate-x-1/2
     sm:relative sm:bottom-0 sm:left-0 sm:translate-x-0 sm:flex-col sm:h-full sm:rounded-none sm:border-r sm:shadow-none sm:p-0
     transition-all duration-300 ease-in-out
@@ -177,6 +177,8 @@
             : '280ms'} cubic-bezier(0.25, 0.46, 0.45, 0.94);"
         ></div>
 
+        {@render SidebarButton(Plus, "Add Task", false, onAddTask)}
+
         {@render SidebarButton(
           ListPlus,
           "New Link",
@@ -185,13 +187,12 @@
           true,
         )}
 
-        {@render SidebarButton(Plus, "Add Task", false, onAddTask)}
-
         {@render SidebarButton(
           Download,
           "Downloads",
           uiState.activeTab === "downloads",
           () => (uiState.activeTab = "downloads"),
+          true,
         )}
 
         <div class="sm:hidden flex">
