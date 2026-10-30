@@ -494,6 +494,8 @@ export interface components {
             available: boolean;
             /** @enum {string|null} */
             source?: "preinstalled" | "system" | "bundled" | "overlay" | null;
+            /** @description Version the probe reported, absent when the tool did not answer `--version`. */
+            version?: string | null;
             /** @description Executable that will be spawned (the interpreter for the Python modes). */
             program?: string | null;
             /** @description Leading arguments, such as `-m yt_dlp`. */

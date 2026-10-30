@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use mm_core::host::{disk_usage, Host};
-use mm_core::{Settings, Tool};
+use mm_core::{Settings, Tool, ToolStatus};
 use tauri::State;
 
 use crate::app::App;
@@ -101,6 +101,15 @@ pub async fn reinstall_python_deps(
             }
         }
     })
+}
+
+#[tauri::command]
+pub async fn list_tools(app: State<'_, App>) -> Result<Vec<ToolStatus>, String> {
+    let mut statuses = Vec::with_capacity(Tool::all().len());
+    for tool in Tool::all() {
+        statuses.push(app.runtime.status(tool).await);
+    }
+    Ok(statuses)
 }
 
 #[tauri::command]

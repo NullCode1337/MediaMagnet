@@ -14,7 +14,7 @@ use serde_json::{json, Value};
 
 use mm_core::cookies::CookieInput;
 use mm_core::host::disk_usage;
-use mm_core::{Backend, DownloadRequest, JobCookie, Settings, Tool, ToolSource};
+use mm_core::{Backend, DownloadRequest, JobCookie, Settings, Tool};
 
 use crate::auth::require_token;
 use crate::files;
@@ -353,37 +353,11 @@ async fn cancel_all(State(state): State<Arc<AppState>>) -> Response {
     }
 }
 
-fn source_name(source: ToolSource) -> &'static str {
-    match source {
-        ToolSource::Preinstalled => "preinstalled",
-        ToolSource::System => "system",
-        ToolSource::Bundled => "bundled",
-        ToolSource::Overlay => "overlay",
-    }
-}
-
 async fn list_tools(State(state): State<Arc<AppState>>) -> Json<Value> {
     let runtime = state.engine.runtime();
-    let mut tools = Vec::new();
+    let mut tools = Vec::with_capacity(Tool::all().len());
     for tool in Tool::all() {
-        let status = match runtime.resolve(tool).await {
-            Ok(resolved) => json!({
-                "name": tool.name(),
-                "available": true,
-                "source": source_name(resolved.source),
-                "program": resolved.program.display().to_string(),
-                "args": resolved.args,
-            }),
-            Err(e) => json!({
-                "name": tool.name(),
-                "available": false,
-                "source": Value::Null,
-                "program": Value::Null,
-                "args": [],
-                "error": e.to_string(),
-            }),
-        };
-        tools.push(status);
+        tools.push(runtime.status(tool).await);
     }
 
     Json(json!({

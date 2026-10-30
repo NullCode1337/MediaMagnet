@@ -19,6 +19,7 @@ import type {
   DownloadOptions,
   OpenOptions,
   SaveOptions,
+  ToolInfo,
   ToolUpdateResult,
   Transport,
   TransportEvent,
@@ -124,6 +125,7 @@ export function createDesktopTransport(): Transport {
     clearCookies: () => invoke("clear_cookies"),
     deleteCookie: (path) => invoke("delete_cookie", { path }),
 
+    listTools: () => invoke<ToolInfo[]>("list_tools"),
     updateTools: () =>
       invoke<ToolUpdateResult>("reinstall_python_deps", { tools: null }),
 

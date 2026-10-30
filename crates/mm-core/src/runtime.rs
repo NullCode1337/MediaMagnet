@@ -147,9 +147,12 @@ pub struct ResolvedTool {
     /// Extra environment for the child process.
     pub env: Vec<(String, String)>,
     pub source: ToolSource,
+    /// Version the probe reported, when the tool answered `--version`.
+    pub version: Option<String>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum ToolSource {
     /// The tool binary is on PATH.
     Preinstalled,
@@ -159,6 +162,29 @@ pub enum ToolSource {
     Bundled,
     /// The bundled/system interpreter runs the module from the writable overlay.
     Overlay,
+}
+
+impl ToolSource {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            ToolSource::Preinstalled => "preinstalled",
+            ToolSource::System => "system",
+            ToolSource::Bundled => "bundled",
+            ToolSource::Overlay => "overlay",
+        }
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ToolStatus {
+    pub name: &'static str,
+    pub available: bool,
+    pub source: Option<ToolSource>,
+    pub version: Option<String>,
+    pub program: Option<String>,
+    pub args: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
 }
 
 /// One probe-validated way to run a tool, before the newest is picked.
@@ -197,11 +223,18 @@ impl ToolRuntime {
     }
 
     /// Ask an interpreter for the module's version (`<python> -m <module> --version`).
-    async fn probe_python(&self, python: &Path, tool: Tool) -> Option<ToolVersion> {
+    /// `overlay` is set when the module lives in the writable overlay, so the
+    /// probe imports the same copy a download would.
+    async fn probe_python(
+        &self,
+        python: &Path,
+        tool: Tool,
+        overlay: Option<&Path>,
+    ) -> Option<ToolVersion> {
         let mut cmd = Command::new(python);
         hide_console(&mut cmd);
         cmd.arg("-m").arg(tool.module());
-        cmd.envs(self.environment(None));
+        cmd.envs(self.environment(overlay));
         Self::version_of(cmd, false).await
     }
 
@@ -308,6 +341,7 @@ impl ToolRuntime {
         program: PathBuf,
         source: ToolSource,
         overlay: Option<&Path>,
+        version: Option<&ToolVersion>,
     ) -> ResolvedTool {
         ResolvedTool {
             tool,
@@ -315,6 +349,7 @@ impl ToolRuntime {
             args: vec!["-m".to_string(), tool.module().to_string()],
             env: self.environment(overlay),
             source,
+            version: version.map(ToString::to_string),
         }
     }
 
@@ -347,8 +382,14 @@ impl ToolRuntime {
         let interpreters = self.interpreters();
 
         if let (Some(overlay), Some((python, _))) = (self.overlay_for(tool), interpreters.first()) {
-            let resolved =
-                self.python_tool(tool, python.clone(), ToolSource::Overlay, Some(&overlay));
+            let version = self.probe_python(python, tool, Some(&overlay)).await;
+            let resolved = self.python_tool(
+                tool,
+                python.clone(),
+                ToolSource::Overlay,
+                Some(&overlay),
+                version.as_ref(),
+            );
             self.remember(&resolved);
             return Ok(resolved);
         }
@@ -400,7 +441,7 @@ impl ToolRuntime {
         // A bundled or MM_PYTHON interpreter can hold a newer tool than the one
         // on PATH, so its module version competes with the PATH candidates.
         for (python, source) in &interpreters {
-            if let Some(version) = self.probe_python(python, tool).await {
+            if let Some(version) = self.probe_python(python, tool, None).await {
                 println!(
                     "[MediaMagnet][Download] Found: {} -m {} {version}",
                     python.display(),
@@ -428,18 +469,43 @@ impl ToolRuntime {
                 args: candidate.args,
                 env: self.environment(None),
                 source: candidate.source,
+                version: Some(candidate.version.to_string()),
             };
             self.remember(&resolved);
             return Ok(resolved);
         }
 
         if let Some((python, source)) = interpreters.into_iter().next() {
-            let resolved = self.python_tool(tool, python, source, None);
+            let resolved = self.python_tool(tool, python, source, None, None);
             self.remember(&resolved);
             return Ok(resolved);
         }
 
         Err(ToolError::Missing { tool: tool.name() })
+    }
+
+    /// Resolves one tool into the shape both hosts report to the UI.
+    pub async fn status(&self, tool: Tool) -> ToolStatus {
+        match self.resolve(tool).await {
+            Ok(resolved) => ToolStatus {
+                name: tool.name(),
+                available: true,
+                source: Some(resolved.source),
+                version: resolved.version,
+                program: Some(resolved.program.display().to_string()),
+                args: resolved.args,
+                error: None,
+            },
+            Err(e) => ToolStatus {
+                name: tool.name(),
+                available: false,
+                source: None,
+                version: None,
+                program: None,
+                args: Vec::new(),
+                error: Some(e.to_string()),
+            },
+        }
     }
 
     /// Bundled Deno, if shipped. It is also prepended to PATH for every child, which

@@ -43,6 +43,19 @@ export interface ToolUpdateResult {
   error?: string;
 }
 
+/** Where a resolved backend comes from: `preinstalled` is a local install. */
+export type ToolSource = "preinstalled" | "system" | "bundled" | "overlay";
+
+export interface ToolInfo {
+  name: string;
+  available: boolean;
+  source: ToolSource | null;
+  version: string | null;
+  program: string | null;
+  args: string[];
+  error?: string;
+}
+
 /**
  * Everything the UI needs from its host. The desktop app implements this over
  * Tauri IPC, the browser build over `/api/v1`. Nothing under
@@ -78,6 +91,8 @@ export interface Transport extends Environment {
   deleteCookie(path: string): Promise<void>;
 
   // tools
+  /** Resolves each backend, probing it. Slow first call: interpreters are started. */
+  listTools(): Promise<ToolInfo[]>;
   /** Reinstalls yt-dlp, gallery-dl and spotdl into the writable overlay. */
   updateTools(): Promise<ToolUpdateResult>;
 

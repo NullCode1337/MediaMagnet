@@ -17,5 +17,7 @@ pub use events::{
     CoreEvent, DownloadState, EventSink, NotificationLevel, NullEventSink, SharedEventSink,
 };
 pub use policy::{ArgTool, Policy};
-pub use runtime::{ResolvedTool, RuntimeConfig, Tool, ToolError, ToolRuntime, ToolSource};
+pub use runtime::{
+    ResolvedTool, RuntimeConfig, Tool, ToolError, ToolRuntime, ToolSource, ToolStatus,
+};
 pub use settings::{force_desktop_fields, Settings};

@@ -7,6 +7,7 @@ import {
   type DownloadOptions,
   type OpenOptions,
   type SaveOptions,
+  type ToolInfo,
   type ToolUpdateResult,
   type Transport,
   type TransportEvent,
@@ -334,6 +335,9 @@ export function createHttpTransport(): Transport {
       delete cookies[domain];
       writeStored(COOKIES_KEY, cookies);
     },
+
+    listTools: async () =>
+      (await request<{ tools: ToolInfo[] }>("/tools")).tools,
 
     updateTools: async (): Promise<ToolUpdateResult> => {
       try {

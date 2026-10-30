@@ -74,6 +74,7 @@ pub fn run() {
             commands::settings::update_settings,
             commands::utils::check_download_path,
             commands::utils::get_free_space,
+            commands::utils::list_tools,
             commands::utils::notify,
             commands::utils::reinstall_python_deps,
             commands::utils::reset_python_deps,

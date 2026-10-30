@@ -960,6 +960,9 @@ components:
         source:
           type: [string, 'null']
           enum: [preinstalled, system, bundled, overlay, null]
+        version:
+          type: [string, 'null']
+          description: Version the probe reported, absent when the tool did not answer `--version`.
         program:
           type: [string, 'null']
           description: Executable that will be spawned (the interpreter for the Python modes).
