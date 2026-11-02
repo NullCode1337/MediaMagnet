@@ -18,24 +18,23 @@
 
 MediaMagnet puts the power of [gallery-dl](https://github.com/mikf/gallery-dl), [yt-dlp](https://github.com/yt-dlp/yt-dlp) and [spotdl](https://github.com/spotDL/spotify-downloader) behind a clean GUI.
 
-It ships as two hosts for the same interface:
+It ships as two variants for the same interface:
 
-- **Desktop** — a Tauri 2 application for Windows, Linux and macOS, with native window controls, notifications and file pickers.
-- **Server** — a single Rust binary that serves the same Svelte UI to a browser and exposes a versioned REST API at `/api/v1`. Anything the browser stores (settings, cookies, API keys) stays in that browser's `localStorage` and is sent with each job, so the server keeps no per-user configuration.
+- **Desktop**: a Tauri 2 application for Windows, Linux and macOS, with native window controls, notifications and file pickers.
+- **Server**: a single Rust binary that serves the same web UI to a browser and exposes a versioned REST API at `/api/v1`. Anything the browser stores (settings, cookies, API keys) stays in that browser's `localStorage` and is sent with each job, so the server keeps no per-user configuration.
 
 Paste a URL, configure your options, and let MediaMagnet handle the rest.
 
 ## Features
 
 - **Unified downloader**: smart selection between gallery-dl, yt-dlp and spotdl
-- **Headless mode**: download as you browse through sites
-- **Two hosts, one UI**: native desktop app or browser front end for a self-hosted server
+- **Headless mode**: one click to download as you browse through sites
 - **REST API**: OpenAPI 3.1 specification and a typed TypeScript client
 - **Custom arguments**: pass **global** or **per-site arguments** directly to the backends (API keys, user IDs, anything supported by the backend)
 - **Cookie manager**: supports both JSON and Netscape formats, with per-job cookies over the API
 - **Settings import / export**: back up and share your configuration with a single click
 - **Cross-platform**: native binaries for Windows, Linux and macOS; the server runs anywhere Rust does
-- **Lightweight**: built on Tauri and a single Axum process
+- **Lightweight**: built on Tauri and a single Axum server
 
 ---
 
@@ -90,14 +89,7 @@ tar -xzf mediamagnet-server-0.6.1-x86_64-unknown-linux-gnu-tools.tar.gz
 ./mediamagnet-server-0.6.1-x86_64-unknown-linux-gnu-tools/mediamagnet-server
 ```
 
-Two variants are published:
-
-| Archive | Contents |
-| --- | --- |
-| `...-<triple>.tar.gz` | Server binary with the web UI embedded. Tools must be on `PATH`. |
-| `...-<triple>-tools.tar.gz` | The same, plus `binaries/` with Python, `yt-dlp`, `gallery-dl`, `spotdl`, Deno and ffmpeg. Needs nothing installed. |
-
-The server picks up `binaries/` beside the executable automatically.
+The server picks up the backends from PATH or `binaries/` directory beside the executable automatically.
 
 ### Desktop binary as a server
 
@@ -108,23 +100,11 @@ The desktop executable embeds the same server and web UI. Pass
 MediaMagnet --launch-server
 ```
 
-It listens on `0.0.0.0:8080` and honours the same `MM_*` variables as the
+It listens on `0.0.0.0:8080` and honors the same `MM_*` variables as the
 standalone server (including `MM_TOKEN`). The bundled Python tools are found
 relative to the installed executable. Server mode keeps its data in the
 standalone server's directory (`$XDG_DATA_HOME/mediamagnet`), separate from the
 desktop app's own settings.
-
-### From source
-
-```bash
-bun install
-bun run build:server
-./target/release/mediamagnet-server
-```
-
-`build:server` builds the web UI first and the server embeds it, so the binary
-serves the app without any extra files or environment variables. `bun run
-package:server` additionally produces `target/package/mediamagnet-server-<version>-<target>.tar.gz`.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
@@ -137,31 +117,6 @@ package:server` additionally produces `target/package/mediamagnet-server-<versio
 | `MM_ALLOW_CUSTOM_ARGS` | off | Accept user-supplied tool arguments (deny-list filtered). When off, jobs carrying them fail; see [the API docs](docs/API.md#policy). |
 
 The binary speaks plain HTTP. Put it behind a TLS reverse proxy before exposing it, and set `MM_TOKEN` if anyone else can reach it. Without a token the API is open.
-
----
-
-## API
-
-The full reference is in [docs/API.md](docs/API.md); the machine-readable specification is [docs/openapi.yaml](docs/openapi.yaml).
-
-```bash
-curl -X POST http://localhost:8080/api/v1/downloads \
-  -H 'Content-Type: application/json' \
-  -d '{"url":"https://www.youtube.com/watch?v=..."}'
-
-curl -N http://localhost:8080/api/v1/events   # Server-Sent Events
-```
-
-A typed client lives in [`packages/client`](packages/client):
-
-```ts
-import { createMediaMagnetClient, subscribeEvents } from "@mediamagnet/client";
-
-const api = createMediaMagnetClient({ baseUrl: "http://localhost:8080" });
-await api.POST("/downloads", { body: { url } });
-```
-
-Regenerate its types after changing the spec with `bun run generate:api`.
 
 ---
 
@@ -191,29 +146,33 @@ bun run tauri build
 
 # Build the server (web UI + Rust binary)
 bun run build:server
+./target/release/mediamagnet-server
 ```
 
-### Repository layout
+---
 
-| Path | Contents |
-| --- | --- |
-| `crates/mm-core` | Download engine, settings, cookies, tool runtime. |
-| `crates/mm-server` | Axum server: `/api/v1`, SSE, file serving, SPA fallback. |
-| `apps/desktop` | Tauri 2 host and its Rust commands. |
-| `apps/web` | Browser shell; picks the desktop or HTTP transport at runtime. |
-| `packages/ui` | Shared Svelte components (no Tauri imports). |
-| `packages/api` | Transport contract and shared config types. |
-| `packages/client` | Generated OpenAPI types and the public TypeScript client. |
-| `docs` | API reference, OpenAPI spec, architecture notes and decisions. |
+## API
 
-### Checks
+The full reference is in [docs/API.md](docs/API.md); the machine-readable specification is [docs/openapi.yaml](docs/openapi.yaml).
 
 ```bash
-cargo fmt --all --check
-cargo clippy --workspace --all-targets -- -D warnings
-cargo test --workspace
-bun run check
+curl -X POST http://localhost:8080/api/v1/downloads \
+  -H 'Content-Type: application/json' \
+  -d '{"url":"https://www.youtube.com/watch?v=..."}'
+
+curl -N http://localhost:8080/api/v1/events   # Server-Sent Events
 ```
+
+A typed client lives in [`packages/client`](packages/client):
+
+```ts
+import { createMediaMagnetClient, subscribeEvents } from "@mediamagnet/client";
+
+const api = createMediaMagnetClient({ baseUrl: "http://localhost:8080" });
+await api.POST("/downloads", { body: { url } });
+```
+
+Regenerate its types after changing the spec with `bun run generate:api`.
 
 ---
 
