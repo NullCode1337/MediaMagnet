@@ -111,6 +111,7 @@ export type Section = {
   description?: string;
   headerAction?: SectionAction;
   items: Setting[];
+  fill?: boolean;
 };
 
 export type SectionBase = {
@@ -118,4 +119,5 @@ export type SectionBase = {
   description?: string;
   headerActions?: PageAction[];
   sections: Section[];
+  fill?: boolean;
 };

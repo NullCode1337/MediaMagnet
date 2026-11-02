@@ -83,7 +83,9 @@
 {/snippet}
 
 {#snippet jsonViewer()}
-  <div class="flex items-center justify-between border-b bg-muted/50 px-3 py-2">
+  <div
+    class="flex shrink-0 items-center justify-between border-b bg-muted/50 px-3 py-2"
+  >
     <div class="flex items-center gap-2">
       <FileBraces size={12} class="text-muted-foreground" />
       <span class="text-[11px] font-medium tracking-wide text-muted-foreground">
@@ -93,16 +95,11 @@
     <div class="flex items-center gap-2">
       <span class="text-[10px] text-muted-foreground">{lines.length} lines</span
       >
-      <span
-        class="rounded border border-primary/25 bg-primary/8 px-1.5 py-0.5 text-[10px] font-medium text-primary/70"
-      >
-        read-only
-      </span>
     </div>
   </div>
 
   <div
-    class="max-h-[50vh] overflow-auto scrollbar-thin font-mono text-[11px] leading-5"
+    class="min-h-0 flex-1 overflow-auto scrollbar-thin font-mono text-[11px] leading-5"
   >
     <div class="flex min-w-fit">
       <div
@@ -123,11 +120,13 @@
 <Section
   config={{
     title: "Import/Export Settings",
+    fill: true,
     sections: [
       {
         items: [{ type: "custom" as const, node: actionBar }],
       },
       {
+        fill: true,
         items: [{ type: "custom" as const, node: jsonViewer }],
       },
     ],

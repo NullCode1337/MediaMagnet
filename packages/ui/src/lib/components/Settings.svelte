@@ -306,7 +306,12 @@
       {/if}
 
       {#if settings.config}
-        <div class="w-full space-y-8 animate-in fade-in slide-in-from-bottom-2">
+        <div
+          class="w-full space-y-8 animate-in fade-in slide-in-from-bottom-2 {activeTab ===
+          'import_export'
+            ? 'flex h-full min-h-0 flex-col'
+            : ''}"
+        >
           {#if activeTab === "general"}
             <GeneralTab {currentPlatform} />
           {:else if activeTab === "downloads"}
@@ -316,7 +321,9 @@
           {:else if activeTab === "privacy"}
             <PrivacyTab />
           {:else if activeTab === "import_export"}
-            <ImportExportTab />
+            <div class="flex min-h-0 flex-1 flex-col">
+              <ImportExportTab />
+            </div>
           {:else if activeTab === "youtube"}
             <YouTubeTab />
           {:else if activeTab === "gallery"}

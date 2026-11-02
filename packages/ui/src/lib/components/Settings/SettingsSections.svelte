@@ -13,12 +13,15 @@
   const ARGS_TEXTAREA_CLASS = `${ARGS_TEXTAREA_BASE} font-mono`;
   const argsMinHeight = (rows = 3) => rows * 22 + 20 + "px";
 
-  let { sections }: { sections: Section[] } = $props();
+  let { sections, fill = false }: { sections: Section[]; fill?: boolean } =
+    $props();
 </script>
 
-<div class="flex flex-col gap-3">
+<div class="flex flex-col gap-3 {fill ? 'min-h-0 flex-1' : ''}">
   {#each sections as section, sindex (sindex)}
-    <div class="flex flex-col gap-3">
+    <div
+      class="flex flex-col gap-3 {section.fill ? 'min-h-0 flex-1' : ''}"
+    >
       {#if section.label && !section.headerAction}
         <div class="px-2 pt-1">
           <h2 class="text-xs font-bold tracking-wide text-primary">
@@ -35,7 +38,9 @@
       <div
         class="overflow-hidden rounded-2xl bg-muted/40 shadow-sm {section.headerAction
           ? ''
-          : 'divide-y divide-border/50'}"
+          : 'divide-y divide-border/50'} {section.fill
+          ? 'flex min-h-0 flex-1 flex-col'
+          : ''}"
       >
         {#if section.headerAction}
           <div class="flex items-start justify-between gap-3 px-4 pt-4 pb-2">
@@ -360,7 +365,7 @@
               </div>
             {/if}
           {:else if item.type === "custom"}
-            <div class="p-0.5">
+            <div class="p-0.5 {section.fill ? 'flex min-h-0 flex-1 flex-col' : ''}">
               {@render item.node()}
             </div>
           {/if}

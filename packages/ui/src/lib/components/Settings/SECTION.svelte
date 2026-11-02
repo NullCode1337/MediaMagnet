@@ -6,8 +6,10 @@
   let { config }: { config: SectionBase } = $props();
 </script>
 
-<div class="flex w-full flex-col">
-  <header class="flex justify-between py-5 px-1">
+<div
+  class="flex w-full flex-col {config.fill ? 'min-h-0 flex-1' : ''}"
+>
+  <header class="flex shrink-0 justify-between py-5 px-1">
     <div class="flex flex-col max-sm:px-7">
       <h1 class="text-xl text-foreground sm:font-bold sm:text-2xl">
         {config.title || "Settings"}
@@ -38,5 +40,5 @@
     </div>
   </header>
 
-  <SettingsSections sections={config.sections} />
+  <SettingsSections sections={config.sections} fill={config.fill} />
 </div>
