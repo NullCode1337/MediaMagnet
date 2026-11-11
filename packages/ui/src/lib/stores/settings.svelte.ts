@@ -46,6 +46,7 @@ class Settings {
   private lastPersisted: string | null = null;
   private started = false;
   private inFlight = false;
+  private dirty = false;
   private chain: Promise<void> = Promise.resolve();
   private saveStatusTimer: ReturnType<typeof setTimeout> | undefined;
   private silentNextSave = false;
@@ -111,6 +112,8 @@ class Settings {
 
   private async persist(): Promise<void> {
     if (this.inFlight) {
+      // Rerun the save loop after the in-flight write.
+      this.dirty = true;
       return this.chain;
     }
 
@@ -119,8 +122,7 @@ class Settings {
       this.inFlight = true;
       try {
         let snapshot = $state.snapshot(this.config) as FullConfig;
-        let stable = false;
-        while (!stable) {
+        for (;;) {
           this.markSaveState("saving");
           const canonical = await transport.updateSettings(
             this.outgoing(snapshot),
@@ -128,8 +130,17 @@ class Settings {
           this.lastPersisted = JSON.stringify(hydrate(canonical));
 
           const next = $state.snapshot(this.config) as FullConfig;
-          stable = JSON.stringify(next) === JSON.stringify(snapshot);
-          if (!stable) snapshot = next;
+          if (JSON.stringify(next) !== JSON.stringify(snapshot)) {
+            snapshot = next;
+            continue;
+          }
+          // Edit landed after the comparison; save once more.
+          if (this.dirty) {
+            this.dirty = false;
+            snapshot = next;
+            continue;
+          }
+          break;
         }
         if (this.silentNextSave) {
           this.silentNextSave = false;
@@ -363,16 +374,10 @@ class Settings {
 
   async openDownloadDir() {
     if (!this.config) return;
-
-    let basePath = this.config.download_path;
-    if (basePath === "") {
-      basePath = await transport.downloadDir();
-    }
-
     try {
-      await transport.openPath(
-        basePath + transport.pathSeparator() + "MediaMagnet",
-      );
+      // Hosts decide the root; appending a segment here would drift.
+      const root = await transport.downloadRoot();
+      await transport.openPath(root);
     } catch (err) {
       toast.error("Failed to open folder: " + err);
     }

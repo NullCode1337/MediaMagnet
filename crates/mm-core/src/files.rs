@@ -76,12 +76,18 @@ pub fn list_dir(root: &Path, relative: &str) -> Result<Vec<DirEntry>> {
 
     let mut entries = Vec::new();
     for entry in std::fs::read_dir(&dir)? {
-        let entry = entry?;
-        if entry.file_type()?.is_symlink() {
+        // Entries can vanish during cleanup; skip stale ones.
+        let Ok(entry) = entry else {
+            continue;
+        };
+        // Symlinks can point outside the root; listing them leaks target metadata.
+        if entry.file_type().is_ok_and(|kind| kind.is_symlink()) {
             continue;
         }
         let name = entry.file_name().to_string_lossy().into_owned();
-        let meta = entry.metadata()?;
+        let Ok(meta) = entry.metadata() else {
+            continue;
+        };
         let is_dir = meta.is_dir();
         entries.push(DirEntry {
             path: join_relative(relative, &name),

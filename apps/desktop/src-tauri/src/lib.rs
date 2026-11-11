@@ -73,12 +73,28 @@ pub fn run() {
             commands::settings::settings,
             commands::settings::update_settings,
             commands::utils::check_download_path,
+            commands::utils::download_root,
             commands::utils::get_free_space,
             commands::utils::list_tools,
             commands::utils::notify,
             commands::utils::reinstall_python_deps,
             commands::utils::reset_python_deps,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app_handle, event| {
+            if matches!(event, tauri::RunEvent::Exit) {
+                clear_cookies_on_exit(app_handle);
+            }
+        });
+}
+
+fn clear_cookies_on_exit(app_handle: &tauri::AppHandle) {
+    let Some(state) = app_handle.try_state::<app::App>() else {
+        return;
+    };
+    if !mm_core::Settings::load_from(&state.config_dir).clear_cookies_on_exit {
+        return;
+    }
+    let _ = mm_core::cookies::clear_cookies(&state.engine.cookies_dir());
 }

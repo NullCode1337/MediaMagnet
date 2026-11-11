@@ -43,7 +43,7 @@
       : tasks.reduce((sum, t) => sum + t.progress, 0) / tasks.length,
   );
 
-  let mobileTabIndex = $derived(() => {
+  let mobileTabIndex = $derived.by(() => {
     switch (uiState.activeTab) {
       case "home":
         return 0;
@@ -57,6 +57,8 @@
   });
 
   function updateTask(id: string, patch: Partial<DownloadTask>) {
+    // Events also arrive for jobs owned by other tabs.
+    if (!tasks.some((t) => t.id === id)) return;
     tasks = tasks.map((t) => (t.id === id ? { ...t, ...patch } : t));
   }
 
@@ -469,7 +471,7 @@
         <div class="flex-1 w-full overflow-hidden relative min-h-0">
           <div
             class="sm:hidden w-full h-full flex transition-transform duration-300 ease-out"
-            style="transform: translateX(-{mobileTabIndex() * 100}%);"
+            style="transform: translateX(-{mobileTabIndex * 100}%);"
           >
             <div
               class="w-full h-full shrink-0 overflow-y-auto px-6 pt-4 pb-32 flex flex-col justify-center"

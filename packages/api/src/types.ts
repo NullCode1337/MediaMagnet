@@ -110,8 +110,8 @@ export interface Environment {
   readClipboard(): Promise<string>;
   writeClipboard(text: string): Promise<void>;
   openPath(path: string): Promise<void>;
-  downloadDir(): Promise<string>;
-  pathSeparator(): string;
+  /** The directory downloads actually land in, after the host's path rule. */
+  downloadRoot(): Promise<string>;
 
   open(options: OpenOptions): Promise<string | null>;
   save(options: SaveOptions): Promise<string | null>;

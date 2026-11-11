@@ -600,9 +600,18 @@ async fn spa(State(state): State<Arc<AppState>>, request: axum::extract::Request
 
     if !path.is_empty() {
         if let Some(bytes) = state.static_assets.read(path).await {
+            // Vite hashes `assets/`; the entry HTML must be revalidated.
+            let cache = if path.starts_with("assets/") {
+                "public, max-age=31536000, immutable"
+            } else {
+                "no-cache"
+            };
             return (
-                [(header::CONTENT_TYPE, mime_for(std::path::Path::new(path)))],
-                bytes,
+                [
+                    (header::CONTENT_TYPE, mime_for(std::path::Path::new(path))),
+                    (header::CACHE_CONTROL, cache),
+                ],
+                axum::body::Body::from(bytes),
             )
                 .into_response();
         }
@@ -616,9 +625,14 @@ async fn spa(State(state): State<Arc<AppState>>, request: axum::extract::Request
     }
 
     match state.static_assets.read("index.html").await {
-        Some(bytes) => {
-            ([(header::CONTENT_TYPE, "text/html; charset=utf-8")], bytes).into_response()
-        }
+        Some(bytes) => (
+            [
+                (header::CONTENT_TYPE, "text/html; charset=utf-8"),
+                (header::CACHE_CONTROL, "no-cache"),
+            ],
+            axum::body::Body::from(bytes),
+        )
+            .into_response(),
         None => error(
             StatusCode::NOT_FOUND,
             "not_found",

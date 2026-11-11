@@ -6,7 +6,6 @@ import {
   type Window,
 } from "@tauri-apps/api/window";
 import { getVersion, onBackButtonPress } from "@tauri-apps/api/app";
-import { sep, downloadDir } from "@tauri-apps/api/path";
 import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { ask, open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
@@ -152,8 +151,7 @@ export function createDesktopTransport(): Transport {
     readClipboard: () => readText(),
     writeClipboard: (text) => writeText(text),
     openPath: (path) => openPath(path),
-    downloadDir: () => downloadDir(),
-    pathSeparator: () => sep(),
+    downloadRoot: () => invoke<string>("download_root"),
 
     open: (options: OpenOptions) =>
       open(options) as Promise<string | null>,

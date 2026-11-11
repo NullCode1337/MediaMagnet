@@ -1,10 +1,18 @@
 use std::path::Path;
 
-use mm_core::host::{disk_usage, Host};
+use mm_core::host::{disk_usage, resolve_download_path, Host};
 use mm_core::{Settings, Tool, ToolStatus};
 use tauri::State;
 
 use crate::app::App;
+
+#[tauri::command]
+pub fn download_root(app: State<'_, App>) -> Result<String, String> {
+    let settings = Settings::load_from(&app.config_dir);
+    Ok(resolve_download_path(&settings, &app.host)
+        .to_string_lossy()
+        .into_owned())
+}
 
 #[tauri::command]
 pub fn check_download_path(path: String) -> Result<(), String> {
@@ -38,13 +46,9 @@ pub fn check_download_path(path: String) -> Result<(), String> {
 #[tauri::command]
 pub async fn get_free_space(app: State<'_, App>) -> Result<f64, String> {
     let settings = Settings::load_from(&app.config_dir);
-    let download_path = if settings.download_path.is_empty() {
-        app.host.default_download_dir()
-    } else {
-        std::path::PathBuf::from(&settings.download_path)
-    };
+    let root = resolve_download_path(&settings, &app.host);
 
-    disk_usage(&download_path)
+    disk_usage(&root)
         .map(|usage| usage.used_percent)
         .map_err(|e| e.to_string())
 }

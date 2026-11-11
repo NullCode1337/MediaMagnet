@@ -113,10 +113,18 @@ impl Host for DesktopHost {
         }
         #[cfg(target_os = "linux")]
         {
-            std::process::Command::new("notify-send")
+            match std::process::Command::new("notify-send")
                 .arg(message)
                 .spawn()
-                .is_ok()
+            {
+                Ok(mut child) => {
+                    std::thread::spawn(move || {
+                        let _ = child.wait();
+                    });
+                    true
+                }
+                Err(_) => false,
+            }
         }
         #[cfg(not(target_os = "linux"))]
         {

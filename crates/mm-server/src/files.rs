@@ -192,7 +192,12 @@ pub async fn serve(
         Err(e) => return not_found(&e.to_string()),
     };
 
-    let meta = match tokio::fs::metadata(&path).await {
+    // Open first: `metadata(path)` can describe a file another job replaces.
+    let mut file = match tokio::fs::File::open(&path).await {
+        Ok(file) => file,
+        Err(_) => return not_found("no such file"),
+    };
+    let meta = match file.metadata().await {
         Ok(meta) if meta.is_file() => meta,
         _ => return not_found("no such file"),
     };
@@ -248,18 +253,7 @@ pub async fn serve(
             ),
         );
 
-    let file = match tokio::fs::File::open(&path).await {
-        Ok(file) => file,
-        Err(_) => return not_found("no such file"),
-    };
-    // Taken from the handle, not the path: if another job replaces the file
-    // while this response is streaming, cleanup must not delete the newcomer.
-    let opened_meta = match file.metadata().await {
-        Ok(meta) => meta,
-        Err(_) => return not_found("no such file"),
-    };
     let full_response = range.is_none();
-
     let (start, end) = match range {
         Some(range) => {
             builder = builder
@@ -284,11 +278,14 @@ pub async fn serve(
             Box::pin(futures_util::stream::empty())
         } else {
             use tokio::io::{AsyncReadExt, AsyncSeekExt, SeekFrom};
-            let mut file = file;
             if start > 0 && file.seek(SeekFrom::Start(start)).await.is_err() {
                 return not_found("no such file");
             }
-            Box::pin(ReaderStream::new(file.take(end - start + 1)))
+            // tokio-util defaults to 4 KiB; file serving is read/poll bound.
+            Box::pin(ReaderStream::with_capacity(
+                file.take(end - start + 1),
+                64 * 1024,
+            ))
         };
 
     // Output files disappear once a client has received them in full. A range
@@ -300,7 +297,7 @@ pub async fn serve(
                 retention: delete.retention,
                 job_id: Some(delete.job_id),
                 relative,
-                identity: FileIdentity::from_metadata(&opened_meta),
+                identity: FileIdentity::from_metadata(&meta),
                 delivered: 0,
                 expected: len,
                 armed: true,

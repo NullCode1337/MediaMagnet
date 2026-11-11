@@ -231,6 +231,8 @@ impl Engine {
     async fn base_command(&self, tool: Tool) -> Result<Command> {
         let resolved = self.runtime.resolve(tool).await?;
         let mut cmd = Command::new(resolved.program);
+        // Don't leave the tool running if the command is dropped.
+        cmd.kill_on_drop(true);
         hide_console(&mut cmd);
         cmd.args(resolved.args);
         for (key, value) in resolved.env {
@@ -243,7 +245,7 @@ impl Engine {
     /// for the error message if the fallback also fails; a normal gallery-dl link
     /// ("no dedicated extractor") is expected and must not surface as a warning.
     async fn identify(&self, url: &str, spec: &JobSpec) -> (Backend, Option<String>) {
-        if url.to_lowercase().contains("spotify.com") {
+        if url_host_is(url, "spotify.com") {
             return (Backend::SpotDl, None);
         }
 
@@ -270,10 +272,13 @@ impl Engine {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
 
-        let output = cmd
-            .output()
-            .await
-            .map_err(|e| format!("could not run yt-dlp: {}", e))?;
+        // A hung network probe must not hold a download permit forever.
+        let output =
+            match tokio::time::timeout(std::time::Duration::from_secs(60), cmd.output()).await {
+                Ok(Ok(output)) => output,
+                Ok(Err(e)) => return Err(format!("could not run yt-dlp: {}", e)),
+                Err(_) => return Err("yt-dlp probe timed out".into()),
+            };
         let stderr = String::from_utf8_lossy(&output.stderr);
 
         if stderr.contains("Falling back on generic") {
@@ -390,7 +395,9 @@ impl Engine {
             .await
             .map_err(|e| Error::Msg(format!("{} backend error: {}", backend.as_str(), e)))?;
 
-        let lc = url.to_lowercase();
+        let is_youtube = url_host_is(url, "youtube.com")
+            || url_host_is(url, "youtu.be")
+            || url_host_is(url, "youtube-nocookie.com");
 
         match backend {
             Backend::SpotDl => {
@@ -428,7 +435,7 @@ impl Engine {
                     "--newline",
                 ]);
 
-                if lc.contains("youtu") || lc.contains("yt.be") {
+                if is_youtube {
                     if !settings.yt_format.is_empty() {
                         cmd.args(["-f", &settings.yt_format]);
                     }
@@ -698,11 +705,19 @@ impl Engine {
             }
             count_cmd.current_dir(base_dir);
 
-            let out = count_cmd.args(["-g", link]).output().await?;
-            String::from_utf8_lossy(&out.stdout)
-                .lines()
-                .filter(|l| !l.trim().is_empty() && !l.trim().starts_with('|'))
-                .count()
+            // Nothing to cancel yet; cap the listing and fall back to an unknown total.
+            match tokio::time::timeout(
+                std::time::Duration::from_secs(30),
+                count_cmd.args(["-g", link]).output(),
+            )
+            .await
+            {
+                Ok(Ok(out)) => String::from_utf8_lossy(&out.stdout)
+                    .lines()
+                    .filter(|l| !l.trim().is_empty() && !l.trim().starts_with('|'))
+                    .count(),
+                _ => 0,
+            }
         } else {
             0
         };
@@ -942,7 +957,10 @@ impl Engine {
                     break;
                 }
                 Err(_) => {
-                    guard.remove(&id);
+                    // Don't leave an orphan if reaping fails.
+                    if let Some(mut entry) = guard.remove(&id) {
+                        let _ = entry.child.start_kill();
+                    }
                     break;
                 }
                 Ok(None) => {}
@@ -1015,9 +1033,8 @@ impl Engine {
                             continue;
                         }
                         let domain_dir = base_dir.join(domain);
-                        if !domain_dir.exists() {
-                            std::fs::create_dir(&domain_dir)?;
-                        }
+                        // Idempotent: concurrent jobs can target the same host directory.
+                        std::fs::create_dir_all(&domain_dir)?;
                         std::fs::rename(&path, domain_dir.join(name))?;
                     }
                 }
@@ -1047,7 +1064,14 @@ impl Engine {
                 cmd.args(["-o", &template, "--print", "filename", "--no-download", url])
                     .current_dir(base);
 
-                let out = cmd.output().await?;
+                let out =
+                    match tokio::time::timeout(std::time::Duration::from_secs(15), cmd.output())
+                        .await
+                    {
+                        Ok(Ok(out)) => out,
+                        // Cancellation must not wait on another network probe.
+                        _ => return Ok(()),
+                    };
                 for line in String::from_utf8_lossy(&out.stdout)
                     .lines()
                     .map(str::trim)
@@ -1077,7 +1101,13 @@ impl Engine {
                 cmd.args(["-s", "-d", ".", "--print", "{_directory}", url])
                     .current_dir(base);
 
-                let out = cmd.output().await?;
+                let out =
+                    match tokio::time::timeout(std::time::Duration::from_secs(15), cmd.output())
+                        .await
+                    {
+                        Ok(Ok(out)) => out,
+                        _ => return Ok(()),
+                    };
                 let mut deleted = HashSet::new();
                 for line in String::from_utf8_lossy(&out.stdout)
                     .lines()
@@ -1168,6 +1198,14 @@ impl Engine {
             }
             let _ = entry.child.wait().await;
 
+            // Match `cancel`: leave no partial files behind.
+            if let Err(e) = self
+                .clean_tempfiles(&entry.base_dir, &entry.url, entry.backend, &entry.spec)
+                .await
+            {
+                eprintln!("[MediaMagnet] Cleanup failed during cancel-all: {}", e);
+            }
+
             self.emit(CoreEvent::DownloadError {
                 id: id.clone(),
                 value: "Download cancelled".into(),
@@ -1187,6 +1225,19 @@ impl Engine {
             .map(|guard| guard.keys().cloned().collect())
             .unwrap_or_default()
     }
+}
+
+fn url_host(link: &str) -> Option<String> {
+    let host = url::Url::parse(link).ok()?.host_str()?.to_ascii_lowercase();
+    Some(host.trim_start_matches("www.").to_string())
+}
+
+#[doc(hidden)]
+pub fn url_host_is(link: &str, domain: &str) -> bool {
+    let Some(host) = url_host(link) else {
+        return false;
+    };
+    host == domain || host.ends_with(&format!(".{domain}"))
 }
 
 #[doc(hidden)]

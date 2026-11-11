@@ -86,3 +86,33 @@ fn settings_round_trip_through_file() {
     assert_eq!(Settings::load_from(&dir), settings);
     std::fs::remove_dir_all(&dir).unwrap();
 }
+
+#[test]
+fn concurrent_saves_leave_one_complete_document() {
+    let dir = std::env::temp_dir().join(format!("mm-settings-race-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+
+    let a = Settings {
+        yt_format: "best".into(),
+        ..Settings::default()
+    };
+    let b = Settings {
+        yt_format: "worst".into(),
+        ..Settings::default()
+    };
+
+    let handles: Vec<_> = (0..8)
+        .map(|index| {
+            let dir = dir.clone();
+            let settings = if index % 2 == 0 { a.clone() } else { b.clone() };
+            std::thread::spawn(move || settings.save_to(&dir).unwrap())
+        })
+        .collect();
+    for handle in handles {
+        handle.join().unwrap();
+    }
+
+    let loaded = Settings::load_from(&dir);
+    assert!(loaded == a || loaded == b);
+    std::fs::remove_dir_all(&dir).unwrap();
+}

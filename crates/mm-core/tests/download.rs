@@ -1,5 +1,5 @@
 use mm_core::download::{
-    contains_separator, matching_cookie, mtime_flag, recode_args, Backend, JobCookie,
+    contains_separator, matching_cookie, mtime_flag, recode_args, url_host_is, Backend, JobCookie,
 };
 
 fn cookie(domain: &str, content: &str) -> JobCookie {
@@ -7,6 +7,27 @@ fn cookie(domain: &str, content: &str) -> JobCookie {
         domain: domain.into(),
         content: content.into(),
     }
+}
+
+#[test]
+fn host_checks_ignore_paths_and_queries() {
+    assert!(url_host_is(
+        "https://www.youtube.com/watch?v=1",
+        "youtube.com"
+    ));
+    assert!(url_host_is("https://music.youtube.com/", "youtube.com"));
+    assert!(url_host_is("https://youtu.be/abc", "youtu.be"));
+    assert!(url_host_is(
+        "https://open.spotify.com/track/1",
+        "spotify.com"
+    ));
+
+    assert!(!url_host_is(
+        "https://example.com/?next=youtube.com",
+        "youtube.com"
+    ));
+    assert!(!url_host_is("https://notyoutube.com/x", "youtube.com"));
+    assert!(!url_host_is("not a url", "youtube.com"));
 }
 
 #[test]

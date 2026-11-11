@@ -5,6 +5,8 @@
 
 use std::path::PathBuf;
 
+use axum::body::Bytes;
+
 include!(concat!(env!("OUT_DIR"), "/spa_assets.rs"));
 
 #[derive(Clone)]
@@ -35,7 +37,7 @@ impl StaticAssets {
         }
     }
 
-    pub async fn read(&self, path: &str) -> Option<Vec<u8>> {
+    pub async fn read(&self, path: &str) -> Option<Bytes> {
         match self {
             Self::Disk(dir) => {
                 let root = dir.canonicalize().ok()?;
@@ -43,12 +45,13 @@ impl StaticAssets {
                 if !resolved.starts_with(&root) || !resolved.is_file() {
                     return None;
                 }
-                tokio::fs::read(resolved).await.ok()
+                tokio::fs::read(resolved).await.ok().map(Bytes::from)
             }
+            // Borrow the embedded bytes instead of copying them per request.
             Self::Embedded => FILES
                 .iter()
                 .find(|(name, _)| *name == path)
-                .map(|(_, bytes)| bytes.to_vec()),
+                .map(|(_, bytes)| Bytes::from_static(bytes)),
         }
     }
 }

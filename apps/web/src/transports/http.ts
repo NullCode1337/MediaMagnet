@@ -423,11 +423,10 @@ export function createHttpTransport(): Transport {
     openPath: async () => {
       throw new Error("opening files is only available in the desktop app");
     },
-    downloadDir: async () => {
+    downloadRoot: async () => {
       const root = await request<{ path: string }>("/paths/download-root");
       return root.path;
     },
-    pathSeparator: () => "/",
 
     open: pickFile,
     save: saveFile,

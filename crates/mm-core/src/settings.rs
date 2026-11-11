@@ -333,6 +333,22 @@ fn prepare_settings_value(raw: &Value) -> (Value, SanitizeReport) {
     (value, report)
 }
 
+fn unique_tmp_path(config_path: &Path) -> PathBuf {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|elapsed| elapsed.as_nanos())
+        .unwrap_or(0);
+    let name = format!(
+        ".settings-{}-{nanos:x}-{:x}.tmp",
+        std::process::id(),
+        COUNTER.fetch_add(1, Ordering::Relaxed)
+    );
+    config_path.with_file_name(name)
+}
+
 fn backup_corrupt_file(path: &Path) -> Option<PathBuf> {
     let stem = path.file_stem()?.to_str()?;
     let parent = path.parent()?;
@@ -373,7 +389,8 @@ impl Settings {
         let json = serde_json::to_string_pretty(self)
             .map_err(|e| format!("could not serialize settings: {e}"))?;
 
-        let tmp_path = config_path.with_extension("json.tmp");
+        // Unique per write: concurrent saves must not share a temp file.
+        let tmp_path = unique_tmp_path(&config_path);
 
         let write_tmp = || -> Result<(), String> {
             let mut file = std::fs::File::create(&tmp_path)
