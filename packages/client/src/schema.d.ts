@@ -78,8 +78,9 @@ export interface paths {
         /**
          * Resume a paused download
          * @description Replays the URL, backend, overrides, settings and cookies the job was
-         *     created with. A job that was started with the server's own settings or
-         *     cookie store uses the current server values.
+         *     created with. A job started with the server's own settings uses the
+         *     current server values; job-local cookies are replayed from the job
+         *     record.
          */
         post: operations["resumeDownload"];
         delete?: never;
@@ -189,17 +190,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List cookie profiles */
+        /**
+         * List cookie profiles (not available)
+         * @description The server keeps no cookie store. Cookies belong to the client and are
+         *     sent per job in the `cookies` field of `POST /downloads`.
+         */
         get: operations["listCookies"];
         put?: never;
-        /**
-         * Add or replace a cookie profile
-         * @description `FilePath` reads a server-side `.txt`, `.cookies` (Netscape) or `.json`
-         *     file. `Content` accepts raw Netscape text or JSON, which is converted to
-         *     Netscape. A profile is stored as `<domain>.txt`.
-         */
+        /** Store a cookie profile (not available) */
         post: operations["saveCookie"];
-        /** Delete every cookie profile */
+        /** Delete every cookie profile (not available) */
         delete: operations["clearCookies"];
         options?: never;
         head?: never;
@@ -216,7 +216,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Delete one cookie profile */
+        /** Delete one cookie profile (not available) */
         delete: operations["deleteCookie"];
         options?: never;
         head?: never;
@@ -452,15 +452,18 @@ export interface components {
             };
             /**
              * @description Job-local cookie profiles. When present, these are the only cookies
-             *     considered; the server's cookie store is not consulted and is not
-             *     modified.
+             *     considered; the server keeps no store to fall back to.
              */
             cookies?: components["schemas"]["JobCookie"][];
         };
         JobCookie: {
-            /** @description Cookie domain; also the match key against the URL. */
+            /**
+             * @description Case-insensitive domain label. The job applies the entry when the
+             *     download host matches it on a domain boundary; the longest matching
+             *     entry wins.
+             */
             domain: string;
-            /** @description Netscape cookie text or JSON, as accepted by `POST /cookies` (`Content`). */
+            /** @description Netscape cookie text or JSON, converted to Netscape for the job. */
             content: string;
         };
         DownloadAccepted: {
@@ -605,34 +608,6 @@ export interface components {
             spotdl_format: string;
             spotdl_bitrate: string;
             spotdl_global_args: string;
-        };
-        CookieInput: {
-            /** @constant */
-            type: "FilePath";
-            /** @description Path on the server to a .txt, .cookies or .json file. */
-            value: string;
-        } | {
-            /** @constant */
-            type: "Content";
-            /** @description Netscape cookie text, or JSON that will be converted. */
-            value: string;
-        };
-        SaveCookieRequest: {
-            /** @description Stored as `<domain>.txt`; must be a single path segment. */
-            domain: string;
-            input: components["schemas"]["CookieInput"];
-        };
-        SavedCookie: {
-            domain: string;
-            /** @description Absolute path of the stored file. */
-            path: string;
-        };
-        /** @description Domain (file stem) to absolute file path. */
-        CookieMap: {
-            [key: string]: string;
-        };
-        DeletedCount: {
-            deleted: number;
         };
         DownloadRoot: {
             path: string;
@@ -1205,18 +1180,9 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Map of cookie domain (file stem) to absolute path. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CookieMap"];
-                };
-            };
             401: components["responses"]["Unauthorized"];
-            /** @description The cookie directory could not be read (`cookie_read_failed`). */
-            500: {
+            /** @description This server stores no cookies (`cookies_unavailable`). */
+            501: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1233,26 +1199,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SaveCookieRequest"];
-            };
-        };
+        requestBody?: never;
         responses: {
-            /** @description Profile stored. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SavedCookie"];
-                };
-            };
-            /**
-             * @description Invalid domain, missing source file, unsupported extension, or
-             *     content that is neither Netscape nor JSON (`invalid_cookie`).
-             */
-            400: {
+            401: components["responses"]["Unauthorized"];
+            /** @description This server stores no cookies (`cookies_unavailable`). */
+            501: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1260,7 +1211,6 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            401: components["responses"]["Unauthorized"];
         };
     };
     clearCookies: {
@@ -1272,18 +1222,9 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Number of files removed. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DeletedCount"];
-                };
-            };
             401: components["responses"]["Unauthorized"];
-            /** @description The cookie directory could not be cleared (`cookie_clear_failed`). */
-            500: {
+            /** @description This server stores no cookies (`cookies_unavailable`). */
+            501: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1305,25 +1246,9 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Profile deleted. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description The domain is not a single path segment (`invalid_cookie`). */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
             401: components["responses"]["Unauthorized"];
-            /** @description No such cookie profile (`no_such_cookie`). */
-            404: {
+            /** @description This server stores no cookies (`cookies_unavailable`). */
+            501: {
                 headers: {
                     [name: string]: unknown;
                 };

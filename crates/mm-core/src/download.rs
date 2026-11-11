@@ -302,11 +302,16 @@ impl Engine {
     ) -> bool {
         let path = if source.explicit {
             source.file.as_ref().map(|file| file.0.clone())
-        } else {
+        } else if self.policy.cookie_store {
             match_cookie(&self.cookies_dir(), link)
+        } else {
+            // server: run without cookies
+            None
         };
         let Some(path) = path else {
-            println!("[MediaMagnet][Download] No cookies matched, ignoring...");
+            if source.explicit || self.policy.cookie_store {
+                println!("[MediaMagnet][Download] No cookies matched, ignoring...");
+            }
             return false;
         };
         let Some(path_str) = path.to_str() else {
@@ -1184,12 +1189,13 @@ impl Engine {
 }
 
 fn matching_cookie<'a>(cookies: &'a [JobCookie], link: &str) -> Option<&'a JobCookie> {
-    let link = link.to_lowercase();
+    let host = url::Url::parse(link).ok()?.host_str()?.to_lowercase();
+    let host = host.trim_end_matches('.').to_string();
     cookies
         .iter()
         .filter(|cookie| {
             let domain = cookie.domain.trim().to_lowercase();
-            !domain.is_empty() && link.contains(&domain)
+            !domain.is_empty() && crate::cookies::host_matches(&host, &domain)
         })
         .max_by_key(|cookie| cookie.domain.trim().len())
 }
@@ -1374,6 +1380,7 @@ mod tests {
             "a"
         );
         assert!(matching_cookie(&cookies, "https://vimeo.com/1").is_none());
+        assert!(matching_cookie(&cookies, "https://evil.com/?x=youtube").is_none());
     }
 
     #[test]

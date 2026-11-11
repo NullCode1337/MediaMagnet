@@ -31,7 +31,7 @@ Paste a URL, configure your options, and let MediaMagnet handle the rest.
 - **Headless mode**: one click to download as you browse through sites
 - **REST API**: OpenAPI 3.1 specification and a typed TypeScript client
 - **Custom arguments**: pass **global** or **per-site arguments** directly to the backends (API keys, user IDs, anything supported by the backend)
-- **Cookie manager**: supports both JSON and Netscape formats, with per-job cookies over the API
+- **Cookie manager**: supports both JSON and Netscape formats; the desktop keeps a local store, while API clients send cookies with each job
 - **Settings import / export**: back up and share your configuration with a single click
 - **Cross-platform**: native binaries for Windows, Linux and macOS; the server runs anywhere Rust does
 - **Lightweight**: built on Tauri and a single Axum server

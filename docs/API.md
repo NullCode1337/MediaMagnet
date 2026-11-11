@@ -166,7 +166,7 @@ endpoint rather than `/files`, because the file disappears after delivery.
 ### Per-job settings and cookies
 
 A job may carry its own settings and cookies. They are used for that job only
-and never written to the server's configuration or cookie directory.
+and never written to the server's configuration.
 
 ```sh
 curl -s -X POST http://localhost:8080/api/v1/downloads \
@@ -180,8 +180,8 @@ curl -s -X POST http://localhost:8080/api/v1/downloads \
 
 Omitted settings fields take defaults, not the server's current values: send
 the complete settings object. When `cookies` is present it is the only cookie
-source for the job (`domain` matching is case-insensitive and the longest
-matching domain wins); when absent the server's cookie store is used as usual.
+source for the job (`domain` matching is case-insensitive, on a host boundary,
+and the longest matching entry wins); when absent the job runs without cookies.
 
 Custom arguments in per-job settings are subject to [Policy](#policy).
 
@@ -282,27 +282,31 @@ The failure is asynchronous: `POST /downloads` still returns `202`, and the
 
 ## Cookies
 
+The server keeps no cookie store. Cookies belong to the client, which sends the
+ones it wants used with each job:
+
 ```sh
-curl -s http://localhost:8080/api/v1/cookies
-# {"example.com":"/var/lib/mediamagnet/data/cookies/example.com.txt"}
-
-curl -s -X POST http://localhost:8080/api/v1/cookies \
+curl -s -X POST http://localhost:8080/api/v1/downloads \
   -H 'Content-Type: application/json' \
-  -d '{"domain":"example.com","input":{"type":"Content","value":"<netscape cookie text>"}}'
-
-curl -i -X DELETE http://localhost:8080/api/v1/cookies/example.com   # 204
-curl -s -X DELETE http://localhost:8080/api/v1/cookies               # {"deleted":1}
+  -d '{
+    "url": "https://example.com/gallery",
+    "cookies": [{ "domain": "example.com", "content": "<netscape cookie text>" }]
+  }'
 ```
 
-`input.type` is `Content` (Netscape text or JSON, converted to Netscape) or
-`FilePath` (a path on the server ending in `.txt`, `.cookies` or `.json`).
-`FilePath` is only available to the desktop app: over HTTP it returns
-`400 invalid_cookie`, because a remote client must not be able to copy server
-files into the store. Send the cookie text as `Content` instead. Profiles are
-stored as `<domain>.txt`, readable only by the server user; the domain must be a
-single path segment. The server applies a profile to a job only when the request
-host matches the profile name on a domain boundary (`youtube` covers
-`youtube.com` and `www.youtube.com`, not `notyoutube.com`).
+`content` is Netscape text or JSON, converted to Netscape for the job. When
+`cookies` is present it is the only cookie source; when absent the job runs
+without cookies. The server writes the matched jar to a private temporary file
+for the lifetime of the job and deletes it when the job ends, is paused or is
+cancelled. A restart sweeps anything a crash left behind.
+
+The desktop app manages a local store on the machine it runs on; that store is
+not part of this API and is never consulted by the server. A `cookies` directory
+left in the server data directory by an older version is removed at startup.
+
+`GET`/`POST /cookies` and `DELETE /cookies[/{domain}]` return
+`501 cookies_unavailable`. They stay in the API so a client can detect the
+absence rather than guess.
 
 ## Files
 

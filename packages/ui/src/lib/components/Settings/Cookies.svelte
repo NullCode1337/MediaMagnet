@@ -6,7 +6,8 @@
   import { toast } from "svelte-sonner";
   import * as Icons from "@lucide/svelte";
 
-  // Cookie files live on the server's disk; only the desktop app can open them.
+  // Cookie jars live in the desktop's local store or the browser's localStorage;
+  // the server keeps none. Only the desktop can reveal a file on disk.
   const isDesktop = transport.kind === "desktop";
 
   let cookieDomain = $state("");

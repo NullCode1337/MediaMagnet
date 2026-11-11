@@ -334,7 +334,7 @@ pub fn match_cookie(dir: &Path, link: &str) -> Option<PathBuf> {
     profiles.into_iter().next().map(|(_, path)| path)
 }
 
-fn host_matches(host: &str, domain: &str) -> bool {
+pub(crate) fn host_matches(host: &str, domain: &str) -> bool {
     if domain.is_empty() || domain.contains('/') || domain.contains('\\') {
         return false;
     }

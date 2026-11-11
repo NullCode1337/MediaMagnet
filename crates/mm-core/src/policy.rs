@@ -107,6 +107,7 @@ fn is_denied(tool: ArgTool, token: &str) -> bool {
 pub struct Policy {
     pub allow_custom_args: bool,
     pub allow_client_paths: bool,
+    pub cookie_store: bool,
 }
 
 impl Policy {
@@ -114,6 +115,7 @@ impl Policy {
         Self {
             allow_custom_args: true,
             allow_client_paths: true,
+            cookie_store: true,
         }
     }
 
@@ -121,6 +123,7 @@ impl Policy {
         Self {
             allow_custom_args: false,
             allow_client_paths: false,
+            cookie_store: false,
         }
     }
 
@@ -130,6 +133,7 @@ impl Policy {
         Self {
             allow_custom_args: true,
             allow_client_paths: false,
+            cookie_store: false,
         }
     }
 
@@ -173,6 +177,13 @@ mod tests {
             .filter_custom_args(ArgTool::YtDlp, "--exec echo {}")
             .unwrap();
         assert_eq!(args, vec!["--exec", "echo", "{}"]);
+        assert!(policy.cookie_store);
+    }
+
+    #[test]
+    fn server_has_no_cookie_store() {
+        assert!(!Policy::server().cookie_store);
+        assert!(!Policy::server_with_custom_args().cookie_store);
     }
 
     #[test]

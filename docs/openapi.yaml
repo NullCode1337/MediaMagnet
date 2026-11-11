@@ -26,8 +26,7 @@ info:
     `POST /downloads` accepts the same settings shape as `PUT /settings`, a
     sparse `overrides` patch and an optional list of cookies. When either
     settings or overrides is present the job uses it instead of the server's
-    stored configuration; the server's files and cookie store are not
-    modified. This lets a browser client keep its configuration in
+    stored configuration; the server's files are not modified. This lets a browser client keep its configuration in
     `localStorage` while still producing identical downloads.
 
     Omitted settings fields fall back to defaults, not to the server's current
@@ -196,8 +195,9 @@ paths:
       summary: Resume a paused download
       description: |
         Replays the URL, backend, overrides, settings and cookies the job was
-        created with. A job that was started with the server's own settings or
-        cookie store uses the current server values.
+        created with. A job started with the server's own settings uses the
+        current server values; job-local cookies are replayed from the job
+        record.
       parameters:
         - $ref: '#/components/parameters/DownloadId'
       responses:
@@ -432,18 +432,15 @@ paths:
     get:
       operationId: listCookies
       tags: [cookies]
-      summary: List cookie profiles
+      summary: List cookie profiles (not available)
+      description: |
+        The server keeps no cookie store. Cookies belong to the client and are
+        sent per job in the `cookies` field of `POST /downloads`.
       responses:
-        '200':
-          description: Map of cookie domain (file stem) to absolute path.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CookieMap'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '500':
-          description: The cookie directory could not be read (`cookie_read_failed`).
+        '501':
+          description: This server stores no cookies (`cookies_unavailable`).
           content:
             application/json:
               schema:
@@ -451,49 +448,25 @@ paths:
     post:
       operationId: saveCookie
       tags: [cookies]
-      summary: Add or replace a cookie profile
-      description: |
-        `FilePath` reads a server-side `.txt`, `.cookies` (Netscape) or `.json`
-        file. `Content` accepts raw Netscape text or JSON, which is converted to
-        Netscape. A profile is stored as `<domain>.txt`.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SaveCookieRequest'
+      summary: Store a cookie profile (not available)
       responses:
-        '200':
-          description: Profile stored.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SavedCookie'
-        '400':
-          description: |
-            Invalid domain, missing source file, unsupported extension, or
-            content that is neither Netscape nor JSON (`invalid_cookie`).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '501':
+          description: This server stores no cookies (`cookies_unavailable`).
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
     delete:
       operationId: clearCookies
       tags: [cookies]
-      summary: Delete every cookie profile
+      summary: Delete every cookie profile (not available)
       responses:
-        '200':
-          description: Number of files removed.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DeletedCount'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '500':
-          description: The cookie directory could not be cleared (`cookie_clear_failed`).
+        '501':
+          description: This server stores no cookies (`cookies_unavailable`).
           content:
             application/json:
               schema:
@@ -503,7 +476,7 @@ paths:
     delete:
       operationId: deleteCookie
       tags: [cookies]
-      summary: Delete one cookie profile
+      summary: Delete one cookie profile (not available)
       parameters:
         - name: domain
           in: path
@@ -512,18 +485,10 @@ paths:
           schema:
             type: string
       responses:
-        '204':
-          description: Profile deleted.
-        '400':
-          description: The domain is not a single path segment (`invalid_cookie`).
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '404':
-          description: No such cookie profile (`no_such_cookie`).
+        '501':
+          description: This server stores no cookies (`cookies_unavailable`).
           content:
             application/json:
               schema:
@@ -890,8 +855,7 @@ components:
           type: array
           description: |
             Job-local cookie profiles. When present, these are the only cookies
-            considered; the server's cookie store is not consulted and is not
-            modified.
+            considered; the server keeps no store to fall back to.
           items:
             $ref: '#/components/schemas/JobCookie'
 
@@ -901,10 +865,13 @@ components:
       properties:
         domain:
           type: string
-          description: Cookie domain; also the match key against the URL.
+          description: |
+            Case-insensitive domain label. The job applies the entry when the
+            download host matches it on a domain boundary; the longest matching
+            entry wins.
         content:
           type: string
-          description: Netscape cookie text or JSON, as accepted by `POST /cookies` (`Content`).
+          description: Netscape cookie text or JSON, converted to Netscape for the job.
 
     DownloadAccepted:
       type: object
@@ -1176,60 +1143,6 @@ components:
           type: string
         spotdl_global_args:
           type: string
-
-    CookieInput:
-      oneOf:
-        - type: object
-          required: [type, value]
-          properties:
-            type:
-              type: string
-              const: FilePath
-            value:
-              type: string
-              description: Path on the server to a .txt, .cookies or .json file.
-        - type: object
-          required: [type, value]
-          properties:
-            type:
-              type: string
-              const: Content
-            value:
-              type: string
-              description: Netscape cookie text, or JSON that will be converted.
-
-    SaveCookieRequest:
-      type: object
-      required: [domain, input]
-      properties:
-        domain:
-          type: string
-          description: Stored as `<domain>.txt`; must be a single path segment.
-        input:
-          $ref: '#/components/schemas/CookieInput'
-
-    SavedCookie:
-      type: object
-      required: [domain, path]
-      properties:
-        domain:
-          type: string
-        path:
-          type: string
-          description: Absolute path of the stored file.
-
-    CookieMap:
-      type: object
-      additionalProperties:
-        type: string
-      description: Domain (file stem) to absolute file path.
-
-    DeletedCount:
-      type: object
-      required: [deleted]
-      properties:
-        deleted:
-          type: integer
 
     DownloadRoot:
       type: object

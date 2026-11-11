@@ -8,7 +8,6 @@ export type MediaMagnetClient = Client<paths>;
 export type Settings = components["schemas"]["ServerSettings"];
 export type SettingsInput = components["schemas"]["SettingsInput"];
 export type DownloadRequest = components["schemas"]["DownloadRequest"];
-export type CookieInput = components["schemas"]["CookieInput"];
 export type FileEntry = components["schemas"]["FileEntry"];
 export type FileList = components["schemas"]["FileList"];
 export type TransportEvent = components["schemas"]["TransportEvent"];

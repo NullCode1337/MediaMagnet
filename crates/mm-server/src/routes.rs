@@ -12,7 +12,6 @@ use futures_util::Stream;
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-use mm_core::cookies::CookieInput;
 use mm_core::host::disk_usage;
 use mm_core::{Backend, DownloadRequest, JobCookie, Settings, Tool};
 
@@ -43,9 +42,12 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/downloads/{id}/resume", post(resume))
         .route("/settings", get(get_settings).put(update_settings))
         .route("/settings/reset", post(reset_settings))
-        .route("/cookies", get(list_cookies).post(save_cookie))
-        .route("/cookies", delete(clear_cookies))
-        .route("/cookies/{domain}", delete(delete_cookie))
+        .route(
+            "/cookies",
+            get(cookies_unavailable).post(cookies_unavailable),
+        )
+        .route("/cookies", delete(cookies_unavailable))
+        .route("/cookies/{domain}", delete(cookies_unavailable))
         .route("/paths/download-root", get(download_root))
         .route("/paths/disk-usage", get(disk))
         .route("/files", get(files::list))
@@ -533,65 +535,12 @@ async fn reset_settings(State(state): State<Arc<AppState>>) -> Response {
     }
 }
 
-async fn list_cookies(State(state): State<Arc<AppState>>) -> Response {
-    match mm_core::cookies::list_cookies(&state.engine.cookies_dir()) {
-        Ok(map) => Json(map).into_response(),
-        Err(e) => error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "cookie_read_failed",
-            e.to_string(),
-        ),
-    }
-}
-
-#[derive(Debug, Deserialize)]
-pub struct SaveCookieBody {
-    pub domain: String,
-    pub input: CookieInput,
-}
-
-async fn save_cookie(
-    State(state): State<Arc<AppState>>,
-    Json(body): Json<SaveCookieBody>,
-) -> Response {
-    // file paths only usable on desktop
-    if matches!(&body.input, CookieInput::FilePath(_)) {
-        return error(
-            StatusCode::BAD_REQUEST,
-            "invalid_cookie",
-            "cookie file paths are not accepted over HTTP; send the cookie content instead",
-        );
-    }
-    match mm_core::cookies::save_cookie(&state.engine.cookies_dir(), &body.domain, &body.input) {
-        Ok(path) => Json(json!({ "domain": body.domain, "path": path })).into_response(),
-        Err(e) => error(StatusCode::BAD_REQUEST, "invalid_cookie", e.to_string()),
-    }
-}
-
-async fn clear_cookies(State(state): State<Arc<AppState>>) -> Response {
-    match mm_core::cookies::clear_cookies(&state.engine.cookies_dir()) {
-        Ok(deleted) => Json(json!({ "deleted": deleted })).into_response(),
-        Err(e) => error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "cookie_clear_failed",
-            e.to_string(),
-        ),
-    }
-}
-
-async fn delete_cookie(
-    State(state): State<Arc<AppState>>,
-    axum::extract::Path(domain): axum::extract::Path<String>,
-) -> Response {
-    let dir = state.engine.cookies_dir();
-    let path = match mm_core::cookies::cookie_path(&dir, &domain) {
-        Ok(path) => path,
-        Err(e) => return error(StatusCode::BAD_REQUEST, "invalid_cookie", e.to_string()),
-    };
-    match mm_core::cookies::delete_cookie(&dir, &path) {
-        Ok(()) => StatusCode::NO_CONTENT.into_response(),
-        Err(e) => error(StatusCode::NOT_FOUND, "no_such_cookie", e.to_string()),
-    }
+async fn cookies_unavailable() -> Response {
+    error(
+        StatusCode::NOT_IMPLEMENTED,
+        "cookies_unavailable",
+        "this server stores no cookies; send `cookies` with each download",
+    )
 }
 
 async fn download_root(State(state): State<Arc<AppState>>) -> Json<Value> {

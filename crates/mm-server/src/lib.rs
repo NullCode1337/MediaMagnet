@@ -110,6 +110,32 @@ fn default_data_dir() -> PathBuf {
     base.join("mediamagnet")
 }
 
+fn sweep_job_cookies(dir: &std::path::Path) {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        if entry.file_type().is_ok_and(|kind| kind.is_file()) {
+            let _ = std::fs::remove_file(entry.path());
+        }
+    }
+}
+
+fn remove_legacy_cookie_store(dir: &std::path::Path) {
+    let Ok(meta) = std::fs::symlink_metadata(dir) else {
+        return;
+    };
+    if !meta.is_dir() {
+        return;
+    }
+    if std::fs::remove_dir_all(dir).is_ok() {
+        println!(
+            "[MediaMagnet][Server] removed legacy cookie store: {}",
+            dir.display()
+        );
+    }
+}
+
 /// Runs the server on a fresh Tokio runtime, blocking until it shuts down.
 pub fn run_blocking(config: Config) -> Result<(), String> {
     tokio::runtime::Builder::new_multi_thread()
@@ -126,23 +152,20 @@ async fn serve(config: Config) -> Result<(), String> {
     for dir in [
         config_dir.clone(),
         app_data_dir.clone(),
-        app_data_dir.join("cookies"),
         config.download_root.clone(),
     ] {
         std::fs::create_dir_all(&dir)
             .map_err(|e| format!("could not create {}: {e}", dir.display()))?;
     }
 
-    // Settings, cookie jars and job metadata live here; keep them private.
+    sweep_job_cookies(&app_data_dir.join("job-cookies"));
+    remove_legacy_cookie_store(&app_data_dir.join("cookies"));
+
+    // Settings and job metadata live here; keep them private.
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        let cookie_dir = app_data_dir.join("cookies");
-        for dir in [
-            config_dir.as_path(),
-            app_data_dir.as_path(),
-            cookie_dir.as_path(),
-        ] {
+        for dir in [config_dir.as_path(), app_data_dir.as_path()] {
             let _ = std::fs::set_permissions(dir, std::fs::Permissions::from_mode(0o700));
         }
     }
