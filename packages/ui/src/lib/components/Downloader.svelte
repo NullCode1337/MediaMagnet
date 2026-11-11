@@ -165,17 +165,17 @@
 
           {#if task.error}
             <span
-              class="text-xs font-semibold uppercase tracking-wider text-destructive bg-destructive/10 px-1.5 py-0.5 rounded-full"
+              class="text-xs font-semibold tracking-wide text-destructive bg-destructive/10 px-1.5 py-0.5 rounded-full"
               >Failed</span
             >
           {:else if task.isPaused}
             <span
-              class="text-xs font-semibold uppercase tracking-wider text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded-full"
+              class="text-xs font-semibold tracking-wide text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded-full"
               >Paused</span
             >
           {:else if !task.isDownloading}
             <span
-              class="text-xs font-semibold uppercase tracking-wider text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded-full"
+              class="text-xs font-semibold tracking-wide text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded-full"
               >Complete</span
             >
           {:else}

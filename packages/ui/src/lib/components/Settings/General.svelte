@@ -86,15 +86,15 @@
 {#snippet accentColorPicker()}
   <div class="flex flex-col gap-4 px-4 py-4">
     <div class="flex items-center justify-between">
-      <p class="text-sm font-medium leading-5">Accent Color</p>
+      <p class="text-[15px] font-medium text-foreground">Accent Color</p>
       <div
-        class="h-8 w-8 rounded-full border-2 border-border shadow-sm transition-colors duration-200"
+        class="size-10 rounded-full ring-2 ring-border/40 transition-colors duration-200"
         style="background-color: {primaryHex};"
       ></div>
     </div>
 
     <div
-      class="relative h-4 overflow-hidden rounded-full transition-opacity {accent.kind !==
+      class="relative h-3.5 overflow-hidden rounded-full transition-opacity {accent.kind !==
       'hue'
         ? 'opacity-40'
         : ''}"
@@ -125,14 +125,13 @@
     <div class="flex items-start gap-2">
       <div class="flex min-w-0 flex-1 flex-col gap-1">
         <span
-          class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+          class="text-[13px] font-semibold tracking-wide text-muted-foreground"
           >Hex</span
         >
         <div
-          class="flex items-center gap-2 rounded-lg border px-3 py-2 font-mono text-sm
-                 bg-background {hexError
-            ? 'border-destructive'
-            : 'border-input'}"
+          class="flex h-11 items-center gap-2.5 rounded-xl border border-transparent bg-background/70 px-3 font-mono text-sm ring-1 ring-border/40 transition-shadow focus-within:ring-2 focus-within:ring-ring/40 {hexError
+            ? 'ring-destructive/50'
+            : ''}"
         >
           <span
             class="h-3.5 w-3.5 shrink-0 rounded-full transition-colors duration-150"
@@ -154,14 +153,14 @@
         {/if}
       </div>
 
-      <div class="flex items-center gap-2 pt-5">
+      <div class="flex items-center gap-2 pt-6">
         <button
           type="button"
           aria-label="Black accent"
           aria-pressed={accent.kind === "black"}
           onclick={() => onSwatch("black")}
-          class="h-7 w-7 cursor-pointer rounded-full border border-border bg-black
-                 shadow-sm transition-all hover:scale-105 {accent.kind ===
+          class="size-9 cursor-pointer rounded-full bg-black ring-1 ring-border/50
+                 transition-all hover:scale-105 {accent.kind ===
           'black'
             ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
             : ''}"
@@ -171,8 +170,8 @@
           aria-label="White accent"
           aria-pressed={accent.kind === "white"}
           onclick={() => onSwatch("white")}
-          class="h-7 w-7 cursor-pointer rounded-full border border-border bg-white
-                 shadow-sm transition-all hover:scale-105 {accent.kind ===
+          class="size-9 cursor-pointer rounded-full bg-white ring-1 ring-border/50
+                 transition-all hover:scale-105 {accent.kind ===
           'white'
             ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
             : ''}"

@@ -29,6 +29,8 @@
     typeof window !== "undefined" ? window.innerWidth : 1200,
   );
   let mobileView = $state<"list" | "content">("list");
+  let mainEl = $state<HTMLElement | null>(null);
+  let navTick = $state(0);
 
   $effect(() => {
     const onResize = () => (windowWidth = window.innerWidth);
@@ -50,6 +52,17 @@
 
   const isFullscreen = $derived(windowWidth < 1000);
 
+  function openTab(id: string) {
+    activeTab = id;
+    mobileView = "content";
+    navTick += 1;
+  }
+
+  $effect(() => {
+    void navTick;
+    if (mainEl) mainEl.scrollTop = 0;
+  });
+
   const CONFIG_TABS = [
     { id: "general", label: "Appearance", icon: Icons.Monitor },
     { id: "downloads", label: "Downloads", icon: Icons.Download },
@@ -66,8 +79,11 @@
 
   const ABOUT_TABS = [{ id: "about", label: "About", icon: Icons.Info }];
 
-  const btnClass =
-    "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground relative justify-start";
+  const TABS = [
+    { label: "Configuration", tabs: CONFIG_TABS },
+    { label: "Backends", tabs: BACKEND_TABS },
+    { label: "About", tabs: ABOUT_TABS },
+  ];
 
   const resetSettings = async () => {
     const confirmed = await transport.ask(
@@ -104,19 +120,37 @@
   }
 </script>
 
+{#snippet saveChip()}
+  {#if settings.saveState === "saved"}
+    <span
+      class="flex h-7 w-fit items-center gap-1.5 rounded-full bg-primary/12 px-3 text-[11px] font-semibold text-primary"
+    >
+      <Icons.Check size={12} />
+      Changes saved
+    </span>
+  {:else if settings.saveState === "error"}
+    <span
+      class="flex h-7 w-fit items-center gap-1.5 rounded-full bg-destructive/12 px-3 text-[11px] font-semibold text-destructive"
+    >
+      <Icons.Info size={12} />
+      Save failed
+    </span>
+  {/if}
+{/snippet}
+
 {#snippet innerContent()}
   <div
-    class="flex h-full w-full overflow-hidden!
-        {isMobile ? 'flex-col' : 'flex-row'} 
-        {isFullscreen ? 'rounded-none!' : 'rounded-xl!'}"
+    class="flex h-full w-full overflow-hidden! {isMobile
+      ? 'flex-col'
+      : 'flex-row'} {isFullscreen ? 'rounded-none!' : 'rounded-[20px]!'}"
   >
     <aside
       class="bg-sidebar shrink-0 transition-all
-          {isMobile
+        {isMobile
         ? mobileView === 'list'
-          ? 'flex flex-col w-full h-full overflow-hidden'
+          ? 'flex h-full w-full flex-col overflow-hidden'
           : 'hidden'
-        : 'flex flex-col w-60 border-r border-sidebar-border p-6 gap-1 h-full overflow-y-auto scrollbar-thin'}"
+        : 'flex h-full w-64 flex-col overflow-y-auto border-r border-sidebar-border p-4 pt-5 scrollbar-thin'}"
     >
       {#if isMobile}
         <div class="flex items-center h-19 bg-background shrink-0">
@@ -124,10 +158,10 @@
         </div>
 
         <div
-          class="flex-1 overflow-y-auto bg-background px-4 pt-1 pb-8 space-y-6"
+          class="flex-1 overflow-y-auto bg-background px-4 pt-1 pb-28 space-y-6"
         >
           <div>
-            <p class="text-xs text-muted-foreground font-bold px-1 ml-2 mb-2">
+            <p class="text-sm text-muted-foreground font-bold px-1 ml-2 mb-2">
               Configuration
             </p>
             <div
@@ -135,10 +169,7 @@
             >
               {#each CONFIG_TABS as tab (tab.id)}
                 <button
-                  onclick={() => {
-                    activeTab = tab.id;
-                    mobileView = "content";
-                  }}
+                  onclick={() => openTab(tab.id)}
                   class="w-full flex items-center gap-5 px-5 py-6 text-sm text-accent-foreground hover:bg-accent/80 active:bg-accent transition-colors cursor-pointer"
                 >
                   <tab.icon size={20} class="text-muted-foreground shrink-0" />
@@ -149,7 +180,7 @@
           </div>
 
           <div>
-            <p class="text-xs text-muted-foreground font-bold px-1 ml-2 mb-2">
+            <p class="text-sm text-muted-foreground font-bold px-1 ml-2 mb-2">
               Backend
             </p>
             <div
@@ -157,10 +188,7 @@
             >
               {#each BACKEND_TABS as tab (tab.id)}
                 <button
-                  onclick={() => {
-                    activeTab = tab.id;
-                    mobileView = "content";
-                  }}
+                  onclick={() => openTab(tab.id)}
                   class="w-full flex items-center gap-5 px-5 py-6 text-sm text-accent-foreground hover:bg-accent/80 active:bg-accent transition-colors cursor-pointer"
                 >
                   <tab.icon size={20} class="text-muted-foreground shrink-0" />
@@ -171,7 +199,7 @@
           </div>
 
           <div>
-            <p class="text-xs text-muted-foreground font-bold px-1 ml-2 mb-2">
+            <p class="text-sm text-muted-foreground font-bold px-1 ml-2 mb-2">
               About
             </p>
             <div
@@ -179,10 +207,7 @@
             >
               {#each ABOUT_TABS as tab (tab.id)}
                 <button
-                  onclick={() => {
-                    activeTab = tab.id;
-                    mobileView = "content";
-                  }}
+                  onclick={() => openTab(tab.id)}
                   class="w-full flex items-center gap-5 px-5 py-6 text-sm text-accent-foreground hover:bg-accent/80 active:bg-accent transition-colors cursor-pointer"
                 >
                   <tab.icon size={20} class="text-muted-foreground shrink-0" />
@@ -193,121 +218,86 @@
           </div>
         </div>
       {:else}
-        <h2
-          class="text-sm font-bold font-[Verdana] text-sidebar-foreground/50 mb-1 px-2"
-        >
-          Configuration
-        </h2>
-        {#each CONFIG_TABS as tab (tab.id)}
-          <button
-            onclick={() => {
-              activeTab = tab.id;
-              mobileView = "content";
-            }}
-            class="{btnClass} {activeTab === tab.id
-              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
-              : 'text-sidebar-foreground/70'}"
-          >
-            <tab.icon size={17} />
-            <span class="whitespace-nowrap">{tab.label}</span>
-          </button>
-        {/each}
+        <div class="flex flex-col">
+          {#each TABS as group, groupIndex (group.label)}
+            <div class="flex flex-col gap-2 {groupIndex > 0 ? 'mt-5' : ''}">
+              <p
+                class="px-3 text-xs font-semibold tracking-wide text-muted-foreground/80"
+              >
+                {group.label}
+              </p>
+              {#each group.tabs as tab (tab.id)}
+                <button
+                  onclick={() => openTab(tab.id)}
+                  class="flex h-10 w-full cursor-pointer items-center gap-3 rounded-xl px-3 text-sm transition-all duration-200 ease-[cubic-bezier(0.2,0,0,1)] {activeTab ===
+                  tab.id
+                    ? 'bg-primary font-semibold text-primary-foreground shadow-sm'
+                    : 'text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'}"
+                >
+                  <tab.icon size={17} class="shrink-0" />
+                  <span class="truncate">{tab.label}</span>
+                </button>
+              {/each}
+            </div>
+          {/each}
+        </div>
 
-        <h2
-          class="text-sm font-bold font-[Verdana] text-sidebar-foreground/50 mt-4 mb-1 px-2"
-        >
-          Backend
-        </h2>
-        {#each BACKEND_TABS as tab (tab.id)}
-          <button
-            onclick={() => {
-              activeTab = tab.id;
-              mobileView = "content";
-            }}
-            class="{btnClass} {activeTab === tab.id
-              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
-              : 'text-sidebar-foreground/70'}"
+        <div class="mt-auto flex flex-col gap-2">
+          {@render saveChip()}
+          <Button
+            variant="ghost"
+            class="h-10 justify-start gap-3 rounded-xl px-3 text-sm text-muted-foreground"
+            onclick={resetSettings}
           >
-            <tab.icon size={17} />
-            <span class="whitespace-nowrap">{tab.label}</span>
-          </button>
-        {/each}
-
-        <h2
-          class="text-sm font-bold font-[Verdana] text-sidebar-foreground/50 mt-4 mb-1 px-2"
-        >
-          About
-        </h2>
-        {#each ABOUT_TABS as tab (tab.id)}
-          <button
-            onclick={() => {
-              activeTab = tab.id;
-              mobileView = "content";
-            }}
-            class="{btnClass} {activeTab === tab.id
-              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
-              : 'text-sidebar-foreground/70'}"
-          >
-            <tab.icon size={17} />
-            <span class="whitespace-nowrap">{tab.label}</span>
-          </button>
-        {/each}
-
-        <Button
-          variant="ghost"
-          class="max-sm:hidden mt-auto gap-3 text-xs opacity-60 justify-start px-3"
-          onclick={resetSettings}
-        >
-          <Icons.RotateCcw size={14} />
-          <span>Reset</span>
-        </Button>
+            <Icons.RotateCcw size={16} />
+            <span>Reset settings</span>
+          </Button>
+        </div>
       {/if}
     </aside>
 
     <main
-      class="flex-1 w-full min-w-0 overflow-y-auto bg-background scrollbar-thin relative transition-all
-          {isMobile
+      bind:this={mainEl}
+      class="relative w-full min-w-0 flex-1 overflow-y-auto bg-background transition-all scrollbar-thin
+        {isMobile
         ? mobileView === 'content'
-          ? 'block w-full h-full p-6 pt-1'
+          ? 'flex h-full w-full flex-col p-4 pb-28 pt-10 [&_header]:pl-12'
           : 'hidden'
-        : 'p-6 sm:p-10'}"
+        : 'px-5 pb-5 pt-8 sm:px-6 sm:pb-6 sm:pt-10 sm:[&_header]:pr-12'}"
     >
-      {#if isMobile && mobileView === "content"}
-        <div class="absolute top-5.5 left-4 z-50">
+      {#if !isMobile}
+        <div class="absolute right-5 top-8 z-20 sm:right-6 sm:top-10">
+          <Dialog.Close>
+            {#snippet child({ props })}
+              <Button
+                variant="ghost"
+                size="icon"
+                class="size-9 shrink-0 rounded-xl text-muted-foreground"
+                aria-label="Close settings"
+                {...props}
+              >
+                <Icons.X size={18} />
+              </Button>
+            {/snippet}
+          </Dialog.Close>
+        </div>
+      {:else if mobileView === "content"}
+        <div class="absolute left-4 top-10 z-20">
           <Button
             variant="ghost"
             size="icon"
-            class="cursor-pointer"
+            class="size-9 shrink-0 rounded-xl text-muted-foreground"
             onclick={() => (mobileView = "list")}
+            aria-label="Back to settings"
           >
-            <Icons.ArrowLeft size={18} />
+            <Icons.ArrowLeft size={20} />
           </Button>
-        </div>
-      {/if}
-
-      {#if !isMobile}
-        <div class="absolute top-6 right-6 z-50 pointer-events-none">
-          {#if settings.saveState === "saved"}
-            <div
-              class="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full border border-primary/20 text-xs shadow-sm"
-            >
-              <Icons.Check size={12} />
-              Changes saved
-            </div>
-          {:else if settings.saveState === "error"}
-            <div
-              class="flex items-center gap-2 px-3 py-1.5 bg-destructive/10 text-destructive rounded-full border border-destructive/20 text-xs shadow-sm"
-            >
-              <Icons.Info size={12} />
-              Save failed
-            </div>
-          {/if}
         </div>
       {/if}
 
       {#if settings.config}
         <div
-          class="w-full space-y-8 animate-in fade-in slide-in-from-bottom-2 {activeTab ===
+          class="w-full space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 {activeTab ===
           'import_export'
             ? 'flex h-full min-h-0 flex-col'
             : ''}"
@@ -336,15 +326,14 @@
         </div>
       {:else if settings.loadError}
         <div
-          class="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground text-sm px-6 text-center"
+          class="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-sm text-muted-foreground"
         >
           <Icons.AlertTriangle size={28} class="text-destructive" />
           <p class="text-destructive">Failed to load settings</p>
-          <p class="text-xs max-w-md wrap-break-word">{settings.loadError}</p>
+          <p class="max-w-md wrap-break-word text-xs">{settings.loadError}</p>
           <Button
             variant="secondary"
-            size="sm"
-            class="cursor-pointer"
+            class="h-11 rounded-full px-5"
             onclick={() => settings.retryLoad()}
           >
             <Icons.RotateCcw size={14} />
@@ -353,7 +342,7 @@
         </div>
       {:else}
         <div
-          class="flex items-center justify-center h-full text-muted-foreground text-sm"
+          class="flex h-full items-center justify-center text-sm text-muted-foreground"
         >
           Loading settings…
         </div>
@@ -363,10 +352,8 @@
 {/snippet}
 
 {#if isMobile}
-  <div class="w-full h-full shrink-0 overflow-y-auto p-0">
-    <div class="flex flex-col h-full bg-background">
-      {@render innerContent()}
-    </div>
+  <div class="h-full w-full shrink-0 overflow-hidden bg-background">
+    {@render innerContent()}
   </div>
 {:else}
   <Dialog.Root
@@ -406,15 +393,16 @@
       onInteractOutside={(e) => {
         if (isFullscreen) e.preventDefault();
       }}
-      showCloseButton={!isMobile}
-      class="p-0 flex flex-col transition-all max-sm:z-60
+      showCloseButton={false}
+      class="p-0 flex flex-col overflow-hidden shadow-[0_28px_90px_-30px_rgb(0_0_0/0.6)] transition-all max-sm:z-60
       {isFullscreen
         ? `w-screen! max-w-none! max-h-none! rounded-none! m-0!
-           ${uiState.showCustom ? 'top-10! h-[calc(100vh-2.5rem)]!' : 'h-screen!'}`
-        : `max-w-250! w-full! h-[89vh]! rounded-2xl! backdrop:backdrop-blur-md
-           ${uiState.showCustom ? 'top-10!' : ''}`}"
+           ${uiState.showCustom ? "top-10! h-[calc(100vh-2.5rem)]!" : "h-screen!"}`
+        : `max-w-275! w-full! h-[89vh]! rounded-[20px]! backdrop:backdrop-blur-md
+           ${uiState.showCustom ? "top-10!" : ""}`}"
       style="padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right);"
     >
+      <Dialog.Title class="sr-only">Settings</Dialog.Title>
       {@render innerContent()}
     </Dialog.Content>
   </Dialog.Root>

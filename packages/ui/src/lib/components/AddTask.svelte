@@ -1,6 +1,16 @@
 <script lang="ts">
   import { untrack } from "svelte";
-  import { ArrowLeft } from "@lucide/svelte";
+  import {
+    ArrowLeft,
+    ArrowRight,
+    CircleAlert,
+    Image as ImageIcon,
+    Loader2,
+    Music,
+    Sparkles,
+    Video,
+    X,
+  } from "@lucide/svelte";
   import * as Dialog from "$lib/components/ui/dialog";
   import { Button } from "$lib/components/ui/button";
   import SettingsSections from "$lib/components/Settings/SettingsSections.svelte";
@@ -22,12 +32,12 @@
 
   type BackendChoice = "auto" | DownloadBackend;
 
-  const BACKENDS: { value: BackendChoice; label: string }[] = [
-    { value: "auto", label: "Auto" },
-    { value: "yt-dlp", label: "yt-dlp" },
-    { value: "gallery-dl", label: "gallery-dl" },
-    { value: "spotdl", label: "spotdl" },
-  ];
+  const BACKENDS = [
+    { value: "auto", label: "Auto", icon: Sparkles },
+    { value: "yt-dlp", label: "yt-dlp", icon: Video },
+    { value: "gallery-dl", label: "gallery-dl", icon: ImageIcon },
+    { value: "spotdl", label: "spotdl", icon: Music },
+  ] satisfies { value: BackendChoice; label: string; icon: typeof Sparkles }[];
 
   let {
     open = $bindable(false),
@@ -136,78 +146,111 @@
 
 {#snippet form()}
   <div class="flex flex-col gap-4">
-    <div class="flex flex-col gap-2">
-      <label
-        for="add-task-links"
-        class="text-[15px] font-normal text-foreground">Links</label
-      >
+    <div
+      class="rounded-2xl bg-secondary/60 px-4 pb-3 pt-3 ring-1 ring-border/40 transition-[box-shadow,background-color] duration-300 ease-[cubic-bezier(0.2,0,0,1)] focus-within:ring-2 focus-within:ring-ring/50"
+    >
+      <div class="flex items-center justify-between gap-3">
+        <label
+          for="add-task-links"
+          class="text-[11px] font-semibold tracking-wide text-muted-foreground"
+          >Links</label
+        >
+        <span
+          class="rounded-full px-2.5 py-0.5 text-[11px] font-semibold tabular-nums {validUrls.length >
+          0
+            ? 'bg-primary/12 text-primary'
+            : 'bg-background/70 text-muted-foreground'}"
+        >
+          {validUrls.length} valid
+        </span>
+      </div>
+
       <textarea
         id="add-task-links"
         bind:value={text}
         rows="4"
-        placeholder="https://example.com/video&#10;https://example.com/gallery"
-        class="flex min-h-24 w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-xs leading-relaxed text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        placeholder={"https://example.com/video\nhttps://example.com/gallery"}
+        aria-describedby="add-task-links-help"
+        class="mt-2 min-h-28 w-full resize-y bg-transparent text-[15px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground/55 sm:min-h-32"
       ></textarea>
-      <p class="text-xs text-muted-foreground">
-        {validUrls.length} valid link{validUrls.length === 1 ? "" : "s"}
-      </p>
     </div>
 
     <div class="flex flex-col gap-2">
-      <p class="text-[15px] font-normal text-foreground">Backend</p>
+      <div class="flex items-center justify-between gap-3 px-1">
+        <p
+          class="text-[11px] font-semibold tracking-wide text-muted-foreground"
+        >
+          Backend
+        </p>
+        {#if backend === "auto"}
+          <p class="text-xs text-muted-foreground/70">Detected per link</p>
+        {/if}
+      </div>
+
       <div
-        role="group"
-        class="flex w-full gap-1 rounded-lg border border-border/30 bg-muted p-1"
+        role="radiogroup"
+        aria-label="Backend"
+        class="grid grid-cols-2 gap-1 rounded-2xl bg-secondary/60 p-1 sm:grid-cols-4"
       >
         {#each BACKENDS as option (option.value)}
           {@const selected = backend === option.value}
+          {@const Icon = option.icon}
           <button
             type="button"
             role="radio"
             aria-checked={selected}
             onclick={() => (backend = option.value)}
-            class="flex flex-1 cursor-pointer items-center justify-center rounded-md px-3 py-2 text-xs font-medium transition-all {selected
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'}"
+            class="flex h-10 min-w-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2 text-[13px] font-medium transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] active:scale-[0.97] motion-reduce:transition-none {selected
+              ? 'bg-primary text-primary-foreground shadow-md shadow-primary/25'
+              : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground'}"
           >
-            {option.label}
+            <Icon size={15} class="shrink-0" />
+            <span class="truncate">{option.label}</span>
           </button>
         {/each}
       </div>
-      {#if backend === "auto"}
-        <p class="text-xs text-muted-foreground">
-          Each link picks its backend from the URL.
-        </p>
-      {/if}
     </div>
 
     <SettingsSections {sections} />
 
     {#if error}
       <div
-        class="wrap-break-word rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2.5 text-xs text-destructive"
+        role="alert"
+        class="flex items-start gap-2.5 rounded-2xl bg-destructive/10 px-4 py-3 text-sm text-destructive"
       >
-        {error}
+        <CircleAlert size={16} class="mt-0.5 shrink-0" />
+        <span class="min-w-0 wrap-break-word leading-relaxed">{error}</span>
       </div>
     {/if}
   </div>
 {/snippet}
 
 {#snippet actions()}
-  <Button
-    variant="outline"
-    class="cursor-pointer"
-    onclick={() => (open = false)}
-  >
-    Cancel
-  </Button>
-  <Button
-    class="cursor-pointer"
-    disabled={submitting || validUrls.length === 0}
-    onclick={submit}
-  >
-    {submitting ? "Adding…" : "Add"}
-  </Button>
+  <div class="flex w-full items-center gap-2 sm:justify-end">
+    <Button
+      variant="ghost"
+      class="h-11 rounded-xl px-4 text-sm font-medium text-muted-foreground hover:text-foreground"
+      onclick={() => (open = false)}
+    >
+      Cancel
+    </Button>
+    <Button
+      class="group h-11 flex-1 gap-2 rounded-xl px-5 text-sm font-semibold shadow-lg shadow-primary/20 transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] active:scale-[0.98] disabled:shadow-none motion-reduce:transition-none sm:flex-none"
+      disabled={submitting || validUrls.length === 0}
+      onclick={submit}
+    >
+      {#if submitting}
+        <Loader2 size={16} class="animate-spin" />
+        Adding…
+      {:else}
+        Add{validUrls.length > 0 ? ` ${validUrls.length}` : ""}
+        <ArrowRight
+          size={16}
+          class="transition-transform duration-300 group-hover:translate-x-0.5 motion-reduce:transition-none"
+        />
+      {/if}
+    </Button>
+  </div>
 {/snippet}
 
 {#if isMobile && open}
@@ -217,45 +260,75 @@
       : ''}"
     style="padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right);"
   >
-    <div class="flex items-center h-19 shrink-0 bg-background">
+    <header class="flex items-start gap-2 px-2 pb-2 pt-6">
       <Button
         variant="ghost"
         size="icon"
-        class="ml-4 cursor-pointer"
+        class="mt-1 size-10 shrink-0 rounded-xl text-muted-foreground"
         onclick={() => (open = false)}
+        aria-label="Back"
       >
-        <ArrowLeft size={18} />
+        <ArrowLeft size={20} />
       </Button>
-      <span class="font-semibold ml-2 text-lg">Add Task</span>
-    </div>
+      <div class="min-w-0 flex-1 pt-1.5">
+        <h2 class="text-[26px] font-semibold leading-tight tracking-[-0.02em]">
+          Add tasks
+        </h2>
+      </div>
+    </header>
 
-    <div class="flex-1 overflow-y-auto px-6 pb-6 scrollbar-thin">
+    <div
+      class="flex-1 overflow-y-auto px-4 pb-8 pt-3 scrollbar-none [&::-webkit-scrollbar]:hidden"
+    >
       {@render form()}
     </div>
 
-    <div
-      class="flex justify-end gap-2 border-t border-border/60 px-6 py-4 shrink-0"
+    <footer
+      class="border-t border-border/40 bg-background/90 px-4 py-3 backdrop-blur"
     >
       {@render actions()}
-    </div>
+    </footer>
   </div>
 {:else}
   <Dialog.Root bind:open>
-    <Dialog.Content class="sm:max-w-xl! gap-0 bg-sidebar">
-      <Dialog.Header class="pb-4">
-        <Dialog.Title>Add Task</Dialog.Title>
-        <Dialog.Description>
-          Queue links with settings for this batch only.
-        </Dialog.Description>
+    <Dialog.Content
+      showCloseButton={false}
+      class="gap-0 rounded-[20px] bg-popover p-0 shadow-[0_28px_90px_-30px_rgb(0_0_0/0.65)] ring-1 ring-foreground/5 sm:max-w-xl!"
+    >
+      <Dialog.Header class="px-5 pb-2 pt-5">
+        <div class="flex items-start gap-4">
+          <div class="min-w-0 flex-1">
+            <Dialog.Title
+              class="text-[26px] font-semibold leading-tight tracking-[-0.02em]"
+            >
+              Add tasks
+            </Dialog.Title>
+          </div>
+          <Dialog.Close>
+            {#snippet child({ props })}
+              <Button
+                variant="ghost"
+                size="icon"
+                class="size-9 shrink-0 rounded-xl text-muted-foreground"
+                aria-label="Close"
+                {...props}
+              >
+                <X size={18} />
+              </Button>
+            {/snippet}
+          </Dialog.Close>
+        </div>
       </Dialog.Header>
 
       <div
-        class="flex max-h-[60vh] flex-col gap-4 overflow-y-auto pr-1 scrollbar-thin"
+        class="max-h-[60vh] overflow-y-auto px-5 pb-2 pt-3 scrollbar-none [&::-webkit-scrollbar]:hidden"
       >
         {@render form()}
       </div>
 
-      <Dialog.Footer class="mt-4">
+      <Dialog.Footer
+        class="mx-0 mb-0 flex-row items-center rounded-b-[20px] border-t border-border/40 bg-transparent px-5 py-3.5"
+      >
         {@render actions()}
       </Dialog.Footer>
     </Dialog.Content>

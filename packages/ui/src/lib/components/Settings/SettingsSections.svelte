@@ -8,27 +8,29 @@
   const ITEM_TITLE_CLASS =
     "text-[15px] font-normal leading-tight text-foreground";
   const ITEM_DESCRIPTION_CLASS = "text-xs leading-normal text-muted-foreground";
-  const ARGS_TEXTAREA_BASE =
-    "flex w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-xs leading-relaxed text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-40";
-  const ARGS_TEXTAREA_CLASS = `${ARGS_TEXTAREA_BASE} font-mono`;
+  const TEXTAREA_BASE =
+    "flex w-full resize-y rounded-xl border border-transparent bg-background/70 px-3.5 py-2.5 leading-relaxed text-foreground ring-1 ring-border/40 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-40";
+  const TEXTAREA_CLASS = `${TEXTAREA_BASE} text-sm`;
+  const MONO_TEXTAREA_CLASS = `${TEXTAREA_CLASS} font-mono`;
+  const SMALL_MONO_TEXTAREA_CLASS = `${TEXTAREA_BASE} text-xs font-mono`;
   const argsMinHeight = (rows = 3) => rows * 22 + 20 + "px";
 
   let { sections, fill = false }: { sections: Section[]; fill?: boolean } =
     $props();
 </script>
 
-<div class="flex flex-col gap-3 {fill ? 'min-h-0 flex-1' : ''}">
+<div class="flex flex-col gap-5 {fill ? 'min-h-0 flex-1' : ''}">
   {#each sections as section, sindex (sindex)}
-    <div
-      class="flex flex-col gap-3 {section.fill ? 'min-h-0 flex-1' : ''}"
-    >
+    <div class="flex flex-col gap-2.5 {section.fill ? 'min-h-0 flex-1' : ''}">
       {#if section.label && !section.headerAction}
         <div class="px-2 pt-1">
-          <h2 class="text-xs font-bold tracking-wide text-primary">
+          <h2
+            class="text-[13px] font-semibold tracking-wide text-muted-foreground"
+          >
             {section.label}
           </h2>
           {#if section.description}
-            <p class="text-11 text-muted-foreground/60 mt-0.5">
+            <p class="mt-0.5 text-xs text-muted-foreground/60">
               {section.description}
             </p>
           {/if}
@@ -36,15 +38,15 @@
       {/if}
 
       <div
-        class="overflow-hidden rounded-2xl bg-muted/40 shadow-sm {section.headerAction
+        class="overflow-hidden rounded-2xl bg-secondary/55 {section.headerAction
           ? ''
-          : 'divide-y divide-border/50'} {section.fill
+          : 'divide-y divide-border/20'} {section.fill
           ? 'flex min-h-0 flex-1 flex-col'
           : ''}"
       >
         {#if section.headerAction}
-          <div class="flex items-start justify-between gap-3 px-4 pt-4 pb-2">
-            <div class="min-w-0 flex flex-col gap-0.5">
+          <div class="flex items-start justify-between gap-3 px-4 pb-2 pt-3.5">
+            <div class="flex min-w-0 flex-col gap-0.5">
               {#if section.label}
                 <p class={ITEM_TITLE_CLASS}>{section.label}</p>
               {/if}
@@ -54,9 +56,8 @@
             </div>
             <Button
               variant={section.headerAction.variant ?? "outline"}
-              size="sm"
               onclick={section.headerAction.onclick}
-              class="h-8 shrink-0 border-border bg-transparent text-xs text-primary hover:bg-foreground/5"
+              class="h-9 shrink-0 rounded-xl px-3.5 text-xs font-medium"
             >
               {#if section.headerAction.icon}
                 <span class="mr-1.5 flex shrink-0 items-center">
@@ -85,11 +86,7 @@
               {/if}
 
               <div class="min-w-0 flex-1">
-                <p
-                  class="text-[15px] font-normal leading-tight text-foreground"
-                >
-                  {item.label}
-                </p>
+                <p class={ITEM_TITLE_CLASS}>{item.label}</p>
                 {#if item.description}
                   <p class="mt-1 text-xs leading-normal text-muted-foreground">
                     {item.description}
@@ -106,18 +103,14 @@
               />
             </label>
           {:else if item.type === "input"}
-            <div class="flex flex-col gap-2.5 px-4 py-4 bg-transparent">
+            <div class="flex flex-col gap-2.5 px-4 py-4">
               <label
                 for="{item.id}--{sindex}-{ii}"
                 class="flex flex-col gap-0.5"
               >
-                <span class="text-[15px] font-normal text-foreground"
-                  >{item.label}</span
-                >
+                <span class={ITEM_TITLE_CLASS}>{item.label}</span>
                 {#if item.description}
-                  <span class="text-xs text-muted-foreground leading-normal"
-                    >{item.description}</span
-                  >
+                  <span class={ITEM_DESCRIPTION_CLASS}>{item.description}</span>
                 {/if}
               </label>
               <Input
@@ -126,7 +119,7 @@
                 value={item.value}
                 placeholder={item.placeholder}
                 disabled={item.disabled}
-                class="h-10 border-input bg-background text-sm text-foreground focus-visible:ring-ring {item.monospace
+                class="h-11 rounded-xl border-transparent bg-background/70 px-3.5 text-sm text-foreground ring-1 ring-border/40 focus-visible:ring-2 {item.monospace
                   ? 'font-mono'
                   : ''}"
                 onchange={(e) =>
@@ -154,7 +147,7 @@
 
                 {#if item.presets?.length}
                   <select
-                    class="h-8 cursor-pointer rounded-md border border-input bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    class="h-8 cursor-pointer rounded-lg border-0 bg-background/70 px-3 text-xs text-foreground ring-1 ring-border/40 focus:outline-none focus:ring-2 focus:ring-ring"
                     onchange={(e) => {
                       const sel = e.target as HTMLSelectElement;
                       item.onchange(sel.value);
@@ -175,20 +168,18 @@
                 value={item.value}
                 placeholder={item.placeholder}
                 style="min-height: {argsMinHeight(item.minRows)}"
-                class="{ARGS_TEXTAREA_BASE} {item.monospace !== false
-                  ? 'font-mono'
-                  : ''}"
+                class={item.monospace !== false
+                  ? MONO_TEXTAREA_CLASS
+                  : TEXTAREA_CLASS}
                 onchange={(e) =>
                   item.onchange((e.target as HTMLTextAreaElement).value)}
               ></textarea>
             </div>
           {:else if item.type === "segmented"}
-            <div class="flex flex-col gap-3 px-4 py-4">
+            <div class="flex flex-col gap-2.5 px-4 py-4">
               {#if item.label}
                 <div>
-                  <p class="text-[15px] font-normal text-foreground">
-                    {item.label}
-                  </p>
+                  <p class={ITEM_TITLE_CLASS}>{item.label}</p>
                   {#if item.description}
                     <p class="mt-0.5 text-xs text-muted-foreground">
                       {item.description}
@@ -198,8 +189,9 @@
               {/if}
 
               <div
-                role="group"
-                class="flex w-full gap-1 rounded-lg bg-muted p-1 border border-border/30"
+                role="radiogroup"
+                aria-label={item.label ?? "Options"}
+                class="flex w-full gap-1 rounded-xl bg-background/50 p-1"
               >
                 {#each item.options as opt (opt.value)}
                   {@const selected = item.value === opt.value}
@@ -208,9 +200,9 @@
                     role="radio"
                     aria-checked={selected}
                     onclick={() => item.onchange(opt.value)}
-                    class="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-all {selected
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'}"
+                    class="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] active:scale-[0.97] {selected
+                      ? 'bg-primary text-primary-foreground shadow-md shadow-primary/25'
+                      : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground'}"
                   >
                     {#if opt.icon}
                       <span class="flex shrink-0 items-center"
@@ -226,21 +218,21 @@
             {#if item.entries.length === 0}
               <div class="p-4">
                 <div
-                  class="flex flex-col items-center justify-center gap-2 rounded-xl py-8 text-center"
+                  class="flex flex-col items-center justify-center gap-2 rounded-xl py-7 text-center"
                 >
                   {#if item.emptyIcon}
                     <div class="text-muted-foreground">
                       {@render item.emptyIcon()}
                     </div>
                   {/if}
-                  <p class="text-xs italic text-muted-foreground">
+                  <p class="text-xs text-muted-foreground">
                     {item.emptyMessage ?? "No items yet."}
                   </p>
                 </div>
               </div>
             {:else}
               <div
-                class="divide-y divide-border/40 overflow-y-auto"
+                class="divide-y divide-border/20 overflow-y-auto"
                 style={item.maxHeight ? `max-height: ${item.maxHeight}` : ""}
               >
                 {#each item.entries as entry (entry.id)}
@@ -301,19 +293,19 @@
             {/if}
           {:else if item.type === "site-args"}
             {#if item.value.length === 0}
-              <div class="p-4">
+              <div class="p-5">
                 <div
-                  class="flex flex-col items-center justify-center gap-2 rounded-xl py-8 text-center"
+                  class="flex flex-col items-center justify-center gap-2 rounded-xl py-7 text-center"
                 >
-                  <p class="text-xs italic text-muted-foreground/60">
+                  <p class="text-xs text-muted-foreground/60">
                     No site-specific arguments configured.
                   </p>
                 </div>
               </div>
             {:else}
-              <div class="divide-y divide-border/40">
+              <div class="divide-y divide-border/20">
                 {#each item.value as siteArg (siteArg.id)}
-                  <div class="flex flex-col gap-2 px-4 pt-2 pb-3">
+                  <div class="flex flex-col gap-2 px-4 pb-3 pt-2">
                     <div class="flex items-center gap-2">
                       <Input
                         value={siteArg.domain}
@@ -327,7 +319,7 @@
                         }}
                         placeholder={item.domainPlaceholder ?? "example.com"}
                         aria-label="Domain"
-                        class="h-9 rounded-md border-input bg-muted/50 px-3 font-mono text-xs text-foreground focus-visible:ring-ring"
+                        class="h-10 rounded-xl border-transparent bg-background/70 px-3 font-mono text-xs text-foreground ring-1 ring-border/40 focus-visible:ring-2"
                       />
                       <Button
                         variant="ghost"
@@ -339,7 +331,7 @@
                             ),
                           );
                         }}
-                        class="h-8 w-8 cursor-pointer shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        class="h-8 w-8 shrink-0 cursor-pointer text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                         aria-label="Remove {siteArg.domain}"
                       >
                         <Delete size={14} />
@@ -359,13 +351,17 @@
                       placeholder={item.argsPlaceholder ?? "--api-key=xyz"}
                       aria-label="Arguments"
                       style="min-height: {argsMinHeight()}"
-                      class={ARGS_TEXTAREA_CLASS}></textarea>
+                      class={SMALL_MONO_TEXTAREA_CLASS}></textarea>
                   </div>
                 {/each}
               </div>
             {/if}
           {:else if item.type === "custom"}
-            <div class="p-0.5 {section.fill ? 'flex min-h-0 flex-1 flex-col' : ''}">
+            <div
+              class="{section.fill
+                ? 'flex min-h-0 flex-1 flex-col'
+                : ''}"
+            >
               {@render item.node()}
             </div>
           {/if}

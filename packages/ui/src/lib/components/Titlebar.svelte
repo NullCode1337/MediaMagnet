@@ -59,7 +59,7 @@
       <img src={logo} alt="logo" class="w-5 h-5" />
       {#if !uiState.headless}
         <span
-          class="text-[11px] font-medium text-muted-foreground tracking-widest uppercase"
+          class="text-xs font-medium text-muted-foreground tracking-wider"
         >
           MediaMagnet
         </span>

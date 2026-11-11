@@ -6,26 +6,29 @@
   let { config }: { config: SectionBase } = $props();
 </script>
 
-<div
-  class="flex w-full flex-col {config.fill ? 'min-h-0 flex-1' : ''}"
->
-  <header class="flex shrink-0 justify-between py-5 px-1">
-    <div class="flex flex-col max-sm:px-7">
-      <h1 class="text-xl text-foreground sm:font-bold sm:text-2xl">
+<div class="flex w-full flex-col {config.fill ? 'min-h-0 flex-1' : ''}">
+  <header
+    class="flex shrink-0 flex-wrap items-start justify-between gap-x-4 gap-y-3 pb-4 pt-0.5"
+  >
+    <div class="flex min-w-0 flex-col">
+      <h1
+        class="text-[22px] font-semibold leading-tight tracking-[-0.02em] text-foreground sm:text-[26px]"
+      >
         {config.title || "Settings"}
       </h1>
       {#if config.description}
-        <p class="text-xs text-foreground/60">{config.description}</p>
+        <p class="mt-1 text-sm leading-relaxed text-muted-foreground">
+          {config.description}
+        </p>
       {/if}
     </div>
 
-    <div class="flex items-center gap-2">
+    <div class="flex shrink-0 items-center gap-2">
       {#if config.headerActions?.length}
         {#each config.headerActions as action (action.label)}
           <Button
             variant={action.variant ?? "ghost"}
-            size="sm"
-            class="text-foreground hover:bg-foreground/5"
+            class="h-9 rounded-xl px-3.5 text-xs font-medium"
             onclick={action.onclick}
           >
             {#if action.icon}
@@ -40,5 +43,13 @@
     </div>
   </header>
 
-  <SettingsSections sections={config.sections} fill={config.fill} />
+  {#if config.sections.some((section) => section.items.length > 0)}
+    <SettingsSections sections={config.sections} fill={config.fill} />
+  {:else}
+    <div
+      class="rounded-2xl bg-secondary/55 px-4 py-7 text-center text-sm text-muted-foreground"
+    >
+      No settings for this client.
+    </div>
+  {/if}
 </div>

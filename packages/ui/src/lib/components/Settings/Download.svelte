@@ -54,11 +54,11 @@
         onchange={(e) =>
           settings.setDownloadPath((e.target as HTMLInputElement).value)}
         placeholder="Default"
-        class="h-10 border-input bg-background text-sm text-foreground focus-visible:ring-ring"
+        class="h-11 rounded-xl border-transparent bg-background/70 px-3.5 text-sm text-foreground ring-1 ring-border/40 focus-visible:ring-2"
       />
       <Button
         variant="outline"
-        class="h-10 shrink-0 border-input bg-transparent text-xs cursor-pointer text-primary hover:bg-muted shadow-sm"
+        class="h-11 shrink-0 rounded-xl border-transparent bg-primary/10 px-4 text-sm font-medium text-primary hover:bg-primary/15"
         onclick={selectDirectory}
       >
         Browse
@@ -82,7 +82,7 @@
         variant="outline"
         disabled={updating}
         onclick={updateBackends}
-        class="h-10 shrink-0 border-input bg-transparent text-xs cursor-pointer text-primary hover:bg-muted shadow-sm"
+        class="h-11 shrink-0 rounded-xl border-transparent bg-primary/10 px-4 text-sm font-medium text-primary hover:bg-primary/15"
       >
         {updating ? "Updating…" : "Update"}
       </Button>
@@ -90,7 +90,7 @@
 
     {#if showLog}
       <pre
-        class="max-h-64 overflow-auto rounded-md border border-input bg-background px-3 py-2 font-mono text-xs leading-relaxed text-foreground whitespace-pre-wrap">{output ||
+        class="max-h-64 overflow-auto rounded-xl border border-border/40 bg-background/70 px-3.5 py-2.5 font-mono text-xs leading-relaxed text-foreground whitespace-pre-wrap scrollbar-thin">{output ||
           (updating ? "Running…" : "(no output)")}</pre>
     {/if}
   </div>

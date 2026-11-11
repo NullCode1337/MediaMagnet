@@ -92,10 +92,6 @@
         settings.json
       </span>
     </div>
-    <div class="flex items-center gap-2">
-      <span class="text-[10px] text-muted-foreground">{lines.length} lines</span
-      >
-    </div>
   </div>
 
   <div

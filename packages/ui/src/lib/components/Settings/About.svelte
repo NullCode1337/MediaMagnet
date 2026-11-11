@@ -83,120 +83,133 @@
 </script>
 
 <div class="flex w-full flex-col">
-  <header class="flex justify-between py-5 px-1">
-    <div class="flex flex-col max-sm:px-7">
-      <h1 class="text-xl text-foreground sm:font-bold sm:text-2xl">About</h1>
+  <header class="flex shrink-0 items-start justify-between gap-4 pb-4 pt-0.5">
+    <div class="flex min-w-0 flex-col">
+      <h1
+        class="text-[22px] font-semibold leading-tight tracking-[-0.02em] text-foreground sm:text-[26px]"
+      >
+        About
+      </h1>
     </div>
   </header>
 
-  <div class="flex flex-col gap-3">
-    <div class="overflow-hidden rounded-2xl bg-muted/40 shadow-sm">
+  <div class="flex flex-col gap-4">
+    <div class="overflow-hidden rounded-2xl bg-secondary/55">
       <div
-        class="flex flex-col items-center gap-5 px-6 py-8 text-center sm:flex-row sm:text-left"
+        class="flex flex-col items-center gap-4 px-4 py-4 text-center sm:flex-row sm:text-left"
       >
         <img
           src={logo}
           alt="MediaMagnet logo"
-          class="size-20 shrink-0 rounded-2xl"
+          class="size-20 shrink-0 rounded-xl"
         />
         <div class="flex min-w-0 flex-col gap-2">
           <div
             class="flex flex-wrap items-center justify-center gap-2 sm:justify-start"
           >
-            <h2 class="text-2xl font-bold tracking-tight text-foreground">
+            <h2
+              class="text-[26px] font-semibold leading-tight tracking-[-0.02em] text-foreground"
+            >
               MediaMagnet
             </h2>
             {#if version}
               <span
-                class="rounded-full border border-border/60 bg-background px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
+                class="rounded-full bg-background/70 px-3 py-1 text-[11px] font-semibold text-muted-foreground"
               >
                 v{version}
               </span>
             {/if}
           </div>
-          <p class="max-w-md text-xs leading-relaxed text-muted-foreground">
-            A polished desktop app and self-hostable server for downloading
-            media from any website.
+          <p class="max-w-md text-sm leading-relaxed text-muted-foreground">
+            This version is up-to-date.
           </p>
         </div>
       </div>
     </div>
 
-    <div
-      class="overflow-hidden rounded-2xl bg-muted/40 divide-y divide-border/50 shadow-sm"
-    >
-      {#each BACKENDS as backend (backend.name)}
-        {@const Icon = backend.icon}
-        {@const tool = toolFor(backend.name)}
-        <div class="flex items-center gap-4 px-4 py-3.5">
-          <span class="shrink-0 text-primary"><Icon size={17} /></span>
-          <span class="min-w-0 flex-1">
-            <span class="block text-[15px] leading-tight text-foreground">
-              {backend.name}
+    <div class="overflow-hidden rounded-2xl bg-secondary/55 py-1">
+      <div class="divide-y divide-border/20">
+        {#each BACKENDS as backend (backend.name)}
+          {@const Icon = backend.icon}
+          {@const tool = toolFor(backend.name)}
+          <div class="flex items-center gap-4 px-4 py-3">
+            <span class="shrink-0 text-primary">
+              <Icon size={18} />
             </span>
-            <span class="mt-0.5 block truncate text-xs text-muted-foreground">
-              {#if toolsError}
-                {toolsError}
-              {:else if !tools}
-                Checking…
-              {:else if !tool}
-                Not reported
-              {:else if !tool.available}
-                Not installed
-              {:else}
-                {SOURCE_LABEL[tool.source ?? ""] ?? "Unknown"}
-                {#if tool.program}· {tool.program}{/if}
-              {/if}
-            </span>
-          </span>
-          <span class="flex shrink-0 items-center">
-            {#if !tools && !toolsError}
+            <span class="min-w-0 flex-1">
+              <span class="block text-[15px] leading-tight text-foreground">
+                {backend.name}
+              </span>
               <span
-                class="size-3.5 animate-pulse rounded-full bg-muted-foreground/30"
-              ></span>
-            {:else if !toolsError}
-              <span
-                class="rounded-full border border-border/60 bg-background px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
+                class="mt-0.5 block truncate text-xs leading-relaxed text-muted-foreground"
               >
-                {#if tool?.available}
-                  {tool.version ?? "unknown"}
+                {#if toolsError}
+                  {toolsError}
+                {:else if !tools}
+                  Checking…
+                {:else if !tool}
+                  Not reported
+                {:else if !tool.available}
+                  Not installed
                 {:else}
-                  missing
+                  {SOURCE_LABEL[tool.source ?? ""] ?? "Unknown"}
+                  {#if tool.program}· {tool.program}{/if}
                 {/if}
               </span>
-            {/if}
-          </span>
-        </div>
-      {/each}
+            </span>
+            <span class="flex shrink-0 items-center">
+              {#if !tools && !toolsError}
+                <span
+                  class="size-3.5 animate-pulse rounded-full bg-muted-foreground/30"
+                ></span>
+              {:else if !toolsError}
+                <span
+                  class="rounded-full bg-background/70 px-2.5 py-1 text-[11px] font-semibold text-muted-foreground"
+                >
+                  {#if tool?.available}
+                    {tool.version ?? "unknown"}
+                  {:else}
+                    missing
+                  {/if}
+                </span>
+              {/if}
+            </span>
+          </div>
+        {/each}
+      </div>
     </div>
 
-    <div
-      class="overflow-hidden rounded-2xl bg-muted/40 divide-y divide-border/50 shadow-sm"
-    >
-      {#each links as link (link.label)}
-        {@const Icon = link.icon}
-        <button
-          type="button"
-          onclick={() => transport.openUrl(link.href)}
-          class="group flex w-full cursor-pointer items-center gap-4 px-4 py-3.5 text-left transition-colors hover:bg-foreground/3"
-        >
-          <span class="shrink-0 text-primary"><Icon size={17} /></span>
-          <span class="min-w-0 flex-1">
-            <span
-              class="block text-[15px] font-normal leading-tight text-foreground"
-            >
-              {link.label}
+    <div class="overflow-hidden rounded-2xl bg-secondary/55 py-1">
+      <div class="divide-y divide-border/20">
+        {#each links as link (link.label)}
+          {@const Icon = link.icon}
+          <button
+            type="button"
+            onclick={() => transport.openUrl(link.href)}
+            class="group flex w-full cursor-pointer items-center gap-4 px-4 py-3 text-left transition-colors hover:bg-foreground/5"
+          >
+            <span class="shrink-0 text-primary">
+              <Icon size={18} />
             </span>
-            <span class="mt-0.5 block truncate text-xs text-muted-foreground">
-              {link.value}
+            <span class="min-w-0 flex-1">
+              <span
+                class="block text-[15px] font-medium leading-tight text-foreground"
+              >
+                {link.label}
+              </span>
+              <span
+                class="mt-0.5 block truncate text-xs leading-relaxed text-muted-foreground"
+              >
+                {link.value}
+              </span>
             </span>
-          </span>
-          <Icons.ExternalLink
-            size={14}
-            class="shrink-0 text-muted-foreground/50 transition-colors group-hover:text-foreground"
-          />
-        </button>
-      {/each}
+            <Icons.ExternalLink
+              size={14}
+              class="shrink-0 text-muted-foreground/50 transition-colors group-hover:text-foreground"
+            />
+          </button>
+        {/each}
+      </div>
     </div>
   </div>
 </div>

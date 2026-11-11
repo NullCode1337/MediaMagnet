@@ -124,22 +124,21 @@
 {#snippet cookieEmptyIcon()}<Icons.Cookie size={28} />{/snippet}
 
 {#snippet cookieEditorNode()}
-  <div class="flex flex-col gap-2 px-4 py-3.5">
+  <div class="flex flex-col gap-2.5 px-4 py-4">
     <label for="cookie_content" class="flex flex-col gap-0.5">
       <span class="text-sm font-medium leading-5">Cookie Content</span>
     </label>
     <textarea
       id="cookie_content"
       bind:value={cookieRawContent}
-      class="flex w-full resize-y rounded-lg border border-input bg-muted/20
-             px-3 py-2 font-mono text-xs leading-relaxed overscroll-contain
-             placeholder:text-muted-foreground/60 min-h-25
-             focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring
-             focus-visible:ring-offset-2"
+      class="flex min-h-32 w-full resize-y rounded-xl border border-transparent bg-background/70
+             px-3.5 py-2.5 font-mono text-xs leading-relaxed text-foreground overscroll-contain
+             ring-1 ring-border/40 placeholder:text-muted-foreground/60
+             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
       placeholder={"[ { 'domain': '.google.com', ... } ]  or  # Netscape format..."}
     ></textarea>
     <Button
-      class="w-full t-2 cursor-pointer"
+      class="mt-1 h-11 w-full cursor-pointer rounded-xl"
       disabled={!cookieDomain || !cookieRawContent}
       onclick={saveCookies}
     >

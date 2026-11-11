@@ -46,12 +46,21 @@
   let barVisible = $state(true);
   let barRestore: ReturnType<typeof setTimeout>;
 
+  const isSettings = () => uiState.activeTab === "settings";
+
   function scheduleRestore(delay = 2000) {
     clearTimeout(barRestore);
     barRestore = setTimeout(() => {
       barVisible = true;
     }, delay);
   }
+
+  $effect(() => {
+    if (uiState.activeTab === "settings") {
+      clearTimeout(barRestore);
+      barVisible = true;
+    }
+  });
 
   $effect(() => {
     if (typeof window === "undefined") return;
@@ -63,6 +72,7 @@
     };
 
     const handleTouchMove = (e: TouchEvent) => {
+      if (isSettings()) return;
       const diff = touchStartY - e.touches[0].clientY;
       if (diff > 8) {
         barVisible = false;
@@ -78,6 +88,7 @@
     };
 
     const handleWheel = (e: WheelEvent) => {
+      if (isSettings()) return;
       if (e.deltaY > 0) {
         barVisible = false;
         scheduleRestore(1500);
@@ -223,7 +234,7 @@
       {#if !isCollapsed}
         <div class="flex-1 min-w-0">
           <div class="flex justify-between text-[10px] mb-1.5 font-semibold">
-            <span class="text-sidebar-foreground/50 uppercase tracking-widest"
+            <span class="text-sidebar-foreground/50 tracking-wide"
               >Storage</span
             >
             <span
