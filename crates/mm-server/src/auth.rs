@@ -9,7 +9,8 @@ use std::sync::Arc;
 use crate::state::AppState;
 
 /// Constant-time comparison, so a wrong token cannot be found byte by byte.
-fn same(a: &[u8], b: &[u8]) -> bool {
+#[doc(hidden)]
+pub fn same(a: &[u8], b: &[u8]) -> bool {
     if a.len() != b.len() {
         return false;
     }
@@ -39,7 +40,8 @@ fn presented_token(request: &Request) -> Option<String> {
     })
 }
 
-fn query_token_allowed(method: &axum::http::Method, path: &str) -> bool {
+#[doc(hidden)]
+pub fn query_token_allowed(method: &axum::http::Method, path: &str) -> bool {
     if method != axum::http::Method::GET && method != axum::http::Method::HEAD {
         return false;
     }
@@ -66,37 +68,5 @@ pub async fn require_token(
             })),
         )
             .into_response(),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use axum::http::Method;
-
-    #[test]
-    fn comparison_is_exact() {
-        assert!(same(b"secret", b"secret"));
-        assert!(!same(b"secret", b"secreT"));
-        assert!(!same(b"secret", b"secret "));
-        assert!(!same(b"", b"s"));
-        assert!(same(b"", b""));
-    }
-
-    #[test]
-    fn query_tokens_are_limited_to_headerless_get_routes() {
-        assert!(query_token_allowed(&Method::GET, "/api/v1/events"));
-        assert!(query_token_allowed(&Method::GET, "/events"));
-        assert!(query_token_allowed(&Method::GET, "/api/v1/files/a.mp4"));
-        assert!(query_token_allowed(
-            &Method::GET,
-            "/api/v1/downloads/job/file"
-        ));
-
-        // Mutating endpoints and everything else require the header.
-        assert!(!query_token_allowed(&Method::POST, "/api/v1/downloads"));
-        assert!(!query_token_allowed(&Method::GET, "/api/v1/settings"));
-        assert!(!query_token_allowed(&Method::DELETE, "/api/v1/downloads"));
-        assert!(!query_token_allowed(&Method::GET, "/api/v1/cookies"));
     }
 }

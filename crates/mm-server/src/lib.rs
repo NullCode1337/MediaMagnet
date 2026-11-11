@@ -10,6 +10,16 @@ mod retention;
 mod routes;
 mod state;
 
+#[doc(hidden)]
+pub mod testing {
+    pub use crate::auth::{query_token_allowed, same};
+    pub use crate::events::to_transport_event;
+    pub use crate::files::{encode_path, is_active_content, serve, DeleteAfter, Disposition};
+    pub use crate::jobs::{JobSummary, Jobs, RETAINED_JOBS};
+    pub use crate::retention::{FileIdentity, Retention};
+    pub use crate::routes::{file_route, valid_job_id};
+}
+
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;

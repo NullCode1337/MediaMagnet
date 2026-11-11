@@ -57,7 +57,8 @@ impl From<DirEntry> for EntryPayload {
     }
 }
 
-fn encode_path(relative: &str) -> String {
+#[doc(hidden)]
+pub fn encode_path(relative: &str) -> String {
     relative
         .split('/')
         .map(|segment| {
@@ -104,7 +105,8 @@ fn content_type(path: &Path) -> HeaderValue {
         .unwrap_or_else(|| HeaderValue::from_static("application/octet-stream"))
 }
 
-fn is_active_content(path: &Path) -> bool {
+#[doc(hidden)]
+pub fn is_active_content(path: &Path) -> bool {
     let extension = path
         .extension()
         .and_then(|extension| extension.to_str())
@@ -375,89 +377,5 @@ impl Stream for BodyWithCleanup {
             }
             Poll::Pending => Poll::Pending,
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn encoding_keeps_slashes_and_escapes_others() {
-        assert_eq!(encode_path("a/b c.mp4"), "a/b%20c.mp4");
-        assert_eq!(encode_path("ünï.txt"), "%C3%BCn%C3%AF.txt");
-    }
-
-    #[test]
-    fn active_content_is_never_served_inline() {
-        for name in [
-            "a.html", "a.HTM", "a.xhtml", "a.svg", "a.svgz", "a.xml", "a.xsl", "a.js", "a.mjs",
-            "a.css", "a.wasm",
-        ] {
-            assert!(
-                is_active_content(Path::new(name)),
-                "{name} should be active"
-            );
-        }
-        for name in ["a.mp4", "a.jpg", "a.png", "a.txt", "a.zip", "a.pdf"] {
-            assert!(
-                !is_active_content(Path::new(name)),
-                "{name} should be inert"
-            );
-        }
-    }
-
-    #[tokio::test]
-    async fn a_fully_streamed_body_deletes_the_output() {
-        use futures_util::StreamExt;
-        use std::time::{Duration, SystemTime, UNIX_EPOCH};
-
-        let unique = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
-        let root = std::env::temp_dir().join(format!("mm-files-cleanup-{unique}"));
-        std::fs::create_dir_all(&root).unwrap();
-        let path = root.join("clip.mp4");
-        std::fs::write(&path, b"hello").unwrap();
-
-        let retention = Retention::open(
-            root.clone(),
-            Duration::from_secs(3600),
-            root.join("job-files.json"),
-        );
-        retention.record("job", &["clip.mp4".into()]);
-
-        let file = tokio::fs::File::open(&path).await.unwrap();
-        let identity = FileIdentity::from_metadata(&file.metadata().await.unwrap());
-        let inner: Pin<Box<dyn Stream<Item = Result<axum::body::Bytes, std::io::Error>> + Send>> =
-            Box::pin(ReaderStream::new(file));
-        let mut body = BodyWithCleanup {
-            inner,
-            cleanup: DeleteOnComplete {
-                retention,
-                job_id: Some("job".into()),
-                relative: "clip.mp4".into(),
-                identity,
-                delivered: 0,
-                expected: 5,
-                armed: true,
-            },
-        };
-
-        while let Some(chunk) = body.next().await {
-            chunk.unwrap();
-        }
-
-        // Deletion happens in a task spawned from the stream.
-        tokio::time::timeout(Duration::from_secs(1), async {
-            while path.exists() {
-                tokio::task::yield_now().await;
-            }
-        })
-        .await
-        .unwrap();
-        assert!(!path.exists());
-        let _ = std::fs::remove_dir_all(&root);
     }
 }
