@@ -39,7 +39,7 @@ Health check:
 
 ```sh
 curl -s http://localhost:8080/api/v1/health
-# {"status":"ok","version":"0.6.1"}
+# {"status":"ok","version":"0.6.2"}
 ```
 
 ## Authentication
