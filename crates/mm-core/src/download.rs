@@ -205,7 +205,7 @@ impl Engine {
         let dir = self.app_data_dir.join("job-cookies");
         std::fs::create_dir_all(&dir)?;
         let path = dir.join(format!("{domain}-{}.txt", unique_suffix()));
-        std::fs::write(&path, body)?;
+        crate::cookies::write_private(&path, body.as_bytes())?;
         Ok(Some(Arc::new(CookieFile(path))))
     }
 
@@ -1000,7 +1000,15 @@ impl Engine {
                         if name.to_lowercase().contains("part") {
                             continue;
                         }
-                        let domain_dir = base_dir.join(name.split('_').next().unwrap_or("unknown"));
+                        let domain = name.split('_').next().unwrap_or("unknown");
+                        if domain.is_empty()
+                            || domain == "."
+                            || domain == ".."
+                            || domain.contains(['/', '\\', '\0'])
+                        {
+                            continue;
+                        }
+                        let domain_dir = base_dir.join(domain);
                         if !domain_dir.exists() {
                             std::fs::create_dir(&domain_dir)?;
                         }
@@ -1213,7 +1221,10 @@ fn recode_args(format: &str) -> Option<&'static [&'static str]> {
 }
 
 fn contains_separator(template: &str) -> bool {
-    template.contains('/') || template.contains('\\')
+    let bytes = template.as_bytes();
+    template.contains('/')
+        || template.contains('\\')
+        || (bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':')
 }
 
 fn strip_ansi_codes(s: &str) -> std::borrow::Cow<'_, str> {
@@ -1398,5 +1409,17 @@ mod tests {
         // spotdl has no equivalent option in either mode.
         assert_eq!(mtime_flag(Backend::SpotDl, false), None);
         assert_eq!(mtime_flag(Backend::SpotDl, true), None);
+    }
+
+    #[test]
+    fn output_templates_cannot_escape_the_job_directory() {
+        assert!(!contains_separator("%(title)s.%(ext)s"));
+        assert!(!contains_separator(
+            "%(uploader)s - %(title)s [%(id)s].%(ext)s"
+        ));
+        assert!(contains_separator("../../etc/cron.d/x"));
+        assert!(contains_separator("%(title)s/%(id)s.%(ext)s"));
+        assert!(contains_separator("..\\evil.%(ext)s"));
+        assert!(contains_separator("C:evil.%(ext)s"));
     }
 }

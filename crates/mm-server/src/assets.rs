@@ -37,7 +37,14 @@ impl StaticAssets {
 
     pub async fn read(&self, path: &str) -> Option<Vec<u8>> {
         match self {
-            Self::Disk(dir) => tokio::fs::read(dir.join(path)).await.ok(),
+            Self::Disk(dir) => {
+                let root = dir.canonicalize().ok()?;
+                let resolved = dir.join(path).canonicalize().ok()?;
+                if !resolved.starts_with(&root) || !resolved.is_file() {
+                    return None;
+                }
+                tokio::fs::read(resolved).await.ok()
+            }
             Self::Embedded => FILES
                 .iter()
                 .find(|(name, _)| *name == path)

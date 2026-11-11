@@ -91,6 +91,17 @@ impl Jobs {
         records.get(id).map(summarize)
     }
 
+    /// Jobs that occupy the queue: waiting for a permit, running, or paused.
+    pub fn active_count(&self) -> usize {
+        let Ok(records) = self.records.lock() else {
+            return 0;
+        };
+        records
+            .values()
+            .filter(|record| matches!(record.state.as_str(), "running" | "paused"))
+            .count()
+    }
+
     pub fn list(&self) -> Vec<JobSummary> {
         let Ok(records) = self.records.lock() else {
             return Vec::new();
@@ -245,5 +256,18 @@ mod tests {
         assert!(jobs
             .summary(&format!("job-{}", RETAINED_JOBS + 4))
             .is_some());
+    }
+
+    #[test]
+    fn active_count_tracks_queued_and_paused_jobs() {
+        let jobs = Jobs::default();
+        jobs.insert(request("a"));
+        jobs.insert(request("b"));
+        assert_eq!(jobs.active_count(), 2);
+        jobs.set_state("a", "finished");
+        jobs.set_state("b", "paused");
+        assert_eq!(jobs.active_count(), 1);
+        jobs.set_state("b", "cancelled");
+        assert_eq!(jobs.active_count(), 0);
     }
 }

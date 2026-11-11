@@ -25,14 +25,25 @@ fn presented_token(request: &Request) -> Option<String> {
     {
         return Some(value.trim().to_string());
     }
-    // `EventSource` cannot set headers, so the SSE endpoint accepts `?token=`.
-    // Pair `MM_TOKEN` with a TLS proxy that does not log query strings.
+    // `EventSource` and a plain download link cannot set headers, so those GET
+    // routes also accept `?token=`. No other request may carry a token in the
+    // URL, so it cannot end up in logs for ordinary API calls.
+    if !query_token_allowed(request.method(), request.uri().path()) {
+        return None;
+    }
     request.uri().query().and_then(|query| {
         query
             .split('&')
             .find_map(|pair| pair.strip_prefix("token="))
             .map(|v| v.to_string())
     })
+}
+
+fn query_token_allowed(method: &axum::http::Method, path: &str) -> bool {
+    if method != axum::http::Method::GET && method != axum::http::Method::HEAD {
+        return false;
+    }
+    path.ends_with("/events") || path.contains("/files") || path.ends_with("/file")
 }
 
 pub async fn require_token(
@@ -60,7 +71,8 @@ pub async fn require_token(
 
 #[cfg(test)]
 mod tests {
-    use super::same;
+    use super::*;
+    use axum::http::Method;
 
     #[test]
     fn comparison_is_exact() {
@@ -69,5 +81,22 @@ mod tests {
         assert!(!same(b"secret", b"secret "));
         assert!(!same(b"", b"s"));
         assert!(same(b"", b""));
+    }
+
+    #[test]
+    fn query_tokens_are_limited_to_headerless_get_routes() {
+        assert!(query_token_allowed(&Method::GET, "/api/v1/events"));
+        assert!(query_token_allowed(&Method::GET, "/events"));
+        assert!(query_token_allowed(&Method::GET, "/api/v1/files/a.mp4"));
+        assert!(query_token_allowed(
+            &Method::GET,
+            "/api/v1/downloads/job/file"
+        ));
+
+        // Mutating endpoints and everything else require the header.
+        assert!(!query_token_allowed(&Method::POST, "/api/v1/downloads"));
+        assert!(!query_token_allowed(&Method::GET, "/api/v1/settings"));
+        assert!(!query_token_allowed(&Method::DELETE, "/api/v1/downloads"));
+        assert!(!query_token_allowed(&Method::GET, "/api/v1/cookies"));
     }
 }

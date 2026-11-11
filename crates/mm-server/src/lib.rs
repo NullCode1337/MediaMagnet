@@ -133,6 +133,20 @@ async fn serve(config: Config) -> Result<(), String> {
             .map_err(|e| format!("could not create {}: {e}", dir.display()))?;
     }
 
+    // Settings, cookie jars and job metadata live here; keep them private.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let cookie_dir = app_data_dir.join("cookies");
+        for dir in [
+            config_dir.as_path(),
+            app_data_dir.as_path(),
+            cookie_dir.as_path(),
+        ] {
+            let _ = std::fs::set_permissions(dir, std::fs::Permissions::from_mode(0o700));
+        }
+    }
+
     let settings = mm_core::Settings::load_from(&config_dir);
     settings
         .save_to(&config_dir)
@@ -215,6 +229,15 @@ async fn serve(config: Config) -> Result<(), String> {
             None => "open (set MM_TOKEN to require one)",
         }
     );
+
+    if config.token.is_none() && !config.bind.ip().is_loopback() {
+        eprintln!(
+            "[MediaMagnet][Server] WARNING: no MM_TOKEN is set and {} is not loopback. \
+             Anyone who can reach this port can start downloads, read the download root \
+             and change settings. Set MM_TOKEN or bind 127.0.0.1.",
+            config.bind
+        );
+    }
 
     let app = routes::router(state);
     let listener = tokio::net::TcpListener::bind(config.bind)

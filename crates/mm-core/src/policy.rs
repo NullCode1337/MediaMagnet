@@ -35,15 +35,18 @@ const EXEC_YT: Deny = Deny {
         "--exec",
         "--load-info-json",
         "--batch-file",
-        "--config-locations",
         "--config",
         "--plugin-dirs",
         "--netrc-cmd",
+        "--cookies",
         "--cookies-from-browser",
         "--output",
         "--paths",
         "--download-archive",
         "--print-to-file",
+        "--ffmpeg-location",
+        "--downloader",
+        "--postprocessor-args",
     ],
     short: &['a', 'o', 'P', 'c'],
 };
@@ -57,29 +60,38 @@ const GALLERY_DL_DENY: &[Deny] = &[Deny {
         "--postprocessor",
         "--postprocessor-option",
         "--config",
-        "--config-json",
-        "--config-yaml",
-        "--config-toml",
         "--destination",
         "--directory",
         "--option",
+        "--cookies",
+        "--filter",
+        "--chapter-filter",
+        "--image-filter",
+        "--post-filter",
+        "--write-log",
+        "--write-unsupported",
     ],
-    short: &['c', 'P', 'O', 'd', 'D', 'o'],
+    short: &['c', 'P', 'O', 'd', 'D', 'o', 'f'],
 }];
 
 const SPOTDL_DENY: &[Deny] = &[Deny {
-    long: &["--output", "--cookie-file", "--config"],
+    long: &["--output", "--cookie-file", "--config", "--ffmpeg"],
     short: &['o'],
 }];
+
+fn is_denied_long(token: &str, long: &str) -> bool {
+    match token.strip_prefix(long) {
+        Some(rest) => rest.is_empty() || rest.starts_with('=') || rest.starts_with('-'),
+        None => false,
+    }
+}
 
 fn is_denied(tool: ArgTool, token: &str) -> bool {
     if token == "--" {
         return false;
     }
     tool.denied().iter().any(|rule| {
-        rule.long
-            .iter()
-            .any(|long| token == *long || token.starts_with(&format!("{long}=")))
+        rule.long.iter().any(|long| is_denied_long(token, long))
             || (token.starts_with('-')
                 && !token.starts_with("--")
                 && rule.short.iter().any(|short| {
@@ -207,5 +219,24 @@ mod tests {
         assert!(!check(ArgTool::YtDlp, "-f"));
         assert!(!check(ArgTool::GalleryDl, "--no-mtime"));
         assert!(!check(ArgTool::GalleryDl, "-R"));
+    }
+
+    #[test]
+    fn deny_list_covers_option_families() {
+        let check = |tool, arg| is_denied(tool, arg);
+        assert!(check(ArgTool::YtDlp, "--exec-before-download"));
+        assert!(check(ArgTool::YtDlp, "--exec-before-download=id"));
+        assert!(check(ArgTool::YtDlp, "--output-na-placeholder"));
+        assert!(check(ArgTool::YtDlp, "--config-locations"));
+        assert!(check(ArgTool::YtDlp, "--ffmpeg-location"));
+        assert!(check(ArgTool::YtDlp, "--ffmpeg-location=/tmp/evil"));
+        assert!(check(ArgTool::YtDlp, "--downloader-args"));
+        assert!(check(ArgTool::SpotDl, "--ffmpeg"));
+        assert!(check(ArgTool::GalleryDl, "--filter"));
+        assert!(check(ArgTool::GalleryDl, "-f"));
+        assert!(check(ArgTool::GalleryDl, "--image-filter"));
+        assert!(!check(ArgTool::YtDlp, "--embed-thumbnail"));
+        assert!(!check(ArgTool::GalleryDl, "--no-download"));
+        assert!(!check(ArgTool::SpotDl, "--bitrate"));
     }
 }

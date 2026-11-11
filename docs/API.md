@@ -45,11 +45,23 @@ curl -s http://localhost:8080/api/v1/health
 ## Authentication
 
 With `MM_TOKEN` set, send `Authorization: Bearer <token>` on every request.
-`GET /events` also accepts `?token=<token>` because `EventSource` cannot set
-headers; pair that with a TLS reverse proxy that does not log query strings.
 A missing or wrong token returns `401` with `WWW-Authenticate: Bearer`.
 
-Without `MM_TOKEN` the API is open. Do not expose it to an untrusted network.
+Three `GET`/`HEAD` routes also accept `?token=<token>`, because `EventSource`
+and a plain download link cannot set headers:
+
+- `/events`
+- `/files/{path}`
+- `/downloads/{id}/file`
+
+Every other endpoint rejects query tokens, so ordinary API calls never carry the
+token in a URL or an access log. Those three still do: use a proxy that does not
+log query strings, and prefer the header wherever the client can set one.
+
+Without `MM_TOKEN` the API is open. The server warns on startup when it binds a
+non-loopback address without a token. Do not expose it to an untrusted network.
+
+Hardening notes and the full audit are in [security.md](./security.md).
 
 ## Errors
 
@@ -114,6 +126,11 @@ Resuming replays the URL, backend, overrides, settings and cookies the job was
 created with. A
 second request with the id of a running or paused job returns `409
 duplicate_download`; finished and cancelled ids may be reused.
+
+Requests are bounded: `id` is at most 128 characters of `A-Z`, `a-z`, `0-9`,
+`-`, `_`, `.` or `:` (an invalid one returns `400 invalid_id`), a URL is at most
+8 KiB with no control characters, a JSON body is at most 1 MiB, and at most
+100 jobs may be queued, running or paused at once (`429 too_many_downloads`).
 
 ### Output file
 
@@ -250,9 +267,15 @@ containing a path separator is replaced with the default template. This is what
 makes it safe to accept settings from a browser client.
 
 Start the server with `MM_ALLOW_CUSTOM_ARGS=1` to accept the arguments. They
-are still checked against a per-tool deny-list (output paths, config loading,
-`--exec` and similar), so a client cannot redirect files or run commands.
-Only enable it when every client is trusted.
+are still checked against a per-tool deny-list, matched by option family so
+`--exec` also covers `--exec-before-download` and `--output` covers
+`--output-na-placeholder`. The list blocks output paths, config loading,
+arbitrary executables (`--ffmpeg-location`, `--downloader`, spotdl's
+`--ffmpeg`) and command execution (`--exec`, gallery-dl's filter expressions).
+An output template that could leave the job directory (a path separator or a
+Windows drive prefix) is replaced with the default template. Only enable it when
+every client is trusted: the deny-list tracks the tools' CLIs and a new
+exec-capable option is a gap until it is added.
 
 The failure is asynchronous: `POST /downloads` still returns `202`, and the
 `download-error` event carries the message.
@@ -273,7 +296,13 @@ curl -s -X DELETE http://localhost:8080/api/v1/cookies               # {"deleted
 
 `input.type` is `Content` (Netscape text or JSON, converted to Netscape) or
 `FilePath` (a path on the server ending in `.txt`, `.cookies` or `.json`).
-Profiles are stored as `<domain>.txt`; the domain must be a single path segment.
+`FilePath` is only available to the desktop app: over HTTP it returns
+`400 invalid_cookie`, because a remote client must not be able to copy server
+files into the store. Send the cookie text as `Content` instead. Profiles are
+stored as `<domain>.txt`, readable only by the server user; the domain must be a
+single path segment. The server applies a profile to a job only when the request
+host matches the profile name on a domain boundary (`youtube` covers
+`youtube.com` and `www.youtube.com`, not `notyoutube.com`).
 
 ## Files
 
@@ -286,7 +315,14 @@ Each entry's `url` is ready to use. `GET /files/{path}` serves the file with
 `Accept-Ranges: bytes` and `Content-Disposition: inline`, honouring one `Range`
 header (`206`); an invalid range returns `416` with `Content-Range: bytes */N`.
 Add `?download=1` for `Content-Disposition: attachment`. Paths are resolved
-inside the download root; traversal is rejected.
+inside the download root; traversal and symlink escapes are rejected, and
+listings omit symlinks.
+
+Downloaded files are untrusted. Types a browser can execute (HTML, SVG, XML,
+JavaScript, CSS, WebAssembly) are always sent as `application/octet-stream` with
+an attachment disposition, and every file response carries
+`X-Content-Type-Options: nosniff` and `Content-Security-Policy: sandbox`, so a
+downloaded page can never run on the API's origin.
 
 `GET /paths/download-root` returns the root path, and `GET /paths/disk-usage`
 returns `{"used_percent": 63.2}` for its filesystem.

@@ -16,6 +16,9 @@ use mm_core::files::{parse_range, safe_join, DirEntry, EntryKind};
 use crate::retention::{FileIdentity, Retention};
 use crate::state::AppState;
 
+pub(crate) const FILE_CSP: &str =
+    "sandbox; default-src 'none'; img-src 'self' data:; media-src 'self'";
+
 #[derive(Debug, Deserialize)]
 pub struct ListQuery {
     #[serde(default)]
@@ -101,6 +104,31 @@ fn content_type(path: &Path) -> HeaderValue {
         .unwrap_or_else(|| HeaderValue::from_static("application/octet-stream"))
 }
 
+fn is_active_content(path: &Path) -> bool {
+    let extension = path
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    matches!(
+        extension.as_str(),
+        "html"
+            | "htm"
+            | "xhtml"
+            | "shtml"
+            | "svg"
+            | "svgz"
+            | "xml"
+            | "xsl"
+            | "xslt"
+            | "js"
+            | "mjs"
+            | "cjs"
+            | "css"
+            | "wasm"
+    )
+}
+
 /// `inline` lets a media player or browser preview a file; `attachment` makes
 /// the browser save it, which is what a completed job's output wants.
 #[derive(Clone, Copy)]
@@ -168,6 +196,13 @@ pub async fn serve(
     };
     let len = meta.len();
 
+    let active_content = is_active_content(&path);
+    let disposition = if active_content {
+        Disposition::Attachment
+    } else {
+        disposition
+    };
+
     let range = match headers.get(header::RANGE).and_then(|v| v.to_str().ok()) {
         Some(value) => match parse_range(value, len) {
             Ok(range) => range,
@@ -191,8 +226,17 @@ pub async fn serve(
         .unwrap_or_else(|| "download".into());
 
     let mut builder = Response::builder()
-        .header(header::CONTENT_TYPE, content_type(&path))
+        .header(
+            header::CONTENT_TYPE,
+            if active_content {
+                HeaderValue::from_static("application/octet-stream")
+            } else {
+                content_type(&path)
+            },
+        )
         .header(header::ACCEPT_RANGES, "bytes")
+        .header(header::X_CONTENT_TYPE_OPTIONS, "nosniff")
+        .header(header::CONTENT_SECURITY_POLICY, FILE_CSP)
         .header(
             header::CONTENT_DISPOSITION,
             format!(
@@ -342,6 +386,25 @@ mod tests {
     fn encoding_keeps_slashes_and_escapes_others() {
         assert_eq!(encode_path("a/b c.mp4"), "a/b%20c.mp4");
         assert_eq!(encode_path("ünï.txt"), "%C3%BCn%C3%AF.txt");
+    }
+
+    #[test]
+    fn active_content_is_never_served_inline() {
+        for name in [
+            "a.html", "a.HTM", "a.xhtml", "a.svg", "a.svgz", "a.xml", "a.xsl", "a.js", "a.mjs",
+            "a.css", "a.wasm",
+        ] {
+            assert!(
+                is_active_content(Path::new(name)),
+                "{name} should be active"
+            );
+        }
+        for name in ["a.mp4", "a.jpg", "a.png", "a.txt", "a.zip", "a.pdf"] {
+            assert!(
+                !is_active_content(Path::new(name)),
+                "{name} should be inert"
+            );
+        }
     }
 
     #[tokio::test]

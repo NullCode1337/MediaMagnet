@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use axum::extract::State;
-use axum::http::{header, StatusCode};
+use axum::http::{header, HeaderValue, StatusCode};
 use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{delete, get, post};
@@ -17,8 +17,18 @@ use mm_core::host::disk_usage;
 use mm_core::{Backend, DownloadRequest, JobCookie, Settings, Tool};
 
 use crate::auth::require_token;
-use crate::files;
+use crate::files::{self, FILE_CSP};
 use crate::state::AppState;
+
+/// For browser cookies transport
+const MAX_BODY_BYTES: usize = 1024 * 1024;
+const MAX_URL_LEN: usize = 8192;
+const MAX_ID_LEN: usize = 128;
+const MAX_ACTIVE_JOBS: usize = 100;
+
+const APP_CSP: &str = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; \
+img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; connect-src 'self'; \
+object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
 
 pub fn router(state: Arc<AppState>) -> Router {
     let api = Router::new()
@@ -48,12 +58,14 @@ pub fn router(state: Arc<AppState>) -> Router {
             get(torrents_unavailable).post(torrents_unavailable),
         )
         .route("/torrents/{id}", delete(torrents_unavailable))
+        .layer(axum::extract::DefaultBodyLimit::max(MAX_BODY_BYTES))
         .layer(middleware::from_fn_with_state(state.clone(), require_token))
         .with_state(state.clone());
 
     Router::new()
         .nest("/api/v1", api)
         .fallback(get(crate::routes::spa))
+        .layer(middleware::from_fn(security_headers))
         .with_state(state)
 }
 
@@ -63,6 +75,54 @@ fn error(status: StatusCode, code: &str, message: impl Into<String>) -> Response
         Json(json!({ "error": code, "message": message.into() })),
     )
         .into_response()
+}
+
+/// File bytes are served on these API routes; only they get the sandbox policy.
+fn file_route(path: &str) -> bool {
+    path.starts_with("/api/") && (path.contains("/files") || path.ends_with("/file"))
+}
+
+/// Response headers that apply to every route
+async fn security_headers(request: axum::extract::Request, next: middleware::Next) -> Response {
+    let path = request.uri().path().to_string();
+    let mut response = next.run(request).await;
+
+    let is_html = response
+        .headers()
+        .get(header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .is_some_and(|value| value.starts_with("text/html"));
+    let is_api = path.starts_with("/api/");
+    let is_file_route = file_route(&path);
+
+    let headers = response.headers_mut();
+    headers.insert(
+        header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static("nosniff"),
+    );
+    headers.insert(
+        header::REFERRER_POLICY,
+        HeaderValue::from_static("no-referrer"),
+    );
+    headers.insert(header::X_FRAME_OPTIONS, HeaderValue::from_static("DENY"));
+
+    if is_file_route {
+        headers.insert(
+            header::CONTENT_SECURITY_POLICY,
+            HeaderValue::from_static(FILE_CSP),
+        );
+    } else if is_html {
+        headers.insert(
+            header::CONTENT_SECURITY_POLICY,
+            HeaderValue::from_static(APP_CSP),
+        );
+    }
+
+    if is_api {
+        headers.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    }
+
+    response
 }
 
 async fn health() -> Json<Value> {
@@ -107,6 +167,13 @@ async fn start_download(
             "url must be http or https",
         );
     }
+    if url.len() > MAX_URL_LEN || url.chars().any(char::is_control) {
+        return error(
+            StatusCode::BAD_REQUEST,
+            "invalid_url",
+            format!("url must be at most {MAX_URL_LEN} characters without control characters"),
+        );
+    }
 
     let settings = match body.settings.as_ref().map(Settings::from_value).transpose() {
         Ok(settings) => settings,
@@ -138,10 +205,29 @@ async fn start_download(
         }
     }
 
-    let id = body
-        .id
-        .filter(|id| !id.trim().is_empty())
-        .unwrap_or_else(new_id);
+    let id = match body.id.filter(|id| !id.trim().is_empty()) {
+        Some(id) => {
+            if !valid_job_id(&id) {
+                return error(
+                    StatusCode::BAD_REQUEST,
+                    "invalid_id",
+                    format!(
+                        "id must be at most {MAX_ID_LEN} characters of A-Z, a-z, 0-9, '-', '_', '.' or ':'"
+                    ),
+                );
+            }
+            id
+        }
+        None => new_id(),
+    };
+
+    if state.jobs.active_count() >= MAX_ACTIVE_JOBS {
+        return error(
+            StatusCode::TOO_MANY_REQUESTS,
+            "too_many_downloads",
+            format!("{MAX_ACTIVE_JOBS} downloads are already queued; wait for one to finish"),
+        );
+    }
 
     let request = DownloadRequest {
         id: id.clone(),
@@ -299,6 +385,14 @@ fn new_id() -> String {
         "srv-{nanos:x}-{:x}",
         COUNTER.fetch_add(1, Ordering::Relaxed)
     )
+}
+
+fn valid_job_id(id: &str) -> bool {
+    !id.is_empty()
+        && id.len() <= MAX_ID_LEN
+        && id
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b':'))
 }
 
 async fn pause(
@@ -460,6 +554,14 @@ async fn save_cookie(
     State(state): State<Arc<AppState>>,
     Json(body): Json<SaveCookieBody>,
 ) -> Response {
+    // file paths only usable on desktop
+    if matches!(&body.input, CookieInput::FilePath(_)) {
+        return error(
+            StatusCode::BAD_REQUEST,
+            "invalid_cookie",
+            "cookie file paths are not accepted over HTTP; send the cookie content instead",
+        );
+    }
     match mm_core::cookies::save_cookie(&state.engine.cookies_dir(), &body.domain, &body.input) {
         Ok(path) => Json(json!({ "domain": body.domain, "path": path })).into_response(),
         Err(e) => error(StatusCode::BAD_REQUEST, "invalid_cookie", e.to_string()),
@@ -589,5 +691,33 @@ fn mime_for(path: &std::path::Path) -> &'static str {
         Some("woff2") => "font/woff2",
         Some("wasm") => "application/wasm",
         _ => "application/octet-stream",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{file_route, valid_job_id};
+
+    #[test]
+    fn sandbox_policy_only_applies_to_api_file_routes() {
+        assert!(file_route("/api/v1/files/a.mp4"));
+        assert!(file_route("/api/v1/downloads/job-1/file"));
+        assert!(!file_route("/files"));
+        assert!(!file_route("/downloads/job-1/file"));
+        assert!(!file_route("/api/v1/settings"));
+        assert!(!file_route("/api/v1/downloads/profile"));
+    }
+
+    #[test]
+    fn job_ids_are_bounded_and_safe() {
+        assert!(valid_job_id("job-1"));
+        assert!(valid_job_id("6f3a0f4e-6c1a-4b3e-9e0e-0c9a2b7d1e55"));
+        assert!(valid_job_id("srv-18f2a-0"));
+        assert!(!valid_job_id("file://abc/name.png"));
+        assert!(!valid_job_id(""));
+        assert!(!valid_job_id("job 1"));
+        assert!(!valid_job_id("job/1"));
+        assert!(!valid_job_id("job\n1"));
+        assert!(!valid_job_id(&"a".repeat(129)));
     }
 }

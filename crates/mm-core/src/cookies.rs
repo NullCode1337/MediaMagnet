@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 use std::io::{BufRead, BufReader, BufWriter, Write};
-use std::path::{Component, Path};
+use std::path::{Component, Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -135,12 +135,34 @@ pub fn convert_json(source_path: &Path, dest_path: &Path) -> Result<()> {
         ))
     })?;
     let netscape = netscape_from_json(&content)?;
-    std::fs::write(dest_path, netscape).map_err(|e| {
+    write_private(dest_path, netscape.as_bytes()).map_err(|e| {
         Error::Msg(format!(
             "[MediaMagnet][Utils] Failed to create destination cookie file: {}",
             e
         ))
     })
+}
+
+pub fn write_private(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    use std::io::Write as _;
+
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create(true).truncate(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let mut file = options.open(path)?;
+    file.write_all(bytes)?;
+    file.sync_all()?;
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))?;
+    }
+    Ok(())
 }
 
 fn write_err(e: std::io::Error) -> Error {
@@ -202,7 +224,9 @@ pub fn save_cookie(dir: &Path, domain: &str, input: &CookieInput) -> Result<Stri
                             "File is not a valid Netscape format cookie file".to_string(),
                         ));
                     }
-                    std::fs::copy(file_path, &dest_path)
+                    let bytes = std::fs::read(file_path)
+                        .map_err(|e| Error::Msg(format!("Failed to copy cookie file: {}", e)))?;
+                    write_private(&dest_path, &bytes)
                         .map_err(|e| Error::Msg(format!("Failed to copy cookie file: {}", e)))?;
                 }
                 "json" => {
@@ -220,9 +244,11 @@ pub fn save_cookie(dir: &Path, domain: &str, input: &CookieInput) -> Result<Stri
 
             if is_json {
                 let netscape = netscape_from_json(content)?;
-                std::fs::write(&dest_path, netscape).map_err(|e| Error::Msg(e.to_string()))?;
+                write_private(&dest_path, netscape.as_bytes())
+                    .map_err(|e| Error::Msg(e.to_string()))?;
             } else {
-                std::fs::write(&dest_path, content).map_err(|e| Error::Msg(e.to_string()))?;
+                write_private(&dest_path, content.as_bytes())
+                    .map_err(|e| Error::Msg(e.to_string()))?;
 
                 if !is_netscape(&dest_path)? {
                     let _ = std::fs::remove_file(&dest_path);
@@ -287,21 +313,41 @@ pub fn delete_cookie(dir: &Path, path: &Path) -> Result<()> {
         .map_err(|e| Error::Msg(format!("Unable to delete cookie file: {}", e)))
 }
 
-/// First cookie profile whose file stem appears in the URL, in directory order.
-pub fn match_cookie(dir: &Path, link: &str) -> Option<std::path::PathBuf> {
-    let entries = std::fs::read_dir(dir).ok()?;
-    let link = link.to_lowercase();
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.is_file() {
-            if let Some(file_stem) = path.file_stem().and_then(|s| s.to_str()) {
-                if link.contains(&file_stem.to_lowercase()) && path.to_str().is_some() {
-                    return Some(path);
-                }
+pub fn match_cookie(dir: &Path, link: &str) -> Option<PathBuf> {
+    let host = url::Url::parse(link).ok()?.host_str()?.to_lowercase();
+    let host = host.trim_end_matches('.').to_string();
+
+    let mut profiles: Vec<(usize, PathBuf)> = std::fs::read_dir(dir)
+        .ok()?
+        .flatten()
+        .filter_map(|entry| {
+            let path = entry.path();
+            if !path.is_file() {
+                return None;
             }
+            let stem = path.file_stem().and_then(|s| s.to_str())?.to_lowercase();
+            host_matches(&host, &stem).then_some((stem.len(), path))
+        })
+        .collect();
+
+    profiles.sort_by(|(a, _), (b, _)| b.cmp(a));
+    profiles.into_iter().next().map(|(_, path)| path)
+}
+
+fn host_matches(host: &str, domain: &str) -> bool {
+    if domain.is_empty() || domain.contains('/') || domain.contains('\\') {
+        return false;
+    }
+    if host == domain || host.ends_with(&format!(".{domain}")) {
+        return true;
+    }
+    if !domain.contains('.') {
+        let labels: Vec<&str> = host.split('.').collect();
+        if labels.len() >= 2 {
+            return labels[labels.len() - 2] == domain;
         }
     }
-    None
+    false
 }
 
 #[cfg(test)]
@@ -328,6 +374,51 @@ mod tests {
         assert_eq!(matched.file_name().unwrap(), "youtube.txt");
         assert!(match_cookie(&dir, "https://vimeo.com/1").is_none());
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn cookies_never_follow_substrings_of_the_url() {
+        assert!(host_matches("www.youtube.com", "youtube"));
+        assert!(host_matches("youtube.de", "youtube"));
+        assert!(host_matches("music.youtube.com", "youtube.com"));
+        assert!(!host_matches("notyoutube.com", "youtube"));
+        assert!(!host_matches("youtube.evil.com", "youtube"));
+        assert!(!host_matches("evil.com", "youtube"));
+        assert!(!host_matches("google.com.evil.com", "google.com"));
+        assert!(!host_matches("youtube", ""));
+        assert!(!host_matches("youtube", "../youtube"));
+    }
+
+    #[test]
+    fn longest_matching_profile_wins() {
+        let dir = std::env::temp_dir().join(format!("mm-cookies-long-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        for domain in ["youtube", "youtube.com"] {
+            std::fs::write(
+                dir.join(format!("{domain}.txt")),
+                "# Netscape HTTP Cookie File\n.youtube.com\tTRUE\t/\tTRUE\t0\ta\tb\n",
+            )
+            .unwrap();
+        }
+        let matched = match_cookie(&dir, "https://www.youtube.com/watch").unwrap();
+        assert_eq!(matched.file_name().unwrap(), "youtube.com.txt");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn stored_cookies_are_owner_only() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = std::env::temp_dir().join(format!("mm-cookies-mode-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let content = "# Netscape HTTP Cookie File\n.youtube.com\tTRUE\t/\tTRUE\t0\ta\tb\n";
+        let path = save_cookie(&dir, "youtube", &CookieInput::Content(content.to_string()))
+            .map(PathBuf::from)
+            .unwrap();
+        let mode = std::fs::metadata(&path).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o600);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

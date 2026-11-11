@@ -15,6 +15,7 @@ tokio = { workspace = true, features = ["rt"] }
 shell-words = { workspace = true }
 which = { workspace = true }
 regex = { workspace = true }
+url = { workspace = true }
 sysinfo = "0.38.4"
 
 [dev-dependencies]

@@ -77,6 +77,9 @@ pub fn list_dir(root: &Path, relative: &str) -> Result<Vec<DirEntry>> {
     let mut entries = Vec::new();
     for entry in std::fs::read_dir(&dir)? {
         let entry = entry?;
+        if entry.file_type()?.is_symlink() {
+            continue;
+        }
         let name = entry.file_name().to_string_lossy().into_owned();
         let meta = entry.metadata()?;
         let is_dir = meta.is_dir();
@@ -119,11 +122,11 @@ pub struct ByteRange {
 
 impl ByteRange {
     pub fn len(&self) -> u64 {
-        self.end - self.start + 1
+        self.end.saturating_sub(self.start) + 1
     }
 
     pub fn is_empty(&self) -> bool {
-        false
+        self.end < self.start
     }
 }
 
@@ -149,6 +152,10 @@ pub fn parse_range(header: &str, len: u64) -> Result<Option<ByteRange>> {
             let suffix: u64 = suffix
                 .parse()
                 .map_err(|_| Error::Msg("malformed range".into()))?;
+            // `bytes=-0` would produce start > end and a wrapped length.
+            if suffix == 0 {
+                return Err(Error::Msg("range not satisfiable".into()));
+            }
             let suffix = suffix.min(len);
             ByteRange {
                 start: len - suffix,
@@ -274,6 +281,19 @@ mod tests {
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
+    #[cfg(unix)]
+    #[test]
+    fn list_dir_skips_symlinks() {
+        let dir = root();
+        let outside = dir.join("outside-secret");
+        std::fs::write(&outside, b"secret").unwrap();
+        std::os::unix::fs::symlink(&outside, dir.join("link")).unwrap();
+
+        let entries = list_dir(&dir, "").unwrap();
+        assert!(entries.iter().all(|entry| entry.name != "link"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
     #[test]
     fn range_parsing() {
         assert_eq!(
@@ -294,6 +314,7 @@ mod tests {
         );
         assert!(parse_range("bytes=11-", 11).is_err());
         assert!(parse_range("bytes=0-4,6-9", 11).is_err());
+        assert!(parse_range("bytes=-0", 11).is_err());
         assert!(parse_range("items=0-4", 11).unwrap().is_none());
         assert!(parse_range("bytes=0-4", 0).is_err());
     }
