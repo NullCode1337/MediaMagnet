@@ -76,14 +76,14 @@
       label: section.label ? `${name} · ${section.label}` : name,
     }));
 
-  const sections = $derived([
-    ...commonSections(local, update),
-    ...(backend === "auto"
+  const common = $derived(commonSections(local, update));
+  const backendSettings = $derived(
+    backend === "auto"
       ? (["yt-dlp", "gallery-dl", "spotdl"] as DownloadBackend[]).flatMap(
           (name) => prefixed(name, backendSections(name, local, update)),
         )
-      : prefixed(backend, backendSections(backend, local, update))),
-  ]);
+      : prefixed(backend, backendSections(backend, local, update)),
+  );
 
   function reset() {
     text = "";
@@ -136,8 +136,7 @@
   }
 </script>
 
-{#snippet form()}
-  <div class="flex flex-col gap-4">
+{#snippet sourcePane()}
     <div
       class="rounded-2xl bg-secondary/60 px-4 pb-3 pt-3 ring-1 ring-border/40 transition-[box-shadow,background-color] duration-300 ease-[cubic-bezier(0.2,0,0,1)] focus-within:ring-2 focus-within:ring-ring/50"
     >
@@ -203,7 +202,7 @@
       </div>
     </div>
 
-    <SettingsSections {sections} />
+    <SettingsSections sections={common} />
 
     {#if error}
       <div
@@ -214,7 +213,10 @@
         <span class="min-w-0 wrap-break-word leading-relaxed">{error}</span>
       </div>
     {/if}
-  </div>
+{/snippet}
+
+{#snippet settingsPane()}
+  <SettingsSections sections={backendSettings} />
 {/snippet}
 
 {#snippet actions()}
@@ -272,7 +274,10 @@
     <div
       class="flex-1 overflow-y-auto px-4 pb-8 pt-3 scrollbar-none [&::-webkit-scrollbar]:hidden"
     >
-      {@render form()}
+      <div class="flex flex-col gap-4">
+        {@render sourcePane()}
+        {@render settingsPane()}
+      </div>
     </div>
 
     <footer
@@ -285,7 +290,7 @@
   <Dialog.Root bind:open>
     <Dialog.Content
       showCloseButton={false}
-      class="gap-0 overflow-hidden rounded-[20px] bg-background p-0 shadow-[0_28px_90px_-30px_rgb(0_0_0/0.65)] ring-1 ring-foreground/5 sm:max-w-xl!"
+      class="w-[calc(100%-10rem)]! gap-0 overflow-hidden rounded-[20px] bg-background p-0 shadow-[0_28px_90px_-30px_rgb(0_0_0/0.65)] ring-1 ring-foreground/5 sm:max-w-275! lg:h-[min(82vh,820px)]"
     >
       <Dialog.Header class="px-5 pb-3 pt-5">
         <div class="flex items-start gap-4">
@@ -312,11 +317,20 @@
         </div>
       </Dialog.Header>
 
-      <div class="flex min-h-0 flex-col bg-background">
+      <div class="flex min-h-0 flex-1 flex-col bg-background">
         <div
-          class="max-h-[60vh] overflow-y-auto px-5 pb-2 pt-3 scrollbar-none [&::-webkit-scrollbar]:hidden"
+          class="flex max-h-[60vh] min-h-0 flex-1 flex-col overflow-y-auto scrollbar-none [&::-webkit-scrollbar]:hidden lg:grid lg:max-h-none lg:grid-cols-2 lg:overflow-hidden"
         >
-          {@render form()}
+          <div
+            class="flex flex-col gap-4 px-5 pb-3 pt-3 scrollbar-thin lg:overflow-y-auto lg:pb-4"
+          >
+            {@render sourcePane()}
+          </div>
+          <div
+            class="flex flex-col px-5 pb-3 pt-3 scrollbar-thin lg:overflow-y-auto lg:pb-4"
+          >
+            {@render settingsPane()}
+          </div>
         </div>
 
         <Dialog.Footer
