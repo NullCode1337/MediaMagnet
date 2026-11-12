@@ -20,6 +20,7 @@
     type ConfigPatch,
   } from "$lib/components/Settings/fields";
   import type { Section } from "$lib/components/Settings/types";
+  import { extractUrls } from "$lib/utils";
   import { settings } from "$lib/stores/settings.svelte";
   import { uiState } from "$lib/stores/store.svelte";
   import { transport } from "$lib/stores/transport.svelte";
@@ -67,16 +68,7 @@
 
   const update: ConfigPatch = (patch) => Object.assign(local, patch);
 
-  const validUrls = $derived(
-    [
-      ...new Set(
-        text
-          .split(/\r?\n/)
-          .map((line) => line.trim())
-          .filter(Boolean),
-      ),
-    ].filter((line) => /^https?:\/\/\S+$/i.test(line)),
-  );
+  const extractedUrls = $derived(extractUrls(text));
 
   const prefixed = (name: string, sections: Section[]) =>
     sections.map((section) => ({
@@ -118,8 +110,8 @@
   }
 
   async function submit() {
-    if (validUrls.length === 0) {
-      error = "Add at least one valid http(s) link.";
+    if (extractedUrls.length === 0) {
+      error = "No links found in the text.";
       return;
     }
 
@@ -127,7 +119,7 @@
     error = null;
     try {
       const patch = overrides();
-      const failure = await addTasks(validUrls, {
+      const failure = await addTasks(extractedUrls, {
         backend: backend === "auto" ? null : backend,
         overrides: Object.keys(patch).length > 0 ? patch : null,
       });
@@ -156,12 +148,12 @@
           >Links</label
         >
         <span
-          class="rounded-full px-2.5 py-0.5 text-[11px] font-semibold tabular-nums {validUrls.length >
+          class="rounded-full px-2.5 py-0.5 text-[11px] font-semibold tabular-nums {extractedUrls.length >
           0
             ? 'bg-primary/12 text-primary'
             : 'bg-background/70 text-muted-foreground'}"
         >
-          {validUrls.length} valid
+          {extractedUrls.length} found
         </span>
       </div>
 
@@ -169,7 +161,7 @@
         id="add-task-links"
         bind:value={text}
         rows="4"
-        placeholder={"https://example.com/video\nhttps://example.com/gallery"}
+        placeholder={"Paste any text with links in it, e.g.\nhttps://example.com/video or: \u201cdownload this https://example.com/gallery\u201d"}
         aria-describedby="add-task-links-help"
         class="mt-2 min-h-28 w-full resize-y bg-transparent text-[15px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground/55 sm:min-h-32"
       ></textarea>
@@ -236,14 +228,14 @@
     </Button>
     <Button
       class="group h-11 flex-1 gap-2 rounded-xl px-5 text-sm font-semibold shadow-lg shadow-primary/20 transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] active:scale-[0.98] disabled:shadow-none motion-reduce:transition-none sm:flex-none"
-      disabled={submitting || validUrls.length === 0}
+      disabled={submitting || extractedUrls.length === 0}
       onclick={submit}
     >
       {#if submitting}
         <Loader2 size={16} class="animate-spin" />
         Adding…
       {:else}
-        Add{validUrls.length > 0 ? ` ${validUrls.length}` : ""}
+        Add{extractedUrls.length > 0 ? ` ${extractedUrls.length}` : ""}
         <ArrowRight
           size={16}
           class="transition-transform duration-300 group-hover:translate-x-0.5 motion-reduce:transition-none"
@@ -293,9 +285,9 @@
   <Dialog.Root bind:open>
     <Dialog.Content
       showCloseButton={false}
-      class="gap-0 rounded-[20px] bg-popover p-0 shadow-[0_28px_90px_-30px_rgb(0_0_0/0.65)] ring-1 ring-foreground/5 sm:max-w-xl!"
+      class="gap-0 overflow-hidden rounded-[20px] bg-background p-0 shadow-[0_28px_90px_-30px_rgb(0_0_0/0.65)] ring-1 ring-foreground/5 sm:max-w-xl!"
     >
-      <Dialog.Header class="px-5 pb-2 pt-5">
+      <Dialog.Header class="px-5 pb-3 pt-5">
         <div class="flex items-start gap-4">
           <div class="min-w-0 flex-1">
             <Dialog.Title
@@ -320,17 +312,19 @@
         </div>
       </Dialog.Header>
 
-      <div
-        class="max-h-[60vh] overflow-y-auto px-5 pb-2 pt-3 scrollbar-none [&::-webkit-scrollbar]:hidden"
-      >
-        {@render form()}
-      </div>
+      <div class="flex min-h-0 flex-col bg-background">
+        <div
+          class="max-h-[60vh] overflow-y-auto px-5 pb-2 pt-3 scrollbar-none [&::-webkit-scrollbar]:hidden"
+        >
+          {@render form()}
+        </div>
 
-      <Dialog.Footer
-        class="mx-0 mb-0 flex-row items-center rounded-b-[20px] border-t border-border/40 bg-transparent px-5 py-3.5"
-      >
-        {@render actions()}
-      </Dialog.Footer>
+        <Dialog.Footer
+          class="mx-0 mb-0 flex-row items-center rounded-b-[20px] border-t border-border/40 bg-background px-5 py-3.5"
+        >
+          {@render actions()}
+        </Dialog.Footer>
+      </div>
     </Dialog.Content>
   </Dialog.Root>
 {/if}

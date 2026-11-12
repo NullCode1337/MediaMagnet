@@ -22,6 +22,7 @@
 
   import logo from "$lib/assets/favicon.png";
   import { uiState } from "$lib/stores/store.svelte";
+  import { extractUrls } from "./utils";
   import { settings } from "$lib/stores/settings.svelte";
   import { transport } from "$lib/stores/transport.svelte";
   import { toast, Toaster } from "svelte-sonner";
@@ -71,8 +72,7 @@
     existingId?: string,
     options?: DownloadOptions,
   ): Promise<string | null> {
-    const urlRegex = /https?:\/\/[^\s,)"]+/gi;
-    const matches = input.trim().match(urlRegex);
+    const matches = extractUrls(input);
 
     if (!matches || matches.length === 0) {
       await transport.notify("No valid URLs found in input");
