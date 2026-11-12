@@ -169,7 +169,7 @@
     <div class="flex flex-col gap-2">
       <div class="flex items-center justify-between gap-3 px-1">
         <p
-          class="text-[11px] font-semibold tracking-wide text-muted-foreground"
+          class="text-[13px] font-semibold tracking-wide text-muted-foreground"
         >
           Backend
         </p>
