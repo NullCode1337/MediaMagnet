@@ -1,6 +1,7 @@
 <script lang="ts">
   import { settings } from "$lib/stores/settings.svelte";
   import { Button } from "$lib/components/ui/button";
+  import * as Tooltip from "$lib/components/ui/tooltip";
   import {
     FileUp,
     ClipboardPaste,
@@ -27,71 +28,106 @@
   }
 </script>
 
-{#snippet actionBar()}
-  <div class="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center">
-    <div class="flex items-center gap-1.5 rounded-lg border bg-muted/30 p-1">
-      <Button
-        variant="ghost"
-        size="sm"
-        class="h-7 flex-1 gap-1.5 rounded-md px-2.5 text-xs font-medium cursor-pointer hover:bg-background hover:shadow-sm transition-all"
-        onclick={() => settings.importFromFile()}
-      >
-        <FileUp size={13} class="shrink-0 text-muted-foreground" />
-        Import File
-      </Button>
-      <div class="h-4 w-px shrink-0 bg-border"></div>
-      <Button
-        variant="ghost"
-        size="sm"
-        class="h-7 flex-1 gap-1.5 rounded-md px-2.5 text-xs font-medium cursor-pointer hover:bg-background hover:shadow-sm transition-all"
-        onclick={() => settings.importFromClipboard()}
-      >
-        <ClipboardPaste size={13} class="shrink-0 text-muted-foreground" />
-        Import JSON
-      </Button>
-    </div>
-
-    <div
-      class="flex items-center gap-1.5 rounded-lg border bg-muted/30 p-1 sm:ml-auto"
-    >
-      <Button
-        variant="ghost"
-        size="sm"
-        class="h-7 flex-1 gap-1.5 rounded-md px-2.5 text-xs font-medium cursor-pointer hover:bg-background hover:shadow-sm transition-all"
-        onclick={handleCopy}
-      >
-        {#if copied}
-          <Check size={13} class="shrink-0 text-emerald-500" />
-          <span class="text-emerald-500">Copied!</span>
-        {:else}
-          <Copy size={13} class="shrink-0 text-muted-foreground" />
-          Export JSON
-        {/if}
-      </Button>
-      <div class="h-4 w-px shrink-0 bg-border"></div>
-      <Button
-        variant="ghost"
-        size="sm"
-        class="h-7 flex-1 gap-1.5 rounded-md px-2.5 text-xs font-medium cursor-pointer hover:bg-background hover:shadow-sm transition-all"
-        onclick={() => settings.exportToFile()}
-      >
-        <FileDown size={13} class="shrink-0 text-muted-foreground" />
-        Export File
-      </Button>
-    </div>
-  </div>
-{/snippet}
-
 {#snippet jsonViewer()}
   <div
-    class="flex shrink-0 items-center justify-between border-b bg-muted/50 px-3 py-2"
+    class="flex shrink-0 items-center justify-between gap-3 border-b bg-muted/50 px-3 py-2"
   >
-    <div class="flex items-center gap-2">
-      <FileBraces size={12} class="text-muted-foreground" />
-      <span class="text-[11px] font-medium tracking-wide text-muted-foreground">
+    <div class="flex min-w-0 items-center gap-2">
+      <FileBraces size={12} class="shrink-0 text-muted-foreground" />
+      <span
+        class="whitespace-nowrap text-[11px] font-medium leading-none tracking-wide text-muted-foreground"
+      >
         settings.json
       </span>
     </div>
+
+    <Tooltip.Provider delayDuration={200}>
+      <div class="flex shrink-0 items-center gap-0.5">
+        <Tooltip.Root>
+          <Tooltip.Trigger>
+            {#snippet child({ props })}
+              <Button
+                {...props}
+                variant="ghost"
+                size="icon-xs"
+                class="text-muted-foreground"
+                aria-label="Import File"
+                onclick={() => settings.importFromFile()}
+              >
+                <FileUp size={13} />
+              </Button>
+            {/snippet}
+          </Tooltip.Trigger>
+          <Tooltip.Content side="bottom" sideOffset={4}>
+            Import File
+          </Tooltip.Content>
+        </Tooltip.Root>
+
+        <Tooltip.Root>
+          <Tooltip.Trigger>
+            {#snippet child({ props })}
+              <Button
+                {...props}
+                variant="ghost"
+                size="icon-xs"
+                class="text-muted-foreground"
+                aria-label="Import JSON"
+                onclick={() => settings.importFromClipboard()}
+              >
+                <ClipboardPaste size={13} />
+              </Button>
+            {/snippet}
+          </Tooltip.Trigger>
+          <Tooltip.Content side="bottom" sideOffset={4}>
+            Import JSON
+          </Tooltip.Content>
+        </Tooltip.Root>
+
+        <Tooltip.Root>
+          <Tooltip.Trigger>
+            {#snippet child({ props })}
+              <Button
+                {...props}
+                variant="ghost"
+                size="icon-xs"
+                class="text-muted-foreground"
+                aria-label={copied ? "Copied" : "Export JSON"}
+                onclick={handleCopy}
+              >
+                {#if copied}
+                  <Check size={13} class="text-emerald-500" />
+                {:else}
+                  <Copy size={13} />
+                {/if}
+              </Button>
+            {/snippet}
+          </Tooltip.Trigger>
+          <Tooltip.Content side="bottom" sideOffset={4}>
+            {copied ? "Copied!" : "Export JSON"}
+          </Tooltip.Content>
+        </Tooltip.Root>
+
+        <Tooltip.Root>
+          <Tooltip.Trigger>
+            {#snippet child({ props })}
+              <Button
+                {...props}
+                variant="ghost"
+                size="icon-xs"
+                class="text-muted-foreground"
+                aria-label="Export File"
+                onclick={() => settings.exportToFile()}
+              >
+                <FileDown size={13} />
+              </Button>
+            {/snippet}
+          </Tooltip.Trigger>
+          <Tooltip.Content side="bottom" sideOffset={4}>
+            Export File
+          </Tooltip.Content>
+        </Tooltip.Root>
+      </div>
+    </Tooltip.Provider>
   </div>
 
   <div
@@ -118,9 +154,6 @@
     title: "Import/Export Settings",
     fill: true,
     sections: [
-      {
-        items: [{ type: "custom" as const, node: actionBar }],
-      },
       {
         fill: true,
         items: [{ type: "custom" as const, node: jsonViewer }],
