@@ -3,7 +3,7 @@ use std::path::Path;
 
 use mm_core::cookies::{
     clear_cookies as clear_cookie_store, delete_cookie as delete_cookie_file, list_cookies,
-    save_cookie as save_cookie_file, CookieInput,
+    read_cookie, save_cookie as save_cookie_file, CookieInput,
 };
 use tauri::State;
 
@@ -21,6 +21,11 @@ pub async fn save_cookie(
 #[tauri::command]
 pub fn get_cookies(app: State<'_, App>) -> Result<BTreeMap<String, String>, String> {
     list_cookies(&app.engine.cookies_dir()).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_cookie_content(app: State<'_, App>, path: String) -> Result<String, String> {
+    read_cookie(&app.engine.cookies_dir(), Path::new(&path)).map_err(|e| e.to_string())
 }
 
 #[tauri::command]

@@ -64,6 +64,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::cookie::clear_cookies,
             commands::cookie::delete_cookie,
+            commands::cookie::get_cookie_content,
             commands::cookie::get_cookies,
             commands::cookie::save_cookie,
             commands::download::cancel_download,

@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
 use mm_core::cookies::{
-    delete_cookie, host_matches, list_cookies, match_cookie, netscape_from_json, save_cookie,
-    validate_domain, CookieInput,
+    delete_cookie, host_matches, list_cookies, match_cookie, netscape_from_json, read_cookie,
+    save_cookie, validate_domain, CookieInput,
 };
 
 #[test]
@@ -81,6 +81,17 @@ fn delete_outside_store_is_refused() {
     assert!(delete_cookie(&dir, &outside).is_err());
     assert!(outside.exists());
     std::fs::remove_file(&outside).unwrap();
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
+#[test]
+fn read_outside_store_is_refused() {
+    let dir = std::env::temp_dir().join(format!("mm-cookies-read-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let content = "# Netscape HTTP Cookie File\n.youtube.com\tTRUE\t/\tTRUE\t0\ta\tb\n";
+    let path = save_cookie(&dir, "youtube", &CookieInput::Content(content.to_string())).unwrap();
+    assert_eq!(read_cookie(&dir, PathBuf::from(&path).as_path()).unwrap(), content);
+    assert!(read_cookie(&dir, &std::env::temp_dir().join("mm-outside.txt")).is_err());
     std::fs::remove_dir_all(&dir).unwrap();
 }
 

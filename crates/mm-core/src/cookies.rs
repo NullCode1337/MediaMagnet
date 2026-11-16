@@ -293,8 +293,8 @@ pub fn clear_cookies(dir: &Path) -> Result<usize> {
     Ok(deleted_count)
 }
 
-/// `delete_cookie(path)` must stay inside the cookies directory.
-pub fn delete_cookie(dir: &Path, path: &Path) -> Result<()> {
+/// Resolve a path handed back by `list_cookies`, refusing anything outside the store.
+fn cookie_file(dir: &Path, path: &Path) -> Result<PathBuf> {
     let canonical_dir = dir.canonicalize().unwrap_or_else(|_| dir.to_path_buf());
     let target = if path.is_absolute() {
         path.to_path_buf()
@@ -303,13 +303,26 @@ pub fn delete_cookie(dir: &Path, path: &Path) -> Result<()> {
     };
     let canonical_target = target
         .canonicalize()
-        .map_err(|e| Error::Msg(format!("Unable to delete cookie file: {}", e)))?;
+        .map_err(|e| Error::Msg(format!("Unable to access cookie file: {}", e)))?;
     if !canonical_target.starts_with(&canonical_dir) {
         return Err(Error::Msg(
-            "Unable to delete cookie file: outside cookie store".into(),
+            "Unable to access cookie file: outside cookie store".into(),
         ));
     }
-    std::fs::remove_file(&canonical_target)
+    Ok(canonical_target)
+}
+
+/// `read_cookie(path)` must stay inside the cookies directory.
+pub fn read_cookie(dir: &Path, path: &Path) -> Result<String> {
+    let target = cookie_file(dir, path)?;
+    std::fs::read_to_string(&target)
+        .map_err(|e| Error::Msg(format!("Unable to read cookie file: {}", e)))
+}
+
+/// `delete_cookie(path)` must stay inside the cookies directory.
+pub fn delete_cookie(dir: &Path, path: &Path) -> Result<()> {
+    let target = cookie_file(dir, path)?;
+    std::fs::remove_file(&target)
         .map_err(|e| Error::Msg(format!("Unable to delete cookie file: {}", e)))
 }
 
