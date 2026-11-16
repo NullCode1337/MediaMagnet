@@ -208,8 +208,14 @@ configuration; delete them to reset the app completely.
 
 ### Updating
 
-Install the newer package over the old one. Settings and cookies in the
-directories above are left untouched. There is no in-app updater.
+Desktop releases check GitHub Releases for a newer version on startup and offer
+to install it from **Settings → About**. Update packages are signed, and the
+public key is embedded in the app.
+
+On Linux the self-updater uses the AppImage, deb or rpm bundle; pacman-managed
+installs should be updated through the package manager. Windows and macOS
+installers update in place. Settings and cookies in the directories above are
+left untouched.
 
 ### Uninstalling
 

@@ -36,6 +36,20 @@ export type TransportEvent =
 
 export type Unsubscribe = () => void;
 
+/** A newer desktop build reported by the Tauri updater. */
+export interface UpdateInfo {
+  version: string;
+  currentVersion: string;
+  body?: string;
+  date?: string;
+}
+
+export interface UpdateProgress {
+  downloaded: number;
+  /** Total size in bytes, when the server reports it. */
+  contentLength: number | null;
+}
+
 /** Outcome of a backend reinstall; `output` is the installer's console log. */
 export interface ToolUpdateResult {
   ok: boolean;
@@ -91,6 +105,13 @@ export interface Transport extends Environment {
   getCookieContent(path: string): Promise<string>;
   clearCookies(): Promise<void>;
   deleteCookie(path: string): Promise<void>;
+
+  // app updates (desktop only)
+  /** Whether this install can replace itself (AppImage, deb, rpm, MSI, NSIS, app). */
+  supportsUpdates(): Promise<boolean>;
+  checkForUpdates(): Promise<UpdateInfo | null>;
+  installUpdate(onProgress?: (progress: UpdateProgress) => void): Promise<void>;
+  relaunchApp(): Promise<void>;
 
   // tools
   /** Resolves each backend, probing it. Slow first call: interpreters are started. */

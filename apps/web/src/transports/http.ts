@@ -342,6 +342,15 @@ export function createHttpTransport(): Transport {
       writeStored(COOKIES_KEY, cookies);
     },
 
+    supportsUpdates: async () => false,
+    checkForUpdates: async () => null,
+    installUpdate: async () => {
+      throw new Error("updates are only available in the desktop app");
+    },
+    relaunchApp: async () => {
+      throw new Error("relaunching is only available in the desktop app");
+    },
+
     listTools: async () =>
       (await request<{ tools: ToolInfo[] }>("/tools")).tools,
 

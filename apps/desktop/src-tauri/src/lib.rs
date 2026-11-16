@@ -60,6 +60,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_fs::init())
         .invoke_handler(tauri::generate_handler![
             commands::cookie::clear_cookies,
@@ -80,6 +81,7 @@ pub fn run() {
             commands::utils::notify,
             commands::utils::reinstall_python_deps,
             commands::utils::reset_python_deps,
+            commands::utils::updater_supported,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

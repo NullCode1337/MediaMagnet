@@ -2,10 +2,34 @@
   import * as Icons from "@lucide/svelte";
   import logo from "$lib/assets/favicon.png";
   import { transport } from "$lib/stores/transport.svelte";
+  import { updater } from "$lib/stores/updater.svelte";
+  import { Button } from "$lib/components/ui/button";
   import type { ToolInfo } from "@mediamagnet/api";
 
   const REPO = "https://github.com/NullCode1337/MediaMagnet";
   const MAINTAINER = "https://github.com/NullCode1337";
+  const isDesktop = transport.kind === "desktop";
+
+  const updateText = $derived.by(() => {
+    if (!isDesktop) return "Served by the MediaMagnet server.";
+    if (!updater.supported) return "Updates are managed by your package manager.";
+    switch (updater.status) {
+      case "checking":
+        return "Checking for updates…";
+      case "available":
+        return `Version ${updater.info?.version ?? ""} is available.`;
+      case "downloading":
+        return updater.progress >= 0
+          ? `Downloading update… ${Math.round(updater.progress * 100)}%`
+          : "Downloading update…";
+      case "up-to-date":
+        return "This version is up-to-date.";
+      case "error":
+        return updater.error || "Update check failed.";
+      default:
+        return "Updates are checked automatically on startup.";
+    }
+  });
 
   const BACKENDS = [
     { name: "yt-dlp", icon: Icons.Video },
@@ -121,11 +145,63 @@
             {/if}
           </div>
           <p class="max-w-md text-sm leading-relaxed text-muted-foreground">
-            This version is up-to-date.
+            {updateText}
           </p>
         </div>
       </div>
     </div>
+
+    {#if isDesktop && updater.supported}
+      <div class="overflow-hidden rounded-2xl bg-secondary/55">
+        <div class="flex flex-col gap-3 px-4 py-4">
+          <div class="flex items-start justify-between gap-4">
+            <div class="min-w-0">
+              <p class="text-[15px] leading-tight text-foreground">App Updates</p>
+              <p class="mt-1 text-xs leading-normal text-muted-foreground">
+                {updateText}
+              </p>
+              {#if updater.status === "available" && updater.info?.body}
+                <p
+                  class="mt-2 max-h-32 overflow-auto whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground scrollbar-thin"
+                >
+                  {updater.info.body}
+                </p>
+              {/if}
+            </div>
+
+            {#if updater.status === "available"}
+              <Button
+                class="h-9 shrink-0 rounded-xl px-3.5 text-xs font-medium"
+                onclick={() => updater.install()}
+              >
+                Install
+              </Button>
+            {:else}
+              <Button
+                variant="outline"
+                class="h-9 shrink-0 rounded-xl px-3.5 text-xs font-medium"
+                disabled={updater.busy}
+                onclick={() => updater.check()}
+              >
+                {updater.status === "checking" ? "Checking…" : "Check"}
+              </Button>
+            {/if}
+          </div>
+
+          {#if updater.status === "downloading"}
+            <div class="h-1.5 overflow-hidden rounded-full bg-background/70">
+              <div
+                class="h-full rounded-full bg-primary transition-[width] duration-200"
+                class:animate-pulse={updater.progress < 0}
+                style="width: {updater.progress >= 0
+                  ? `${Math.round(updater.progress * 100)}%`
+                  : '100%'}"
+              ></div>
+            </div>
+          {/if}
+        </div>
+      </div>
+    {/if}
 
     <div class="overflow-hidden rounded-2xl bg-secondary/55 py-1">
       <div class="divide-y divide-border/20">

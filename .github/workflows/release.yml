@@ -167,10 +167,22 @@ jobs:
             chmod +x "$BIN/$tool"
           done
 
+      - name: Check updater signing key
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            echo "::error::Set TAURI_SIGNING_PRIVATE_KEY in repository secrets before publishing desktop releases."
+            exit 1
+          fi
+
       - name: Build and publish
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: apps/desktop
           tagName: app-v__VERSION__
@@ -179,6 +191,7 @@ jobs:
           releaseDraft: ${{ github.event.inputs.draft }}
           prerelease: false
           generateReleaseNotes: true
+          includeUpdaterJson: true
           args: ${{ matrix.args }}
 
   server:
@@ -260,6 +273,7 @@ jobs:
           name: Server v${{ steps.version.outputs.version }}
           body: Standalone MediaMagnet server binaries. The API and web SPA are embedded in the binary; yt-dlp, gallery-dl, spotdl, ffmpeg and optionally Deno must be on PATH.
           draft: ${{ github.event.inputs.draft == 'true' }}
+          make_latest: 'false'
           files: dist/*.tar.gz
 
   docker:

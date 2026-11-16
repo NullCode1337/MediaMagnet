@@ -15,6 +15,11 @@ pub fn download_root(app: State<'_, App>) -> Result<String, String> {
 }
 
 #[tauri::command]
+pub fn updater_supported() -> bool {
+    tauri::utils::platform::bundle_type().is_some()
+}
+
+#[tauri::command]
 pub fn check_download_path(path: String) -> Result<(), String> {
     if path.trim().is_empty() || path.trim().eq_ignore_ascii_case("default") {
         return Ok(());

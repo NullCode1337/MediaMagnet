@@ -32,10 +32,20 @@
   "plugins": {
     "opener": {
       "requireLiteralLeadingDot": false
+    },
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEI4MUI3Q0E3RDMyNzk3MDMKUldRRGx5ZlRwM3didUErdHFMNGVldmZrQXVkZlErSEFqVDRBVDlGVFVjTGlzKzd1MzBQY254OGUK",
+      "endpoints": [
+        "https://github.com/NullCode1337/MediaMagnet/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
     }
   },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "targets": "all",
     "icon": [
       "icons/32x32.png",

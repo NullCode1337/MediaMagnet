@@ -25,6 +25,7 @@
   import { extractUrls } from "./utils";
   import { settings } from "$lib/stores/settings.svelte";
   import { transport } from "$lib/stores/transport.svelte";
+  import { updater } from "$lib/stores/updater.svelte";
   import { toast, Toaster } from "svelte-sonner";
 
   // eslint-disable-next-line svelte/prefer-writable-derived
@@ -301,10 +302,32 @@
     }
   }
 
+  async function autoUpdateBackends() {
+    const id = toast.loading("Updating backends…");
+    try {
+      const result = await transport.updateTools();
+      if (result.ok) {
+        toast.success("Backends updated", { id });
+      } else {
+        toast.error("Backend update failed", {
+          id,
+          description: result.error,
+        });
+      }
+    } catch (e) {
+      toast.error("Backend update failed", {
+        id,
+        description: e instanceof Error ? e.message : String(e),
+      });
+    }
+  }
+
   onMount(() => {
     currentPlatform = transport.platform();
     // The browser has no storage figure to show; only the desktop sidebar does.
     if (transport.kind !== "desktop") return;
+    void updater.start();
+    if (settings.config?.auto_update_backends) void autoUpdateBackends();
     updateDiskSpace();
     const interval = setInterval(updateDiskSpace, 60000);
     return () => clearInterval(interval);

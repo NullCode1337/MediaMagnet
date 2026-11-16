@@ -11,6 +11,8 @@ import { ask, open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 import { platform } from "@tauri-apps/plugin-os";
+import { relaunch } from "@tauri-apps/plugin-process";
+import { check, type Update } from "@tauri-apps/plugin-updater";
 import type {
   AnyConfig,
   AskOptions,
@@ -92,6 +94,8 @@ function windowControl(win: Window) {
 /** The desktop app: every call is a Tauri IPC command or plugin. */
 export function createDesktopTransport(): Transport {
   const win = getCurrentWindow();
+  // `check()` returns the handle that `downloadAndInstall()` needs.
+  let pendingUpdate: Update | null = null;
 
   return {
     kind: "desktop",
@@ -125,6 +129,38 @@ export function createDesktopTransport(): Transport {
       invoke<string>("get_cookie_content", { path }),
     clearCookies: () => invoke("clear_cookies"),
     deleteCookie: (path) => invoke("delete_cookie", { path }),
+
+    supportsUpdates: () => invoke<boolean>("updater_supported"),
+    checkForUpdates: async () => {
+      const update = await check();
+      pendingUpdate = update;
+      if (!update) return null;
+      return {
+        version: update.version,
+        currentVersion: update.currentVersion,
+        body: update.body,
+        date: update.date,
+      };
+    },
+    installUpdate: async (onProgress) => {
+      if (!pendingUpdate) throw new Error("check for updates first");
+      const update = pendingUpdate;
+      let downloaded = 0;
+      let contentLength: number | null = null;
+      await update.downloadAndInstall((event) => {
+        if (event.event === "Started") {
+          contentLength = event.data.contentLength ?? null;
+          onProgress?.({ downloaded, contentLength });
+        } else if (event.event === "Progress") {
+          downloaded += event.data.chunkLength;
+          onProgress?.({ downloaded, contentLength });
+        } else {
+          onProgress?.({ downloaded: contentLength ?? downloaded, contentLength });
+        }
+      });
+      pendingUpdate = null;
+    },
+    relaunchApp: () => relaunch(),
 
     listTools: () => invoke<ToolInfo[]>("list_tools"),
     updateTools: () =>
