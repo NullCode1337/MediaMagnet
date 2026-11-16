@@ -1,8 +1,11 @@
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
+use std::process::Stdio;
 use std::sync::Mutex;
 
+use tokio::io::{AsyncRead, AsyncReadExt};
 use tokio::process::Command;
+use tokio::sync::mpsc::UnboundedSender;
 
 pub const TOOL_TARGET: &str = env!("MM_TARGET");
 
@@ -523,6 +526,18 @@ impl ToolRuntime {
 
     /// Installs the tools into the overlay and returns pip's console output.
     pub async fn reinstall_python_deps(&self, tools: &[Tool]) -> Result<String, ToolError> {
+        self.reinstall_python_deps_streaming(tools, |_| {}).await
+    }
+
+    /// Installs the tools into the overlay, forwarding pip's output as it arrives.
+    pub async fn reinstall_python_deps_streaming<F>(
+        &self,
+        tools: &[Tool],
+        mut on_output: F,
+    ) -> Result<String, ToolError>
+    where
+        F: FnMut(&str) + Send,
+    {
         let python = self
             .interpreters()
             .into_iter()
@@ -546,18 +561,41 @@ impl ToolRuntime {
         cmd.args(["-m", "pip", "install", "--target"])
             .arg(overlay)
             .arg("--upgrade")
-            .args(tools.iter().map(|tool| tool.package()));
+            .args(tools.iter().map(|tool| tool.package()))
+            .env("PYTHONUNBUFFERED", "1")
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
 
-        let output = cmd
-            .output()
+        let mut child = cmd.spawn().map_err(|e| ToolError::Install(e.to_string()))?;
+        let stdout = child
+            .stdout
+            .take()
+            .ok_or_else(|| ToolError::Install("pip stdout unavailable".into()))?;
+        let stderr = child
+            .stderr
+            .take()
+            .ok_or_else(|| ToolError::Install("pip stderr unavailable".into()))?;
+
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<String>();
+        let out_reader = tokio::spawn(stream_pipe(stdout, tx.clone()));
+        let err_reader = tokio::spawn(stream_pipe(stderr, tx));
+
+        let mut log = String::new();
+        while let Some(chunk) = rx.recv().await {
+            log.push_str(&chunk);
+            on_output(&chunk);
+        }
+
+        let status = child
+            .wait()
             .await
             .map_err(|e| ToolError::Install(e.to_string()))?;
+        join_pipe(out_reader).await?;
+        join_pipe(err_reader).await?;
 
-        let mut log = String::from_utf8_lossy(&output.stdout).into_owned();
-        log.push_str(&String::from_utf8_lossy(&output.stderr));
         let log = log.trim().to_string();
 
-        if !output.status.success() {
+        if !status.success() {
             return Err(ToolError::Install(log));
         }
 
@@ -599,4 +637,32 @@ pub fn hide_console(cmd: &mut Command) {
     cmd.creation_flags(0x08000000);
     #[cfg(not(target_os = "windows"))]
     let _ = cmd;
+}
+
+/// Forwards a child process pipe to `tx` as bytes arrive.
+async fn stream_pipe<R>(mut reader: R, tx: UnboundedSender<String>) -> std::io::Result<()>
+where
+    R: AsyncRead + Unpin + Send + 'static,
+{
+    let mut buf = [0u8; 4096];
+    loop {
+        let read = reader.read(&mut buf).await?;
+        if read == 0 {
+            return Ok(());
+        }
+        if tx
+            .send(String::from_utf8_lossy(&buf[..read]).into_owned())
+            .is_err()
+        {
+            return Ok(());
+        }
+    }
+}
+
+async fn join_pipe(handle: tokio::task::JoinHandle<std::io::Result<()>>) -> Result<(), ToolError> {
+    match handle.await {
+        Ok(Ok(())) => Ok(()),
+        Ok(Err(e)) => Err(ToolError::Install(e.to_string())),
+        Err(e) => Err(ToolError::Install(e.to_string())),
+    }
 }

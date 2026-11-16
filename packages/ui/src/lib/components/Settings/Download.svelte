@@ -27,14 +27,22 @@
   let updating = $state(false);
   let showLog = $state(false);
   let output = $state("");
+  let logEl = $state<HTMLPreElement | null>(null);
+
+  $effect(() => {
+    void output;
+    if (logEl) logEl.scrollTop = logEl.scrollHeight;
+  });
 
   async function updateBackends() {
     updating = true;
     showLog = true;
     output = "";
     try {
-      const result = await transport.updateTools();
-      output = result.output || result.error || "";
+      const result = await transport.updateTools((chunk) => {
+        output += chunk;
+      });
+      output = result.output || result.error || output;
       if (result.ok) toast.success("Backends updated");
       else toast.error("Backend update failed", { description: result.error });
     } catch (err) {
@@ -91,6 +99,7 @@
 
     {#if showLog}
       <pre
+        bind:this={logEl}
         class="max-h-64 overflow-auto rounded-xl border border-border/40 bg-background/70 px-3.5 py-2.5 font-mono text-xs leading-relaxed text-foreground whitespace-pre-wrap scrollbar-thin">{output ||
           (updating ? "Running…" : "(no output)")}</pre>
     {/if}

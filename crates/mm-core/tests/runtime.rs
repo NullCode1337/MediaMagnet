@@ -117,3 +117,38 @@ async fn missing_tool_reports_its_own_name() {
     let err = runtime.resolve(Tool::SpotDl).await.unwrap_err();
     assert!(err.to_string().starts_with("spotdl is not installed"));
 }
+
+#[cfg(unix)]
+#[tokio::test]
+async fn reinstall_streams_output_as_it_arrives() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let dir = temp_dir("stream");
+    let python = dir.join("python");
+    std::fs::write(
+        &python,
+        "#!/bin/sh\nprev=\nfor arg in \"$@\"; do\n  if [ \"$prev\" = \"--target\" ]; then\n    mkdir -p \"$arg/yt_dlp\" \"$arg/gallery_dl\" \"$arg/spotdl\"\n  fi\n  prev=\"$arg\"\ndone\necho collecting\necho installed\n",
+    )
+    .unwrap();
+    std::fs::set_permissions(&python, std::fs::Permissions::from_mode(0o755)).unwrap();
+    // Let the write handle settle; Linux can report ETXTBSY immediately after create.
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
+    let overlay = dir.join("overlay");
+    let runtime = ToolRuntime::new(RuntimeConfig {
+        bundled_tools_dir: None,
+        overlay_dir: Some(overlay),
+        python_path: Some(python),
+    });
+
+    let mut streamed = String::new();
+    let log = runtime
+        .reinstall_python_deps_streaming(&Tool::all(), |chunk| streamed.push_str(chunk))
+        .await
+        .unwrap();
+
+    assert!(log.contains("collecting"));
+    assert!(log.contains("installed"));
+    assert_eq!(streamed.trim(), log);
+    std::fs::remove_dir_all(&dir).unwrap();
+}

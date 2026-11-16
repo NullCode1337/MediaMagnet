@@ -2,8 +2,9 @@ use std::convert::Infallible;
 use std::sync::Arc;
 use std::time::Duration;
 
+use axum::body::Body;
 use axum::extract::State;
-use axum::http::{header, HeaderValue, StatusCode};
+use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{delete, get, post};
@@ -468,23 +469,71 @@ async fn list_tools(State(state): State<Arc<AppState>>) -> Json<Value> {
 /// Installs the pinned Python tools into the writable overlay. Fails when the
 /// host has no bundled or system interpreter (for example the Docker image,
 /// where the tools are preinstalled).
-async fn update_tools(State(state): State<Arc<AppState>>) -> Response {
-    match state
-        .engine
-        .runtime()
-        .reinstall_python_deps(&Tool::all())
-        .await
-    {
-        Ok(log) => {
-            let updated: Vec<&str> = Tool::all().into_iter().map(Tool::name).collect();
-            Json(json!({ "updated": updated, "output": log })).into_response()
-        }
-        Err(e) => error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "tool_update_failed",
-            e.to_string(),
-        ),
+///
+/// `Accept: application/x-ndjson` streams output as it arrives, ending with a
+/// `done` record; any other request keeps the original JSON response.
+async fn update_tools(State(state): State<Arc<AppState>>, headers: HeaderMap) -> Response {
+    let streaming = headers
+        .get(header::ACCEPT)
+        .and_then(|value| value.to_str().ok())
+        .is_some_and(|value| value.contains("application/x-ndjson"));
+
+    if !streaming {
+        return match state
+            .engine
+            .runtime()
+            .reinstall_python_deps(&Tool::all())
+            .await
+        {
+            Ok(log) => {
+                let updated: Vec<&str> = Tool::all().into_iter().map(Tool::name).collect();
+                Json(json!({ "updated": updated, "output": log })).into_response()
+            }
+            Err(e) => error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "tool_update_failed",
+                e.to_string(),
+            ),
+        };
     }
+
+    let engine = state.engine.clone();
+    let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<String>();
+    tokio::spawn(async move {
+        let chunks = tx.clone();
+        let result = engine
+            .runtime()
+            .reinstall_python_deps_streaming(&Tool::all(), move |chunk| {
+                let line = json!({ "event": "output", "data": chunk }).to_string();
+                let _ = chunks.send(format!("{line}\n"));
+            })
+            .await;
+
+        let line = match result {
+            Ok(log) => {
+                let updated: Vec<&str> = Tool::all().into_iter().map(Tool::name).collect();
+                json!({ "event": "done", "ok": true, "updated": updated, "output": log })
+            }
+            Err(e) => json!({ "event": "done", "ok": false, "error": e.to_string() }),
+        };
+        let _ = tx.send(format!("{line}\n"));
+    });
+
+    let stream = futures_util::stream::unfold(rx, |mut rx| async move {
+        rx.recv().await.map(|line| (Ok::<_, Infallible>(line), rx))
+    });
+
+    Response::builder()
+        .header(header::CONTENT_TYPE, "application/x-ndjson")
+        .header(header::CACHE_CONTROL, "no-store")
+        .body(Body::from_stream(stream))
+        .unwrap_or_else(|_| {
+            error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "tool_update_failed",
+                "could not build update stream",
+            )
+        })
 }
 
 /// Torrent support is not implemented; the audit records this as a later

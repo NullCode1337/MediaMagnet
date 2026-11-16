@@ -117,7 +117,7 @@ export interface Transport extends Environment {
   /** Resolves each backend, probing it. Slow first call: interpreters are started. */
   listTools(): Promise<ToolInfo[]>;
   /** Reinstalls yt-dlp, gallery-dl and spotdl into the writable overlay. */
-  updateTools(): Promise<ToolUpdateResult>;
+  updateTools(onOutput?: (chunk: string) => void): Promise<ToolUpdateResult>;
 
   // notifications
   notify(message: string): Promise<void>;

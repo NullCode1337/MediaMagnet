@@ -1,4 +1,4 @@
-import { invoke, type PluginListener } from "@tauri-apps/api/core";
+import { Channel, invoke, type PluginListener } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import {
   getCurrentWindow,
@@ -163,8 +163,14 @@ export function createDesktopTransport(): Transport {
     relaunchApp: () => relaunch(),
 
     listTools: () => invoke<ToolInfo[]>("list_tools"),
-    updateTools: () =>
-      invoke<ToolUpdateResult>("reinstall_python_deps", { tools: null }),
+    updateTools: (onOutput) => {
+      const channel = new Channel<string>();
+      channel.onmessage = (chunk) => onOutput?.(chunk);
+      return invoke<ToolUpdateResult>("reinstall_python_deps", {
+        tools: null,
+        onOutput: channel,
+      });
+    },
 
     notify: (message) => invoke("notify", { body: message }),
 

@@ -2,6 +2,7 @@ use std::path::Path;
 
 use mm_core::host::{disk_usage, resolve_download_path, Host};
 use mm_core::{Settings, Tool, ToolStatus};
+use tauri::ipc::Channel;
 use tauri::State;
 
 use crate::app::App;
@@ -78,6 +79,7 @@ pub struct ToolUpdateResult {
 pub async fn reinstall_python_deps(
     app: State<'_, App>,
     tools: Option<Vec<String>>,
+    on_output: Channel<String>,
 ) -> Result<ToolUpdateResult, String> {
     let selected: Vec<Tool> = match tools {
         Some(names) => names
@@ -95,7 +97,14 @@ pub async fn reinstall_python_deps(
         });
     }
 
-    Ok(match app.runtime.reinstall_python_deps(&selected).await {
+    let result = app
+        .runtime
+        .reinstall_python_deps_streaming(&selected, move |chunk| {
+            let _ = on_output.send(chunk.to_string());
+        })
+        .await;
+
+    Ok(match result {
         Ok(output) => ToolUpdateResult {
             ok: true,
             output,

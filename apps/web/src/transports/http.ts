@@ -354,16 +354,90 @@ export function createHttpTransport(): Transport {
     listTools: async () =>
       (await request<{ tools: ToolInfo[] }>("/tools")).tools,
 
-    updateTools: async (): Promise<ToolUpdateResult> => {
+    updateTools: async (
+      onOutput?: (chunk: string) => void,
+    ): Promise<ToolUpdateResult> => {
+      const run = () => {
+        const headers = new Headers({ accept: "application/x-ndjson" });
+        if (token) headers.set("authorization", `Bearer ${token}`);
+        return fetch(API + "/tools/update", { method: "POST", headers });
+      };
+
       try {
-        const result = await request<{ updated: string[]; output?: string }>(
-          "/tools/update",
-          { method: "POST" },
-        );
-        return {
-          ok: true,
-          output: result.output ?? `Updated: ${result.updated.join(", ")}`,
+        let response = await run();
+        if (response.status === 401 && promptForToken()) response = await run();
+        if (!response.ok) {
+          const message = await errorMessage(response);
+          return { ok: false, output: message, error: message };
+        }
+
+        const contentType = response.headers.get("content-type") ?? "";
+        if (contentType.includes("application/json")) {
+          const result = (await response.json()) as {
+            updated: string[];
+            output?: string;
+          };
+          return {
+            ok: true,
+            output: result.output ?? `Updated: ${result.updated.join(", ")}`,
+          };
+        }
+
+        if (!response.body) {
+          return { ok: false, output: "", error: "empty update response" };
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let output = "";
+        let result: ToolUpdateResult | null = null;
+
+        const handle = (line: string) => {
+          if (!line.trim()) return;
+          let event: {
+            event?: string;
+            data?: string;
+            ok?: boolean;
+            output?: string;
+            error?: string;
+          };
+          try {
+            event = JSON.parse(line);
+          } catch {
+            return;
+          }
+          if (event.event === "output" && typeof event.data === "string") {
+            output += event.data;
+            onOutput?.(event.data);
+          } else if (event.event === "done") {
+            if (event.ok) {
+              result = { ok: true, output: event.output ?? output };
+            } else {
+              const message = event.error ?? "backend update failed";
+              result = {
+                ok: false,
+                output: event.output ?? output,
+                error: message,
+              };
+            }
+          }
         };
+
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+          for (const line of lines) handle(line);
+        }
+        buffer += decoder.decode();
+        if (buffer.trim()) handle(buffer);
+
+        return (
+          result ?? { ok: false, output, error: "update stream ended early" }
+        );
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         return { ok: false, output: message, error: message };

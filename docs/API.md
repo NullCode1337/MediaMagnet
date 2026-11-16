@@ -229,6 +229,18 @@ returns the installer's console output in `output`, and needs a bundled or
 `MM_PYTHON` interpreter; the Docker image preinstalls them and answers
 `500 tool_update_failed`.
 
+Send `Accept: application/x-ndjson` to stream the installer output instead:
+
+```sh
+curl -sN -X POST http://localhost:8080/api/v1/tools/update \
+  -H 'Accept: application/x-ndjson'
+# {"event":"output","data":"Collecting yt-dlp...\n"}
+# {"event":"done","ok":true,"updated":["yt-dlp","gallery-dl","spotdl"],"output":"..."}
+```
+
+Each line is one JSON record. `done` is always last; on failure it has
+`"ok": false` and an `error` field.
+
 ## Torrents
 
 Torrent support is not implemented. `GET`/`POST /torrents` and `DELETE
