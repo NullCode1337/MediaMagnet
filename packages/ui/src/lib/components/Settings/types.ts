@@ -61,12 +61,20 @@ export type SegmentedItem = {
   onchange: (val: string) => void;
 };
 
+export type ListEntryAction = {
+  label: string;
+  icon: Snippet<[]>;
+  onclick: () => void;
+  destructive?: boolean;
+};
+
 export type ListEntry = {
   id: string;
   label: string;
   supporting?: string;
   icon?: Snippet<[]>;
   onclick?: () => void;
+  actions?: ListEntryAction[];
   ondelete?: () => void;
 };
 

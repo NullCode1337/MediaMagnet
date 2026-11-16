@@ -70,6 +70,12 @@
     return domain.trim().toLowerCase().replace(/[\\/]/g, "");
   }
 
+  // The SPA keeps cookies in localStorage and reports bare names, not paths;
+  // file actions are only meaningful for a real desktop file.
+  function cookieFile(path: string): string | null {
+    return isDesktop && /[\\/]/.test(path) ? path : null;
+  }
+
   async function saveCookies() {
     const v = isCookie(cookieRawContent);
     if (!v.valid) {
@@ -86,6 +92,32 @@
       await loadCookies();
     } catch (e) {
       toast("Failed to save cookie: " + e);
+    }
+  }
+
+  async function openCookieFile(path: string) {
+    try {
+      await transport.openPath(path);
+    } catch (e) {
+      toast("Failed to open cookie file: " + e);
+    }
+  }
+
+  async function copyText(text: string, message: string) {
+    try {
+      await transport.writeClipboard(text);
+      toast(message);
+    } catch (e) {
+      toast("Failed to copy: " + e);
+    }
+  }
+
+  async function copyCookieContent(path: string) {
+    try {
+      await transport.writeClipboard(await transport.getCookieContent(path));
+      toast("Cookie content copied");
+    } catch (e) {
+      toast("Failed to copy cookie content: " + e);
     }
   }
 
@@ -120,6 +152,9 @@
 
 {#snippet importIcon()}<Icons.FileUp size={14} />{/snippet}
 {#snippet trashIcon()}<Icons.Trash2 size={14} />{/snippet}
+{#snippet openFileIcon()}<Icons.FolderOpen size={14} />{/snippet}
+{#snippet copyPathIcon()}<Icons.Link2 size={14} />{/snippet}
+{#snippet copyContentIcon()}<Icons.ClipboardCopy size={14} />{/snippet}
 {#snippet cookieIcon()}<Icons.Cookie size={16} />{/snippet}
 {#snippet cookieEmptyIcon()}<Icons.Cookie size={28} />{/snippet}
 
@@ -191,13 +226,38 @@
             type: "list",
             emptyMessage: "No cookies saved",
             emptyIcon: cookieEmptyIcon,
-            entries: Object.entries(savedCookies).map(([domain, path]) => ({
-              id: domain,
-              label: domain.toUpperCase(),
-              leading: cookieIcon,
-              onclick: isDesktop ? () => transport.openPath(path) : undefined,
-              ondelete: () => deleteCookie(domain, path),
-            })),
+            entries: Object.entries(savedCookies).map(([domain, path]) => {
+              const file = cookieFile(path);
+              return {
+                id: domain,
+                label: domain.toUpperCase(),
+                icon: cookieIcon,
+                onclick: file ? () => openCookieFile(file) : undefined,
+                actions: [
+                  ...(file
+                    ? [
+                        {
+                          label: "Open file",
+                          icon: openFileIcon,
+                          onclick: () => openCookieFile(file),
+                        },
+                        {
+                          label: "Copy file location",
+                          icon: copyPathIcon,
+                          onclick: () =>
+                            copyText(file, "Cookie file location copied"),
+                        },
+                      ]
+                    : []),
+                  {
+                    label: "Copy cookie content",
+                    icon: copyContentIcon,
+                    onclick: () => copyCookieContent(path),
+                  },
+                ],
+                ondelete: () => deleteCookie(domain, path),
+              };
+            }),
           },
         ],
       },

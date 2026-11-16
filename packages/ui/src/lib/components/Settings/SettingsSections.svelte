@@ -273,19 +273,43 @@
                       {/if}
                     </div>
 
-                    {#if entry.ondelete}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onclick={(e) => {
-                          e.stopPropagation();
-                          entry.ondelete?.();
-                        }}
-                        class="h-8 w-8 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                        aria-label="Delete {entry.label}"
-                      >
-                        <Delete size={14} />
-                      </Button>
+                    {#if entry.actions?.length || entry.ondelete}
+                      <div class="flex shrink-0 items-center gap-1">
+                        {#each entry.actions ?? [] as action (action.label)}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onclick={(e) => {
+                              e.stopPropagation();
+                              action.onclick();
+                            }}
+                            onkeydown={(e) => e.stopPropagation()}
+                            class="h-8 w-8 shrink-0 text-muted-foreground {action.destructive
+                              ? 'hover:bg-destructive/10 hover:text-destructive'
+                              : 'hover:bg-foreground/5 hover:text-foreground'}"
+                            aria-label={action.label}
+                            title={action.label}
+                          >
+                            {@render action.icon()}
+                          </Button>
+                        {/each}
+
+                        {#if entry.ondelete}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onclick={(e) => {
+                              e.stopPropagation();
+                              entry.ondelete?.();
+                            }}
+                            onkeydown={(e) => e.stopPropagation()}
+                            class="h-8 w-8 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                            aria-label="Delete {entry.label}"
+                          >
+                            <Delete size={14} />
+                          </Button>
+                        {/if}
+                      </div>
                     {/if}
                   </div>
                 {/each}

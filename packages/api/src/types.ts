@@ -87,6 +87,8 @@ export interface Transport extends Environment {
   // cookies
   saveCookie(domain: string, input: CookieInput): Promise<string>;
   getCookies(): Promise<Record<string, string>>;
+  /** Contents of a stored cookie jar, addressed by a path from `getCookies`. */
+  getCookieContent(path: string): Promise<string>;
   clearCookies(): Promise<void>;
   deleteCookie(path: string): Promise<void>;
 

@@ -321,6 +321,12 @@ export function createHttpTransport(): Transport {
       Object.fromEntries(
         Object.keys(storedCookies()).map((domain) => [domain, `${domain}.txt`]),
       ),
+    getCookieContent: async (path) => {
+      const domain = path.split("/").pop()?.replace(/\.txt$/, "") ?? path;
+      const content = storedCookies()[domain];
+      if (content === undefined) throw new Error("cookie content not found");
+      return content;
+    },
     clearCookies: async () => {
       try {
         localStorage.removeItem(COOKIES_KEY);

@@ -121,6 +121,8 @@ export function createDesktopTransport(): Transport {
     saveCookie: (domain, input: CookieInput) =>
       invoke<string>("save_cookie", { domain, input }),
     getCookies: () => invoke<Record<string, string>>("get_cookies"),
+    getCookieContent: (path) =>
+      invoke<string>("get_cookie_content", { path }),
     clearCookies: () => invoke("clear_cookies"),
     deleteCookie: (path) => invoke("delete_cookie", { path }),
 
