@@ -2,7 +2,7 @@
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
   import { Switch } from "$lib/components/ui/switch";
-  import { Delete } from "@lucide/svelte";
+  import { ChevronDown, Delete } from "@lucide/svelte";
   import type { GlobalArg, Section } from "./types";
 
   const ITEM_TITLE_CLASS =
@@ -146,20 +146,26 @@
                 </label>
 
                 {#if item.presets?.length}
-                  <select
-                    class="h-8 cursor-pointer rounded-lg border-0 bg-background/70 px-3 text-xs text-foreground ring-1 ring-border/40 focus:outline-none focus:ring-2 focus:ring-ring"
-                    onchange={(e) => {
-                      const sel = e.target as HTMLSelectElement;
-                      item.onchange(sel.value);
-                      sel.value = "";
-                    }}
-                    aria-label="Presets for {item.label}"
-                  >
-                    <option value="" disabled selected>Preset…</option>
-                    {#each item.presets as preset (preset.label)}
-                      <option value={preset.value}>{preset.label}</option>
-                    {/each}
-                  </select>
+                  <div class="relative w-44 shrink-0">
+                    <select
+                      class="h-9 w-full cursor-pointer appearance-none rounded-xl border-0 bg-background/70 pl-3.5 pr-9 text-xs font-medium text-foreground ring-1 ring-border/40 transition-colors hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                      onchange={(e) => {
+                        const sel = e.target as HTMLSelectElement;
+                        item.onchange(sel.value);
+                        sel.value = "";
+                      }}
+                      aria-label="Presets for {item.label}"
+                    >
+                      <option value="" disabled selected class="bg-background text-foreground">Preset…</option>
+                      {#each item.presets as preset (preset.label)}
+                        <option value={preset.value} class="bg-background text-foreground">{preset.label}</option>
+                      {/each}
+                    </select>
+                    <ChevronDown
+                      size={14}
+                      class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    />
+                  </div>
                 {/if}
               </div>
 
