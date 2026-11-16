@@ -1,5 +1,6 @@
 <script lang="ts">
   import Section from "$lib/components/Settings/SECTION.svelte";
+  import FileEditor from "$lib/components/FileEditor.svelte";
   import { Button } from "$lib/components/ui/button";
   import { transport } from "$lib/stores/transport.svelte";
   import { onMount } from "svelte";
@@ -13,6 +14,11 @@
   let cookieDomain = $state("");
   let cookieRawContent = $state("");
   let savedCookies = $state<Record<string, string>>({});
+
+  let editorOpen = $state(false);
+  let editorDomain = $state("");
+  let editorPath = $state("");
+  let editorValue = $state("");
 
   async function loadCookies() {
     try {
@@ -119,6 +125,26 @@
     } catch (e) {
       toast("Failed to copy cookie content: " + e);
     }
+  }
+
+  async function openCookieEditor(domain: string, path: string) {
+    try {
+      const content = await transport.getCookieContent(path);
+      editorDomain = domain;
+      editorPath = path;
+      editorValue = content;
+      editorOpen = true;
+    } catch (e) {
+      toast("Failed to open cookie file: " + e);
+    }
+  }
+
+  async function saveCookieEditor(next: string) {
+    const v = isCookie(next);
+    if (!v.valid) throw new Error(v.error ?? "Invalid cookie content");
+    await transport.saveCookie(editorDomain, { type: "Content", value: next });
+    await loadCookies();
+    toast("Cookie saved");
   }
 
   async function deleteCookie(domain: string, path: string) {
@@ -232,7 +258,7 @@
                 id: domain,
                 label: domain.toUpperCase(),
                 icon: cookieIcon,
-                onclick: file ? () => openCookieFile(file) : undefined,
+                onclick: () => openCookieEditor(domain, path),
                 actions: [
                   ...(file
                     ? [
@@ -263,4 +289,12 @@
       },
     ],
   }}
+/>
+
+<FileEditor
+  bind:open={editorOpen}
+  title={editorDomain ? editorDomain.toUpperCase() : "Cookie file"}
+  subtitle={cookieFile(editorPath) ?? "Stored in this browser"}
+  value={editorValue}
+  onsave={saveCookieEditor}
 />
