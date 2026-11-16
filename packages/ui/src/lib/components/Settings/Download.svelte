@@ -6,6 +6,7 @@
   import { transport } from "$lib/stores/transport.svelte";
   import Section from "$lib/components/Settings/SECTION.svelte";
   import {
+    backendAutoUpdateSetting,
     preserveMtimeSetting,
     userAgentSetting,
   } from "$lib/components/Settings/fields";
@@ -72,7 +73,7 @@
     <div class="flex items-start justify-between gap-4">
       <div class="min-w-0">
         <span class="text-[15px] font-normal text-foreground"
-          >Update Backends</span
+          >Update Backends now</span
         >
         <p class="mt-1 text-xs leading-normal text-muted-foreground">
           Reinstalls yt-dlp, gallery-dl and spotdl with pip.
@@ -113,6 +114,9 @@
         label: "Backends",
         items: [
           preserveMtimeSetting(config, update),
+          ...(isDesktop
+            ? [backendAutoUpdateSetting(config, update)]
+            : []),
           { type: "custom" as const, node: backendsRow },
         ],
       },

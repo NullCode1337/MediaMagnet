@@ -27,6 +27,7 @@ pub struct Settings {
     pub download_path: String,
     pub user_agent: String,
     pub preserve_mtime: bool,
+    pub auto_update_backends: bool,
 
     // yt-dlp backend options
     pub yt_format: String,
@@ -67,6 +68,7 @@ impl Default for Settings {
             download_path: String::new(),
             user_agent: String::new(),
             preserve_mtime: false,
+            auto_update_backends: false,
             dark_mode: true,
             amoled_mode: false,
             accent_hue: 260,
@@ -127,6 +129,7 @@ const KNOWN_KEYS: &[&str] = &[
     "download_path",
     "user_agent",
     "preserve_mtime",
+    "auto_update_backends",
     "yt_format",
     "yt_recode_format",
     "yt_output_template",
@@ -150,6 +153,7 @@ pub const DESKTOP_ONLY_KEYS: &[&str] = &[
     "native_notifications",
     "clear_cookies_on_exit",
     "download_path",
+    "auto_update_backends",
 ];
 
 pub fn is_desktop_only(key: &str) -> bool {
@@ -165,6 +169,7 @@ fn field_type(key: &str) -> Option<Type> {
         | "native_notifications"
         | "clear_cookies_on_exit"
         | "preserve_mtime"
+        | "auto_update_backends"
         | "yt_embed_thumbnail"
         | "yt_embed_subs"
         | "yt_restrict_filenames" => Some(Type::Bool),
@@ -504,4 +509,5 @@ pub fn force_desktop_fields(next: &mut Settings, current: &Settings) {
     next.native_notifications = current.native_notifications;
     next.clear_cookies_on_exit = current.clear_cookies_on_exit;
     next.download_path = current.download_path.clone();
+    next.auto_update_backends = current.auto_update_backends;
 }

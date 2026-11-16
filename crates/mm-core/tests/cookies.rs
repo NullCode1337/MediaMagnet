@@ -90,7 +90,10 @@ fn read_outside_store_is_refused() {
     std::fs::create_dir_all(&dir).unwrap();
     let content = "# Netscape HTTP Cookie File\n.youtube.com\tTRUE\t/\tTRUE\t0\ta\tb\n";
     let path = save_cookie(&dir, "youtube", &CookieInput::Content(content.to_string())).unwrap();
-    assert_eq!(read_cookie(&dir, PathBuf::from(&path).as_path()).unwrap(), content);
+    assert_eq!(
+        read_cookie(&dir, PathBuf::from(&path).as_path()).unwrap(),
+        content
+    );
     assert!(read_cookie(&dir, &std::env::temp_dir().join("mm-outside.txt")).is_err());
     std::fs::remove_dir_all(&dir).unwrap();
 }

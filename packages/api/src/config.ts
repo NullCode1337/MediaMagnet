@@ -34,6 +34,7 @@ export interface Config {
   download_path: string;
   user_agent: string;
   preserve_mtime: boolean;
+  auto_update_backends: boolean;
 
   // yt-dlp
   yt_format: string;
@@ -63,6 +64,7 @@ export const DESKTOP_ONLY_KEYS = [
   "native_notifications",
   "clear_cookies_on_exit",
   "download_path",
+  "auto_update_backends",
 ] as const satisfies readonly (keyof Config)[];
 
 export type DesktopOnlyKey = (typeof DESKTOP_ONLY_KEYS)[number];
@@ -102,6 +104,7 @@ export const DEFAULT_CONFIG: Config = {
   download_path: "",
   user_agent: "",
   preserve_mtime: false,
+  auto_update_backends: false,
 
   yt_format: "bv*+ba/b",
   yt_recode_format: "",

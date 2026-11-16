@@ -39,6 +39,7 @@ const FIELD_RULES: Record<keyof Config, FieldRule> = {
   download_path: { kind: "string" },
   user_agent: { kind: "string" },
   preserve_mtime: { kind: "boolean" },
+  auto_update_backends: { kind: "boolean" },
 
   yt_format: { kind: "string" },
   yt_recode_format: { kind: "string" },

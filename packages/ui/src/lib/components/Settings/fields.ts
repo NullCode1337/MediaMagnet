@@ -95,6 +95,21 @@ export function preserveMtimeSetting(
   };
 }
 
+export function backendAutoUpdateSetting(
+  config: Config,
+  update: ConfigPatch,
+): SwitchItem {
+  return {
+    type: "switch",
+    id: "auto_update_backends",
+    label: "Update Backends on launch",
+    description:
+      "Check for updates to backend each time the app starts",
+    value: config.auto_update_backends,
+    onchange: (v: boolean) => update({ auto_update_backends: v }),
+  };
+}
+
 export function commonSections(config: Config, update: ConfigPatch): Section[] {
   return [
     {

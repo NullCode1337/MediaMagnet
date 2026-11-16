@@ -29,12 +29,14 @@ fn force_desktop_fields_restores_local_values() {
     let mut incoming = Settings {
         always_on_top: true,
         download_path: "/etc".into(),
+        auto_update_backends: true,
         user_agent: "x".into(),
         ..Settings::default()
     };
     force_desktop_fields(&mut incoming, &current);
     assert!(!incoming.always_on_top);
     assert_eq!(incoming.download_path, "");
+    assert!(!incoming.auto_update_backends);
     assert_eq!(incoming.user_agent, "x");
 }
 
@@ -80,10 +82,13 @@ fn settings_round_trip_through_file() {
     std::fs::create_dir_all(&dir).unwrap();
     let settings = Settings {
         spotdl_format: "flac".into(),
+        auto_update_backends: true,
         ..Settings::default()
     };
     settings.save_to(&dir).unwrap();
-    assert_eq!(Settings::load_from(&dir), settings);
+    let loaded = Settings::load_from(&dir);
+    assert_eq!(loaded, settings);
+    assert!(loaded.auto_update_backends);
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
