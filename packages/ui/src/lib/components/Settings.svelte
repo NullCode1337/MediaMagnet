@@ -154,14 +154,16 @@
     >
       {#if isMobile}
         <div class="flex items-center h-19 bg-background shrink-0">
-          <span class="font-semibold mx-6 text-lg">Settings</span>
+          <span class="font-semibold ml-6 mr-6 translate-y-2 text-lg"
+            >Settings</span
+          >
         </div>
 
         <div
           class="flex-1 overflow-y-auto bg-background px-4 pt-1 pb-28 space-y-6"
         >
           <div>
-            <p class="text-sm text-muted-foreground font-bold px-1 ml-2 mb-2">
+            <p class="text-xs text-muted-foreground font-bold px-1 ml-2 mb-2">
               Configuration
             </p>
             <div
@@ -180,7 +182,7 @@
           </div>
 
           <div>
-            <p class="text-sm text-muted-foreground font-bold px-1 ml-2 mb-2">
+            <p class="text-xs text-muted-foreground font-bold px-1 ml-2 mb-2">
               Backend
             </p>
             <div
@@ -199,7 +201,7 @@
           </div>
 
           <div>
-            <p class="text-sm text-muted-foreground font-bold px-1 ml-2 mb-2">
+            <p class="text-xs text-muted-foreground font-bold px-1 ml-2 mb-2">
               About
             </p>
             <div
@@ -282,7 +284,7 @@
           </Dialog.Close>
         </div>
       {:else if mobileView === "content"}
-        <div class="absolute left-4 top-10 z-20">
+        <div class="absolute left-4 top-9.5 z-20">
           <Button
             variant="ghost"
             size="icon"

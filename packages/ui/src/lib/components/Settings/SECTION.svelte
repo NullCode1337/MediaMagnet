@@ -23,7 +23,7 @@
       {/if}
     </div>
 
-    <div class="flex shrink-0 items-center gap-2">
+    <div class="flex shrink-0 items-center gap-2 max-sm:-mt-1">
       {#if config.headerActions?.length}
         {#each config.headerActions as action (action.label)}
           <Button
