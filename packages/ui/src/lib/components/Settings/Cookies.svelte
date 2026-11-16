@@ -293,7 +293,7 @@
 
 <FileEditor
   bind:open={editorOpen}
-  title={editorDomain ? editorDomain.toUpperCase() : "Cookie file"}
+  title={editorDomain || "Cookie file"}
   subtitle={cookieFile(editorPath) ?? "Stored in this browser"}
   value={editorValue}
   onsave={saveCookieEditor}

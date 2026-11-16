@@ -68,7 +68,7 @@
     class="flex h-[min(80dvh,720px)] w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden rounded-[20px] bg-background p-0 ring-1 ring-foreground/5 sm:max-w-3xl"
   >
     <Dialog.Header
-      class="flex-row items-start gap-4 border-b border-border/40 px-5 py-4"
+      class="flex-row items-start gap-4 border-b border-border/40 px-6 pb-4 pt-6"
     >
       <div class="min-w-0 flex-1">
         <Dialog.Title
@@ -109,13 +109,13 @@
       autocomplete="off"
       wrap="off"
       aria-label="{title} content"
-      class="min-h-0 flex-1 resize-none bg-background px-5 py-4 text-xs leading-relaxed text-foreground overscroll-contain placeholder:text-muted-foreground/60 focus-visible:outline-none {monospace
+      class="min-h-0 flex-1 resize-none bg-background px-6 py-5 text-xs leading-relaxed text-foreground overscroll-contain placeholder:text-muted-foreground/60 focus-visible:outline-none {monospace
         ? 'font-mono'
         : ''}"
     ></textarea>
 
     <Dialog.Footer
-      class="mx-0 mb-0 flex-row items-center justify-between gap-3 rounded-b-[20px] border-t border-border/40 bg-background px-5 py-3"
+      class="mx-0 mb-0 flex-row items-center justify-between gap-3 rounded-b-[20px] border-t border-border/40 bg-background px-6 py-4"
     >
       <p class="min-w-0 flex-1 truncate text-xs text-destructive" role="alert">
         {error ?? ""}
