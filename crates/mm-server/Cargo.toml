@@ -21,3 +21,4 @@ futures-util = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 mime_guess = { workspace = true }
+zip = { version = "9", default-features = false, features = ["deflate"] }

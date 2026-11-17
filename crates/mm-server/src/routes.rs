@@ -39,6 +39,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         )
         .route("/downloads/{id}", get(get_download).delete(cancel))
         .route("/downloads/{id}/file", get(output_file))
+        .route("/downloads/{id}/archive", get(output_archive))
         .route("/downloads/{id}/pause", post(pause))
         .route("/downloads/{id}/resume", post(resume))
         .route("/settings", get(get_settings).put(update_settings))
@@ -336,7 +337,7 @@ async fn output_file(
         },
     };
 
-    files::serve(
+    let mut response = files::serve(
         &state.download_root,
         &relative,
         headers,
@@ -346,7 +347,106 @@ async fn output_file(
             job_id: id,
         }),
     )
-    .await
+    .await;
+    if response.status().is_success() {
+        response.headers_mut().insert(
+            header::CONTENT_TYPE,
+            HeaderValue::from_static("application/octet-stream"),
+        );
+    }
+    response
+}
+
+/// Streams every file a finished multi-file job produced as one ZIP archive.
+async fn output_archive(
+    State(state): State<Arc<AppState>>,
+    axum::extract::Path(id): axum::extract::Path<String>,
+    headers: HeaderMap,
+) -> Response {
+    let Some(job) = state.jobs.summary(&id) else {
+        return error(
+            StatusCode::NOT_FOUND,
+            "no_such_download",
+            format!("no download with id: {id}"),
+        );
+    };
+    if job.files.is_empty() {
+        return error(
+            StatusCode::NOT_FOUND,
+            "no_output_file",
+            format!("download {id} has no recorded output files"),
+        );
+    }
+
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|elapsed| elapsed.as_nanos())
+        .unwrap_or(0);
+    let zip_name = format!(".mm-archive-{id}-{stamp}.zip");
+    let zip_path = state.download_root.join(&zip_name);
+    let root = state.download_root.clone();
+    let files = job.files.clone();
+
+    let built = tokio::task::spawn_blocking(move || -> std::result::Result<(), String> {
+        let root = root.canonicalize().map_err(|e| e.to_string())?;
+        let file = std::fs::File::create(&zip_path).map_err(|e| e.to_string())?;
+        let mut zip = zip::ZipWriter::new(file);
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+
+        for relative in files {
+            let name = relative.replace('\\', "/");
+            let name = name.trim_start_matches("./");
+            if name.is_empty() || name.split('/').any(|part| part.is_empty() || part == "..") {
+                continue;
+            }
+            let Ok(path) = root.join(name).canonicalize() else {
+                continue;
+            };
+            if !path.starts_with(&root) || !path.is_file() {
+                continue;
+            }
+            let Ok(mut input) = std::fs::File::open(&path) else {
+                continue;
+            };
+            zip.start_file(name, options).map_err(|e| e.to_string())?;
+            std::io::copy(&mut input, &mut zip).map_err(|e| e.to_string())?;
+        }
+
+        zip.finish().map_err(|e| e.to_string())?;
+        Ok(())
+    })
+    .await;
+
+    match built {
+        Ok(Ok(())) => {
+            state.retention.record(&id, std::slice::from_ref(&zip_name));
+            let mut response = files::serve(
+                &state.download_root,
+                &zip_name,
+                headers,
+                files::Disposition::Attachment,
+                Some(files::DeleteAfter {
+                    retention: state.retention.clone(),
+                    job_id: id,
+                }),
+            )
+            .await;
+            if response.status().is_success() {
+                response.headers_mut().insert(
+                    header::CONTENT_TYPE,
+                    HeaderValue::from_static("application/zip"),
+                );
+            }
+            response
+        }
+        Ok(Err(e)) => error(StatusCode::INTERNAL_SERVER_ERROR, "archive_failed", e),
+        Err(e) => error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "archive_failed",
+            e.to_string(),
+        ),
+    }
 }
 
 /// Replays the stored request of a paused job. Settings, cookies and the URL

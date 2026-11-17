@@ -186,8 +186,13 @@ export function createHttpTransport(): Transport {
     return path.split(/[\\/]/).pop() || "download";
   }
 
+  /** Image links can be opened by the browser's viewer instead of saved. */
+  function isImage(path: string): boolean {
+    return /\.(avif|bmp|gif|heic|heif|ico|jpe?g|png|svg|tiff?|webp)$/i.test(path);
+  }
+
   /* Saves a finished job's file through the browser */
-  function saveJobFile(id: string, path: string) {
+  async function saveJobFile(id: string, path: string) {
     const url = new URL(
       `${API}/downloads/${encodeURIComponent(id)}/file`,
       window.location.origin,
@@ -195,9 +200,65 @@ export function createHttpTransport(): Transport {
     url.searchParams.set("path", path);
     if (token) url.searchParams.set("token", token);
 
+    if (isImage(path)) {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.blob();
+        const objectUrl = URL.createObjectURL(
+          new Blob([data], { type: "application/octet-stream" }),
+        );
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = fileNameOf(path);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+        return;
+      } catch {
+        // Fall through to the server URL if the blob path is unavailable.
+      }
+    }
+
     const link = document.createElement("a");
     link.href = url.toString();
     link.download = fileNameOf(path);
+    link.rel = "noopener";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+
+  /* Downloads every file from a multi-file job as one archive. */
+  function archiveName(id: string, paths: string[]): string {
+    const dirs = paths.map((path) => path.split(/[\\/]/).slice(0, -1));
+    let common = dirs[0] ?? [];
+    for (const dir of dirs.slice(1)) {
+      let index = 0;
+      while (
+        index < common.length &&
+        index < dir.length &&
+        common[index] === dir[index]
+      ) {
+        index += 1;
+      }
+      common = common.slice(0, index);
+    }
+    const base = common.at(-1) ?? dirs[0]?.at(0) ?? id;
+    return `${base.replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_").slice(0, 120) || id}.zip`;
+  }
+
+  function saveJobArchive(id: string, name: string) {
+    const url = new URL(
+      `${API}/downloads/${encodeURIComponent(id)}/archive`,
+      window.location.origin,
+    );
+    if (token) url.searchParams.set("token", token);
+
+    const link = document.createElement("a");
+    link.href = url.toString();
+    link.download = name;
     link.rel = "noopener";
     document.body.appendChild(link);
     link.click();
@@ -212,6 +273,10 @@ export function createHttpTransport(): Transport {
     const paths = files.filter(
       (file): file is string => typeof file === "string" && file.length > 0,
     );
+    if (paths.length > 1 || paths.some(isImage)) {
+      saveJobArchive(id, archiveName(id, paths));
+      return;
+    }
     paths.forEach((path, index) => {
       window.setTimeout(() => saveJobFile(id, path), index * 400);
     });
