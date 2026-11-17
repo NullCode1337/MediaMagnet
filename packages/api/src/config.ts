@@ -136,6 +136,7 @@ export interface DownloadTask {
 }
 
 export interface HistoryItem {
+  id?: string;
   url: string;
   name: string;
   timestamp: string;

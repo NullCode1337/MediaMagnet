@@ -37,6 +37,7 @@
 
   let tasks = $state<DownloadTask[]>([]);
   let history = $state<HistoryItem[]>([]);
+  const cancelled = new Map<string, string>();
 
   let anyDownloading = $derived(tasks.some((t) => t.isDownloading));
   let headlessProgress = $derived(
@@ -191,6 +192,7 @@
   }
 
   async function cancelDownload(id: string, url: string) {
+    cancelled.set(id, url);
     try {
       await transport.cancel(id, url);
     } catch (err) {
@@ -201,6 +203,9 @@
   }
 
   async function stopAllDownloads() {
+    tasks.forEach((t) => {
+      if (t.isDownloading) cancelled.set(t.id, t.url);
+    });
     try {
       await transport.cancelAll();
       tasks.forEach((t) => {
@@ -216,9 +221,11 @@
     status: "success" | "error",
     error?: string,
     source?: DownloadTask,
+    id?: string,
   ) {
     history = [
       {
+        id: id ?? source?.id,
         url,
         name: url,
         timestamp: new Date().toLocaleTimeString(),
@@ -257,11 +264,19 @@
 
       case "download-error": {
         const task = tasks.find((t) => t.id === event.id);
-        if (task?.isPaused) return;
-        if (event.value.includes("cancelled")) {
+        if (event.value.toLowerCase().includes("cancelled")) {
+          const url =
+            task?.url ?? cancelled.get(event.id) ?? event.id;
+          cancelled.set(event.id, url);
+          history = history.filter(
+            (item) => !(item.id === event.id && item.status === "success"),
+          );
+          addToHistory(url, "error", "Download cancelled", task, event.id);
           removeTask(event.id);
+          window.setTimeout(() => cancelled.delete(event.id), 5000);
           return;
         }
+        if (task?.isPaused) return;
         updateTask(event.id, {
           error: event.value,
           isDownloading: false,
@@ -272,6 +287,11 @@
       }
 
       case "download-finished": {
+        if (cancelled.has(event.id)) {
+          removeTask(event.id);
+          window.setTimeout(() => cancelled.delete(event.id), 5000);
+          return;
+        }
         const task = tasks.find((t) => t.id === event.id);
         if (task?.isPaused) return;
         if (task) {
