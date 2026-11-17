@@ -789,12 +789,28 @@ impl Engine {
             if spec.with_cookies {
                 self.apply_cookie(&mut count_cmd, link, backend, &spec.cookies);
             }
+            if let Err(e) = self.apply_args(
+                &mut count_cmd,
+                link,
+                &spec.settings.gdl_global_args,
+                &spec.settings.gdl_site_args,
+                ArgTool::GalleryDl,
+            ) {
+                println!(
+                    "[MediaMagnet][gallery-dl] Count arguments failed: {}",
+                    e
+                );
+            }
+            if !spec.settings.user_agent.is_empty() {
+                count_cmd.args(["-a", &spec.settings.user_agent]);
+            }
             count_cmd.current_dir(base_dir);
+            count_cmd.arg("-g").arg(link);
 
             // Nothing to cancel yet; cap the listing and fall back to an unknown total.
             match tokio::time::timeout(
                 std::time::Duration::from_secs(30),
-                count_cmd.args(["-g", link]).output(),
+                count_cmd.output(),
             )
             .await
             {
