@@ -118,6 +118,8 @@ struct JobSpec {
     settings: Settings,
     cookies: CookieSource,
     with_cookies: bool,
+    trim_filenames: Option<u32>,
+    truncate_paths: bool,
 }
 
 struct ActiveDownload {
@@ -126,6 +128,15 @@ struct ActiveDownload {
     base_dir: PathBuf,
     url: String,
     spec: JobSpec,
+    outputs: Arc<Mutex<Vec<String>>>,
+}
+
+struct RetainedJob {
+    backend: Backend,
+    base_dir: PathBuf,
+    url: String,
+    spec: JobSpec,
+    outputs: Arc<Mutex<Vec<String>>>,
 }
 
 pub struct Engine {
@@ -135,6 +146,7 @@ pub struct Engine {
     policy: Policy,
     sink: SharedEventSink,
     downloads: Mutex<HashMap<String, ActiveDownload>>,
+    retained: Mutex<HashMap<String, RetainedJob>>,
     semaphore: tokio::sync::Semaphore,
 }
 
@@ -153,6 +165,7 @@ impl Engine {
             policy,
             sink,
             downloads: Mutex::new(HashMap::new()),
+            retained: Mutex::new(HashMap::new()),
             semaphore: tokio::sync::Semaphore::new(MAX_CONCURRENT_DOWNLOADS),
         })
     }
@@ -266,7 +279,7 @@ impl Engine {
     /// would use, so the probe cannot fail for a reason the download would not hit.
     async fn probe_ytdlp(&self, url: &str, spec: &JobSpec) -> std::result::Result<(), String> {
         let (mut cmd, _) = self
-            .apply_download_args(url, Backend::YtDlp, spec, None, false)
+            .apply_download_args(url, Backend::YtDlp, spec)
             .await
             .map_err(|e| e.to_string())?;
         cmd.args(["--print", "title", "--no-download"])
@@ -389,8 +402,6 @@ impl Engine {
         url: &str,
         backend: Backend,
         spec: &JobSpec,
-        trim_filenames: Option<u32>,
-        truncate_paths: bool,
     ) -> Result<(Command, bool)> {
         let settings = &spec.settings;
         let mut cmd = self
@@ -437,7 +448,7 @@ impl Engine {
                     "%(progress)j",
                     "--newline",
                 ]);
-                if let Some(limit) = trim_filenames {
+                if let Some(limit) = spec.trim_filenames {
                     cmd.args(["--trim-filenames", &limit.to_string()]);
                 }
 
@@ -482,7 +493,7 @@ impl Engine {
             }
             Backend::GalleryDl => {
                 cmd.args(["-d", "."]);
-                if truncate_paths {
+                if spec.truncate_paths {
                     cmd.args([
                         "-o",
                         "directory=[\"{category}\", \"{gallery_id} {title[:120]}\"]",
@@ -514,6 +525,9 @@ impl Engine {
     /// are reported on the event stream, matching the desktop commands' contract.
     pub async fn run_job(self: &Arc<Self>, request: DownloadRequest) {
         let id = request.id.clone();
+        if let Ok(mut guard) = self.retained.lock() {
+            guard.remove(&id);
+        }
         let lc = request.url.to_lowercase();
 
         if lc.contains("didg") && lc.contains("ls.i") && !lc.contains("original") {
@@ -579,6 +593,8 @@ impl Engine {
             settings,
             cookies,
             with_cookies: true,
+            trim_filenames: None,
+            truncate_paths: false,
         };
 
         let (backend, probe_failure) = match request.backend {
@@ -595,10 +611,7 @@ impl Engine {
 
         self.emit(CoreEvent::DownloadStarted { id: id.clone() });
 
-        let prepared = match self
-            .apply_download_args(&request.url, backend, &spec, None, false)
-            .await
-        {
+        let prepared = match self.apply_download_args(&request.url, backend, &spec).await {
             Ok(prepared) => prepared,
             Err(e) => {
                 self.emit(CoreEvent::DownloadError {
@@ -637,15 +650,13 @@ impl Engine {
                     );
                     self.status(&id, "FAILED: Retrying with shorter filenames...");
 
-                    let trim = (backend == Backend::YtDlp).then_some(TRIM_LEN);
+                    let retry_spec = JobSpec {
+                        trim_filenames: (backend == Backend::YtDlp).then_some(TRIM_LEN),
+                        truncate_paths: backend == Backend::GalleryDl,
+                        ..spec.clone()
+                    };
                     match self
-                        .apply_download_args(
-                            &request.url,
-                            backend,
-                            &spec,
-                            trim,
-                            backend == Backend::GalleryDl,
-                        )
+                        .apply_download_args(&request.url, backend, &retry_spec)
                         .await
                     {
                         Ok((trimmed_cmd, _)) => {
@@ -656,7 +667,7 @@ impl Engine {
                                     backend,
                                     &request.base_dir,
                                     &id,
-                                    spec.clone(),
+                                    retry_spec,
                                 )
                                 .await
                             {
@@ -698,7 +709,7 @@ impl Engine {
                     };
 
                     match self
-                        .apply_download_args(&request.url, backend, &retry_spec, None, false)
+                        .apply_download_args(&request.url, backend, &retry_spec)
                         .await
                     {
                         Ok((retry_cmd, _)) => {
@@ -810,6 +821,7 @@ impl Engine {
                 base_dir: base_dir.to_path_buf(),
                 url: link.to_string(),
                 spec,
+                outputs: output_files.clone(),
             },
         );
 
@@ -1169,8 +1181,11 @@ impl Engine {
                     self.apply_cookie(&mut cmd, url, backend, &spec.cookies);
                 }
                 let template = self.output_template(&spec.settings);
-                cmd.args(["-o", &template, "--print", "filename", "--no-download", url])
-                    .current_dir(base);
+                cmd.args(["-o", &template, "--print", "filename", "--no-download", url]);
+                if let Some(limit) = spec.trim_filenames {
+                    cmd.args(["--trim-filenames", &limit.to_string()]);
+                }
+                cmd.current_dir(base);
 
                 let out =
                     match tokio::time::timeout(std::time::Duration::from_secs(15), cmd.output())
@@ -1205,6 +1220,12 @@ impl Engine {
                 let mut cmd = self.base_command(Tool::GalleryDl).await?;
                 if spec.with_cookies {
                     self.apply_cookie(&mut cmd, url, backend, &spec.cookies);
+                }
+                if spec.truncate_paths {
+                    cmd.args([
+                        "-o",
+                        "directory=[\"{category}\", \"{gallery_id} {title[:120]}\"]",
+                    ]);
                 }
                 cmd.args(["-s", "-d", ".", "--print", "{_directory}", url])
                     .current_dir(base);
@@ -1257,6 +1278,18 @@ impl Engine {
                     .wait()
                     .await
                     .map_err(|e| Error::Msg(format!("Wait failed: {}", e)))?;
+                if let Ok(mut guard) = self.retained.lock() {
+                    guard.insert(
+                        id.to_string(),
+                        RetainedJob {
+                            backend: entry.backend,
+                            base_dir: entry.base_dir.clone(),
+                            url: entry.url.clone(),
+                            spec: entry.spec.clone(),
+                            outputs: entry.outputs.clone(),
+                        },
+                    );
+                }
                 self.status(id, "Paused");
                 self.emit(CoreEvent::DownloadState {
                     id: id.to_string(),
@@ -1270,17 +1303,30 @@ impl Engine {
 
     pub async fn cancel(&self, id: &str) -> Result<()> {
         let entry = self.downloads.lock().map_err(|_| Error::Lock)?.remove(id);
+        let retained = self.retained.lock().map_err(|_| Error::Lock)?.remove(id);
 
         if let Some(mut entry) = entry {
             let _ = entry.child.kill().await;
             let _ = entry.child.wait().await;
-
-            if let Err(e) = self
+            let outputs = entry
+                .outputs
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .clone();
+            clean_output_dirs(&entry.base_dir, &outputs);
+            let _ = self
                 .clean_tempfiles(&entry.base_dir, &entry.url, entry.backend, &entry.spec)
-                .await
-            {
-                println!("[MediaMagnet] Cleanup failed during cancellation: {}", e);
-            }
+                .await;
+        } else if let Some(job) = retained {
+            let outputs = job
+                .outputs
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .clone();
+            clean_output_dirs(&job.base_dir, &outputs);
+            let _ = self
+                .clean_tempfiles(&job.base_dir, &job.url, job.backend, &job.spec)
+                .await;
         }
 
         self.emit(CoreEvent::DownloadError {
@@ -1294,9 +1340,20 @@ impl Engine {
         Ok(())
     }
 
+    pub fn is_retained(&self, id: &str) -> bool {
+        self.retained
+            .lock()
+            .map(|guard| guard.contains_key(id))
+            .unwrap_or(false)
+    }
+
     pub async fn cancel_all(&self) -> Result<()> {
         let children: Vec<(String, ActiveDownload)> = {
             let mut guard = self.downloads.lock().map_err(|_| Error::Lock)?;
+            guard.drain().collect()
+        };
+        let paused: Vec<(String, RetainedJob)> = {
+            let mut guard = self.retained.lock().map_err(|_| Error::Lock)?;
             guard.drain().collect()
         };
 
@@ -1305,6 +1362,12 @@ impl Engine {
                 eprintln!("[MediaMagnet] Failed to kill {}: {}", id, e);
             }
             let _ = entry.child.wait().await;
+            let outputs = entry
+                .outputs
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .clone();
+            clean_output_dirs(&entry.base_dir, &outputs);
 
             // Match `cancel`: leave no partial files behind.
             if let Err(e) = self
@@ -1314,6 +1377,26 @@ impl Engine {
                 eprintln!("[MediaMagnet] Cleanup failed during cancel-all: {}", e);
             }
 
+            self.emit(CoreEvent::DownloadError {
+                id: id.clone(),
+                value: "Download cancelled".into(),
+            });
+            self.emit(CoreEvent::DownloadState {
+                id,
+                state: DownloadState::Cancelled,
+            });
+        }
+
+        for (id, job) in paused {
+            let outputs = job
+                .outputs
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .clone();
+            clean_output_dirs(&job.base_dir, &outputs);
+            let _ = self
+                .clean_tempfiles(&job.base_dir, &job.url, job.backend, &job.spec)
+                .await;
             self.emit(CoreEvent::DownloadError {
                 id: id.clone(),
                 value: "Download cancelled".into(),
@@ -1500,6 +1583,42 @@ fn collect_files(
     files.sort();
     files.dedup();
     Ok(files)
+}
+
+fn clean_output_dirs(base: &Path, outputs: &[String]) {
+    let base = base.canonicalize().unwrap_or_else(|_| base.to_path_buf());
+    let mut removed = HashSet::new();
+    for relative in outputs {
+        let relative = relative.replace('\\', "/");
+        if relative.split('/').any(|part| part == "..") {
+            continue;
+        }
+        let file = base.join(relative.trim_start_matches("./"));
+        if !file.starts_with(&base) {
+            continue;
+        }
+        let _ = std::fs::remove_file(&file);
+        let Some(parent) = file.parent() else {
+            continue;
+        };
+        let depth = parent
+            .strip_prefix(&base)
+            .ok()
+            .map(|path| {
+                path.components()
+                    .filter(|part| matches!(part, Component::Normal(_)))
+                    .count()
+            })
+            .unwrap_or(0);
+        if depth >= 2 && removed.insert(parent.to_path_buf()) {
+            let _ = std::fs::remove_dir_all(parent);
+            if let Some(grand) = parent.parent() {
+                if grand != base {
+                    let _ = std::fs::remove_dir(grand);
+                }
+            }
+        }
+    }
 }
 
 fn scan_recent_files(base_dir: &Path, since: std::time::SystemTime) -> Vec<String> {

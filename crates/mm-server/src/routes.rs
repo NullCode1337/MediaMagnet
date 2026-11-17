@@ -519,7 +519,9 @@ async fn cancel(
 ) -> Response {
     // `Engine::cancel` reports success for unknown ids but still broadcasts a
     // "cancelled" error to every SSE client, so unknown ids stop here.
-    if !state.engine.active_ids().iter().any(|active| active == &id) {
+    if !state.engine.active_ids().iter().any(|active| active == &id)
+        && !state.engine.is_retained(&id)
+    {
         return error(
             StatusCode::NOT_FOUND,
             "no_such_download",
