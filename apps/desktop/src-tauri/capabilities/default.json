@@ -30,11 +30,20 @@
       "identifier": "opener:allow-open-path",
       "allow": [
         {
-          "path": "$APPDATA/cookies/**"
+          "path": "/**"
         }
       ]
     },
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        "/**"
+      ]
+    },
     "fs:default",
+    "fs:allow-read-file",
+    "fs:allow-write-file",
+    "fs:allow-read-text-file",
     "fs:allow-write-text-file"
   ]
 }
