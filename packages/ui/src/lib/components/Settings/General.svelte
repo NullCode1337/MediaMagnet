@@ -1,8 +1,14 @@
 <script lang="ts">
   import Section from "$lib/components/Settings/SECTION.svelte";
-  import { accentToHex, hexToAccent, type Accent } from "$lib/color";
+  import {
+    accentToHex,
+    hexToAccent,
+    hueToHex,
+    type Accent,
+  } from "$lib/color";
   import { applyAccent, settings } from "$lib/stores/settings.svelte";
   import { transport } from "$lib/stores/transport.svelte";
+  import { Slider } from "bits-ui";
   import { mode, userPrefersMode } from "mode-watcher";
 
   let { currentPlatform }: { currentPlatform: string } = $props();
@@ -17,6 +23,8 @@
   });
   let accent = $derived(pendingAccent ?? currentAccent);
   let primaryHex = $derived(accentToHex(accent));
+  let sliderHue = $derived(((Math.round(accent.hue) % 360) + 360) % 360);
+  let sliderHex = $derived(hueToHex(sliderHue));
   let hexInput = $state("");
   let hexError = $state(false);
   let hexEl: HTMLInputElement | undefined = $state();
@@ -43,17 +51,28 @@
     };
   });
 
+  function normalizeHue(value: number): number {
+    return ((Math.round(value) % 360) + 360) % 360;
+  }
+
   function commitAccent(next: Accent) {
-    pendingAccent = next;
+    const normalized: Accent = {
+      kind: next.kind,
+      hue: normalizeHue(next.hue),
+    };
+    pendingAccent = normalized;
     applyAccent({
-      accent_hue: next.hue,
-      accent_kind: next.kind,
+      accent_hue: normalized.hue,
+      accent_kind: normalized.kind,
       amoled_mode: settings.config?.amoled_mode ?? false,
     });
     if (accentTimer) clearTimeout(accentTimer);
     accentTimer = setTimeout(() => {
       settings.update(
-        { accent_kind: next.kind, accent_hue: next.hue },
+        {
+          accent_kind: normalized.kind,
+          accent_hue: normalized.hue,
+        },
         { silent: true },
       );
       pendingAccent = null;
@@ -61,11 +80,8 @@
     }, 200);
   }
 
-  function onSliderInput(e: Event) {
-    commitAccent({
-      kind: "hue",
-      hue: Number((e.target as HTMLInputElement).value),
-    });
+  function onSliderChange(value: number) {
+    commitAccent({ kind: "hue", hue: value });
   }
 
   function onSwatch(kind: "black" | "white") {
@@ -81,6 +97,11 @@
       commitAccent(parsed);
     } else hexError = val.length > 1;
   }
+
+  function onHexBlur() {
+    hexInput = primaryHex;
+    hexError = false;
+  }
 </script>
 
 {#snippet accentColorPicker()}
@@ -93,34 +114,32 @@
       ></div>
     </div>
 
-    <div
-      class="relative h-3.5 overflow-hidden rounded-full transition-opacity {accent.kind !==
-      'hue'
-        ? 'opacity-40'
-        : ''}"
-      style="background: linear-gradient(to right,
-        hsl(0,100%,50%),   hsl(30,100%,50%),  hsl(60,100%,50%),
-        hsl(90,100%,50%),  hsl(120,100%,50%), hsl(150,100%,50%),
-        hsl(180,100%,50%), hsl(210,100%,50%), hsl(240,100%,50%),
-        hsl(270,100%,50%), hsl(300,100%,50%), hsl(330,100%,50%),
-        hsl(360,100%,50%));"
+    <Slider.Root
+      type="single"
+      min={0}
+      max={359}
+      step={1}
+      value={sliderHue}
+      onValueChange={onSliderChange}
+      class="relative flex h-6 w-full touch-none select-none items-center"
     >
-      <input
-        type="range"
-        min="0"
-        max="359"
-        value={accent.hue}
-        oninput={onSliderInput}
-        class="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-        aria-label="Accent hue"
-      />
       <div
-        class="pointer-events-none absolute bottom-0 top-0 w-1 -translate-x-1/2
-               rounded-full ring-2 ring-white shadow-md transition-[left] duration-75"
-        style="left: {(accent.hue / 359) *
-          100}%; background-color: {primaryHex};"
+        class="pointer-events-none absolute inset-x-0 top-1/2 h-3.5 -translate-y-1/2 rounded-full ring-1 ring-border/40"
+        style="background: linear-gradient(to right,
+          hsl(0,100%,50%),   hsl(30,100%,50%),  hsl(60,100%,50%),
+          hsl(90,100%,50%),  hsl(120,100%,50%), hsl(150,100%,50%),
+          hsl(180,100%,50%), hsl(210,100%,50%), hsl(240,100%,50%),
+          hsl(270,100%,50%), hsl(300,100%,50%), hsl(330,100%,50%),
+          hsl(360,100%,50%));"
       ></div>
-    </div>
+      <Slider.Thumb
+        index={0}
+        aria-label="Accent hue"
+        aria-valuetext="{sliderHue}°"
+        class="top-1/2 z-10 -mt-2.5 block size-5 cursor-grab rounded-full border-2 border-background shadow-md hover:scale-105 active:cursor-grabbing focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring/40"
+        style="background-color: {sliderHex};"
+      />
+    </Slider.Root>
 
     <div class="flex items-start gap-2">
       <div class="flex min-w-0 flex-1 flex-col gap-1">
@@ -139,6 +158,7 @@
             bind:this={hexEl}
             value={hexInput}
             oninput={onHexChange}
+            onblur={onHexBlur}
             spellcheck="false"
             class="min-w-0 w-0 flex-1 select-text bg-transparent outline-none"
             placeholder="#000000"

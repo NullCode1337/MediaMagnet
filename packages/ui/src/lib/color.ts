@@ -57,12 +57,20 @@ export function accentToHex(accent: Accent): string {
 }
 
 export function hexToAccent(hex: string): Accent | null {
-  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim());
+  const m = /^#?([a-f\d]{3}|[a-f\d]{6})$/i.exec(hex.trim());
   if (!m) return null;
 
-  const r = parseInt(m[1], 16) / 255;
-  const g = parseInt(m[2], 16) / 255;
-  const b = parseInt(m[3], 16) / 255;
+  let digits = m[1];
+  if (digits.length === 3) {
+    digits = digits
+      .split("")
+      .map((c) => c + c)
+      .join("");
+  }
+
+  const r = parseInt(digits.slice(0, 2), 16) / 255;
+  const g = parseInt(digits.slice(2, 4), 16) / 255;
+  const b = parseInt(digits.slice(4, 6), 16) / 255;
 
   const max = Math.max(r, g, b),
     min = Math.min(r, g, b);
@@ -79,5 +87,5 @@ export function hexToAccent(hex: string): Accent | null {
   else if (max === g) h = ((b - r) / d + 2) / 6;
   else h = ((r - g) / d + 4) / 6;
 
-  return { kind: "hue", hue: Math.round(h * 360) };
+  return { kind: "hue", hue: Math.round(h * 360) % 360 };
 }
