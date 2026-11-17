@@ -58,13 +58,21 @@
               variant={section.headerAction.variant ?? "outline"}
               onclick={section.headerAction.onclick}
               class="h-9 shrink-0 rounded-xl px-3.5 text-xs font-medium"
+              aria-label={section.headerAction.ariaLabel ||
+                section.headerAction.label}
             >
               {#if section.headerAction.icon}
-                <span class="mr-1.5 flex shrink-0 items-center">
+                <span
+                  class="flex shrink-0 items-center {section.headerAction.label
+                    ? 'mr-1.5'
+                    : ''}"
+                >
                   {@render section.headerAction.icon()}
                 </span>
               {/if}
-              {section.headerAction.label}
+              {#if section.headerAction.label}
+                {section.headerAction.label}
+              {/if}
             </Button>
           </div>
         {/if}
@@ -127,7 +135,13 @@
               />
             </div>
           {:else if item.type === "textarea"}
-            <div class="flex flex-col gap-2.5 px-4 py-4">
+            {@const hasDescription = !!(item.description || item.descriptionNode)}
+            {@const tightPreset = !!item.presets?.length && !hasDescription}
+            <div
+              class="flex flex-col px-4 py-4 {tightPreset
+                ? 'gap-3'
+                : 'gap-2.5'}"
+            >
               <div class="flex items-start justify-between gap-3">
                 <label
                   for="{item.id}--{sindex}-{ii}"
@@ -171,6 +185,7 @@
 
               <textarea
                 id="{item.id}--{sindex}-{ii}"
+                rows={item.minRows ?? 3}
                 value={item.value}
                 placeholder={item.placeholder}
                 style="min-height: {argsMinHeight(item.minRows)}"
@@ -252,32 +267,47 @@
                           (e.key === "Enter" || e.key === " ") &&
                           entry.onclick?.()
                       : undefined}
+                    aria-label={entry.ariaLabel || entry.label}
                     class="group flex min-h-14 items-center gap-4 px-4 py-3 transition-colors {entry.onclick
                       ? 'cursor-pointer hover:bg-foreground/3'
                       : ''}"
                   >
-                    {#if entry.icon}
+                    {#if entry.label || entry.description || entry.supporting}
+                      {#if entry.icon}
+                        <div
+                          class="shrink-0 text-muted-foreground group-hover:text-foreground transition-colors"
+                        >
+                          {@render entry.icon()}
+                        </div>
+                      {/if}
+
+                      <div class="min-w-0 flex-1">
+                        {#if entry.label}
+                          <p
+                            class="text-[15px] font-normal leading-snug text-foreground"
+                          >
+                            {entry.label}
+                          </p>
+                        {/if}
+                        {#if entry.description || entry.supporting}
+                          <p
+                            class="text-xs leading-normal text-muted-foreground {entry.label
+                              ? 'mt-0.5'
+                              : ''}"
+                          >
+                            {entry.description ?? entry.supporting}
+                          </p>
+                        {/if}
+                      </div>
+                    {:else}
                       <div
-                        class="shrink-0 text-muted-foreground group-hover:text-foreground transition-colors"
+                        class="flex min-w-0 flex-1 items-center justify-center gap-4 text-muted-foreground group-hover:text-foreground transition-colors"
                       >
-                        {@render entry.icon()}
+                        {#if entry.icon}
+                          {@render entry.icon()}
+                        {/if}
                       </div>
                     {/if}
-
-                    <div class="min-w-0 flex-1">
-                      <p
-                        class="text-[15px] font-normal leading-snug text-foreground"
-                      >
-                        {entry.label}
-                      </p>
-                      {#if entry.supporting}
-                        <p
-                          class="mt-0.5 text-xs leading-normal text-muted-foreground"
-                        >
-                          {entry.supporting}
-                        </p>
-                      {/if}
-                    </div>
 
                     {#if entry.actions?.length || entry.ondelete}
                       <div class="flex shrink-0 items-center gap-1">
@@ -310,7 +340,9 @@
                             }}
                             onkeydown={(e) => e.stopPropagation()}
                             class="h-8 w-8 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                            aria-label="Delete {entry.label}"
+                            aria-label={entry.label
+                              ? `Delete ${entry.label}`
+                              : "Delete entry"}
                           >
                             <Delete size={14} />
                           </Button>

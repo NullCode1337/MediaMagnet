@@ -70,7 +70,9 @@ export type ListEntryAction = {
 
 export type ListEntry = {
   id: string;
-  label: string;
+  label?: string;
+  ariaLabel?: string;
+  description?: string;
   supporting?: string;
   icon?: Snippet<[]>;
   onclick?: () => void;
@@ -101,14 +103,16 @@ export type Setting =
   | SiteArgsItem;
 
 export type SectionAction = {
-  label: string;
+  label?: string;
+  ariaLabel?: string;
   onclick: () => void;
   variant?: "default" | "outline" | "destructive" | "ghost";
   icon?: Snippet<[]>;
 };
 
 export type PageAction = {
-  label: string;
+  label?: string;
+  ariaLabel?: string;
   onclick: () => void;
   variant?: "default" | "outline" | "destructive" | "ghost";
   icon?: Snippet<[]>;

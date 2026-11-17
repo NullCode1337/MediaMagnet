@@ -3,7 +3,6 @@
   import { transport } from "$lib/stores/transport.svelte";
   import Section from "$lib/components/Settings/SECTION.svelte";
 
-  // Both items are desktop-only: notification delivery style and process-lifetime cookies.
   const isDesktop = transport.kind === "desktop";
 </script>
 

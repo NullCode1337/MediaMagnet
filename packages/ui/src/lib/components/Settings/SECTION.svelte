@@ -25,18 +25,23 @@
 
     <div class="flex shrink-0 items-center gap-2 max-sm:-mt-1">
       {#if config.headerActions?.length}
-        {#each config.headerActions as action (action.label)}
+        {#each config.headerActions as action, index (action.label || index)}
           <Button
             variant={action.variant ?? "ghost"}
             class="h-9 rounded-xl px-3.5 text-xs font-medium"
             onclick={action.onclick}
+            aria-label={action.ariaLabel || action.label}
           >
             {#if action.icon}
-              <span class="mr-1.5 flex shrink-0 items-center">
+              <span
+                class="flex shrink-0 items-center {action.label
+                  ? 'mr-1.5'
+                  : ''}"
+              >
                 {@render action.icon()}
               </span>
             {/if}
-            {action.label}
+            {#if action.label}{action.label}{/if}
           </Button>
         {/each}
       {/if}
