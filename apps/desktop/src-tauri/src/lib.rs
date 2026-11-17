@@ -1,4 +1,5 @@
 mod app;
+mod clock;
 mod commands;
 mod events;
 
@@ -82,6 +83,7 @@ pub fn run() {
             commands::utils::reinstall_python_deps,
             commands::utils::reset_python_deps,
             commands::utils::updater_supported,
+            clock::is_24h,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

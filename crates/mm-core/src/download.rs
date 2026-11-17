@@ -796,10 +796,7 @@ impl Engine {
                 &spec.settings.gdl_site_args,
                 ArgTool::GalleryDl,
             ) {
-                println!(
-                    "[MediaMagnet][gallery-dl] Count arguments failed: {}",
-                    e
-                );
+                println!("[MediaMagnet][gallery-dl] Count arguments failed: {}", e);
             }
             if !spec.settings.user_agent.is_empty() {
                 count_cmd.args(["-a", &spec.settings.user_agent]);
@@ -808,11 +805,7 @@ impl Engine {
             count_cmd.arg("-g").arg(link);
 
             // Nothing to cancel yet; cap the listing and fall back to an unknown total.
-            match tokio::time::timeout(
-                std::time::Duration::from_secs(30),
-                count_cmd.output(),
-            )
-            .await
+            match tokio::time::timeout(std::time::Duration::from_secs(30), count_cmd.output()).await
             {
                 Ok(Ok(out)) => String::from_utf8_lossy(&out.stdout)
                     .lines()

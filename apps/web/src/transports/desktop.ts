@@ -197,6 +197,7 @@ export function createDesktopTransport(): Transport {
     writeClipboard: (text) => writeText(text),
     openPath: (path) => openPath(path),
     downloadRoot: () => invoke<string>("download_root"),
+    uses24HourClock: () => invoke<boolean>("is_24h"),
 
     open: (options: OpenOptions) =>
       open(options) as Promise<string | null>,

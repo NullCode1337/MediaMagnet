@@ -581,6 +581,7 @@ export function createHttpTransport(): Transport {
       const root = await request<{ path: string }>("/paths/download-root");
       return root.path;
     },
+    uses24HourClock: async () => false,
 
     open: pickFile,
     save: saveFile,

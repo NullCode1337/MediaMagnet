@@ -135,6 +135,7 @@ export interface Environment {
   openPath(path: string): Promise<void>;
   /** The directory downloads actually land in, after the host's path rule. */
   downloadRoot(): Promise<string>;
+  uses24HourClock(): Promise<boolean>;
 
   open(options: OpenOptions): Promise<string | null>;
   save(options: SaveOptions): Promise<string | null>;

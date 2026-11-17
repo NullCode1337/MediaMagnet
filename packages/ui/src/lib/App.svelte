@@ -34,6 +34,7 @@
   let addTaskOpen = $state(false);
   let diskUsage = $state(0);
   let currentPlatform = $state("");
+  let hour24 = $state(false);
 
   let tasks = $state<DownloadTask[]>([]);
   let history = $state<HistoryItem[]>([]);
@@ -229,7 +230,11 @@
         id: id ?? source?.id,
         url,
         name: url,
-        timestamp: new Date().toLocaleTimeString(),
+        timestamp: new Date().toLocaleTimeString(undefined, {
+          hour: "numeric",
+          minute: "2-digit",
+          hourCycle: hour24 ? "h23" : "h12",
+        }),
         status,
         error,
         files,
@@ -351,15 +356,30 @@
     }
   }
 
+  const refreshClock = () => {
+    void transport
+      .uses24HourClock()
+      .then((value) => (hour24 = value))
+      .catch(() => {});
+  };
+
   onMount(() => {
     currentPlatform = transport.platform();
+    // Re-read on focus so a changed system toggle applies to new entries.
+    refreshClock();
+    window.addEventListener("focus", refreshClock);
+    const cleanupClock = () => window.removeEventListener("focus", refreshClock);
+
     // The browser has no storage figure to show; only the desktop sidebar does.
-    if (transport.kind !== "desktop") return;
+    if (transport.kind !== "desktop") return cleanupClock;
     void updater.start();
     if (settings.config?.auto_update_backends) void autoUpdateBackends();
     updateDiskSpace();
     const interval = setInterval(updateDiskSpace, 60000);
-    return () => clearInterval(interval);
+    return () => {
+      cleanupClock();
+      clearInterval(interval);
+    };
   });
 
   $effect(() => {
