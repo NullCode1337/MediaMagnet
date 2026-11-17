@@ -50,6 +50,7 @@ function toEvent(type: string, payload: Record<string, unknown>): TransportEvent
     type: type as Exclude<TransportEvent["type"], "notification">,
     id: payload.id as string,
     ...("value" in payload ? { value: payload.value } : {}),
+    ...("files" in payload ? { files: payload.files as string[] } : {}),
   } as TransportEvent;
 }
 

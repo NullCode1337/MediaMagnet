@@ -18,6 +18,8 @@
     CircleCheck,
     CircleAlert,
     RotateCcw,
+    FolderOpen,
+    File as FileIcon,
     X,
     Copy,
   } from "@lucide/svelte";
@@ -88,6 +90,31 @@
       toast("Copied to clipboard: " + url);
     } catch (err) {
       toast("Failed to copy: " + err);
+    }
+  }
+
+  async function openItemFolder(item: HistoryItem) {
+    try {
+      const root = await transport.downloadRoot();
+      const files = item.files ?? [];
+      const sep = root.includes("\\") ? "\\" : "/";
+      const base = root.replace(/[\\/]+$/, "");
+      const relative = (files[0] ?? "")
+        .split(/[\\/]/)
+        .filter((part) => part && part !== ".");
+
+      let path = base;
+      if (files.length === 1 && relative.length) {
+        path = [base, ...relative].join(sep);
+      } else if (relative.length > 1) {
+        relative.pop();
+        path = [base, ...relative].join(sep);
+      } else if (files.length === 0) {
+        path = root;
+      }
+      await transport.openPath(path);
+    } catch (err) {
+      toast.error("Failed to open path: " + err);
     }
   }
 </script>
@@ -228,18 +255,39 @@
     </div>
 
     <div class="flex items-center shrink-0 gap-0.5">
-      <Button
-        variant="ghost"
-        size="icon"
-        class="h-7 w-7 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all hover:scale-105 active:scale-95"
-        title="Retry download"
-        onclick={(e) => {
-          e.stopPropagation();
-          handleRetry(item);
-        }}
-      >
-        <RotateCcw size={13} />
-      </Button>
+      {#if item.status === "success"}
+        {#if transport.kind === "desktop" && (item.files?.length ?? 0) > 0}
+          <Button
+            variant="ghost"
+            size="icon"
+            class="h-7 w-7 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all hover:scale-105 active:scale-95"
+            title={item.files?.length === 1 ? "Open file" : "Open download folder"}
+            onclick={(e) => {
+              e.stopPropagation();
+              void openItemFolder(item);
+            }}
+          >
+            {#if item.files?.length === 1}
+              <FileIcon size={13} />
+            {:else}
+              <FolderOpen size={13} />
+            {/if}
+          </Button>
+        {/if}
+      {:else}
+        <Button
+          variant="ghost"
+          size="icon"
+          class="h-7 w-7 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all hover:scale-105 active:scale-95"
+          title="Retry download"
+          onclick={(e) => {
+            e.stopPropagation();
+            handleRetry(item);
+          }}
+        >
+          <RotateCcw size={13} />
+        </Button>
+      {/if}
       <Button
         variant="ghost"
         size="icon"

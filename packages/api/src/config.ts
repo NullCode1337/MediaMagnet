@@ -142,6 +142,7 @@ export interface HistoryItem {
   timestamp: string;
   status: "success" | "error";
   error?: string;
+  files?: string[];
   backend?: DownloadBackend | null;
   overrides?: Partial<Config> | null;
 }

@@ -222,6 +222,7 @@
     error?: string,
     source?: DownloadTask,
     id?: string,
+    files?: string[],
   ) {
     history = [
       {
@@ -231,6 +232,7 @@
         timestamp: new Date().toLocaleTimeString(),
         status,
         error,
+        files,
         backend: source?.backend ?? null,
         overrides: source?.overrides ?? null,
       },
@@ -295,7 +297,14 @@
         const task = tasks.find((t) => t.id === event.id);
         if (task?.isPaused) return;
         if (task) {
-          addToHistory(task.url, "success", undefined, task);
+          addToHistory(
+            task.url,
+            "success",
+            undefined,
+            task,
+            undefined,
+            event.files ?? [],
+          );
         }
         updateTask(event.id, {
           isDownloading: false,
