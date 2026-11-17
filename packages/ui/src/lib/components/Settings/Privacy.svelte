@@ -26,7 +26,7 @@
               {
                 type: "switch" as const,
                 id: "clear_cookies_on_exit",
-                label: "Refresh Session",
+                label: "Clear Session",
                 description: "Delete all cookies upon closing the app",
                 value: settings.config?.clear_cookies_on_exit ?? false,
                 onchange: (val: boolean) =>

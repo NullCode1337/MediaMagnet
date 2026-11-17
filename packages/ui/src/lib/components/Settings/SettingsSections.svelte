@@ -45,35 +45,36 @@
           : ''}"
       >
         {#if section.headerAction}
-          <div class="flex items-start justify-between gap-3 px-4 pb-2 pt-3.5">
-            <div class="flex min-w-0 flex-col gap-0.5">
+          <div class="flex flex-col gap-0.5 px-4 pb-2 pt-3.5">
+            <div class="flex items-center justify-between gap-3">
               {#if section.label}
                 <p class={ITEM_TITLE_CLASS}>{section.label}</p>
               {/if}
-              {#if section.description}
-                <p class={ITEM_DESCRIPTION_CLASS}>{section.description}</p>
-              {/if}
+              <Button
+                variant={section.headerAction.variant ?? "outline"}
+                onclick={section.headerAction.onclick}
+                class="h-9 shrink-0 rounded-xl px-3.5 text-xs font-medium"
+                aria-label={section.headerAction.ariaLabel ||
+                  section.headerAction.label}
+              >
+                {#if section.headerAction.icon}
+                  <span
+                    class="flex shrink-0 items-center {section.headerAction
+                      .label
+                      ? 'mr-1.5'
+                      : ''}"
+                  >
+                    {@render section.headerAction.icon()}
+                  </span>
+                {/if}
+                {#if section.headerAction.label}
+                  {section.headerAction.label}
+                {/if}
+              </Button>
             </div>
-            <Button
-              variant={section.headerAction.variant ?? "outline"}
-              onclick={section.headerAction.onclick}
-              class="h-9 shrink-0 rounded-xl px-3.5 text-xs font-medium"
-              aria-label={section.headerAction.ariaLabel ||
-                section.headerAction.label}
-            >
-              {#if section.headerAction.icon}
-                <span
-                  class="flex shrink-0 items-center {section.headerAction.label
-                    ? 'mr-1.5'
-                    : ''}"
-                >
-                  {@render section.headerAction.icon()}
-                </span>
-              {/if}
-              {#if section.headerAction.label}
-                {section.headerAction.label}
-              {/if}
-            </Button>
+            {#if section.description}
+              <p class={ITEM_DESCRIPTION_CLASS}>{section.description}</p>
+            {/if}
           </div>
         {/if}
 
@@ -138,11 +139,15 @@
             {@const hasDescription = !!(item.description || item.descriptionNode)}
             {@const tightPreset = !!item.presets?.length && !hasDescription}
             <div
-              class="flex flex-col px-4 py-4 {tightPreset
-                ? 'gap-3'
-                : 'gap-2.5'}"
+              class="flex flex-col {tightPreset
+                ? 'gap-3 px-4 pb-6 pt-4'
+                : 'gap-2.5 px-4 py-4'}"
             >
-              <div class="flex items-start justify-between gap-3">
+              <div
+                class="flex justify-between gap-3 {tightPreset
+                  ? 'items-center'
+                  : 'items-start'}"
+              >
                 <label
                   for="{item.id}--{sindex}-{ii}"
                   class="flex flex-1 flex-col gap-0.5"
@@ -367,7 +372,7 @@
             {:else}
               <div class="divide-y divide-border/20">
                 {#each item.value as siteArg (siteArg.id)}
-                  <div class="flex flex-col gap-2 px-4 pb-3 pt-2">
+                  <div class="flex flex-col gap-3 px-4 py-3">
                     <div class="flex items-center gap-2">
                       <Input
                         value={siteArg.domain}

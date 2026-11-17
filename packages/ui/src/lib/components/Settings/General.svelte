@@ -195,7 +195,6 @@
                   type: "switch" as const,
                   id: "always_on_top",
                   label: "Keep Always on Top",
-                  description: "Prevent other windows from covering the app",
                   value: settings.config?.always_on_top ?? false,
                   onchange: (v: boolean) =>
                     settings.update({ always_on_top: v }),
@@ -204,7 +203,6 @@
                   type: "switch" as const,
                   id: "custom_titlebar",
                   label: "Custom Titlebar",
-                  description: "Use custom title bar allowing headless mode",
                   value: settings.config?.custom_titlebar ?? false,
                   onchange: (v: boolean) =>
                     settings.update({ custom_titlebar: v }),
@@ -232,8 +230,6 @@
             type: "switch" as const,
             id: "amoled_mode",
             label: "AMOLED Black",
-            description:
-              "Pure black backgrounds in dark mode",
             value: settings.config?.amoled_mode ?? false,
             onchange: (v: boolean) => settings.update({ amoled_mode: v }),
           },

@@ -18,7 +18,6 @@
     selectDirectory: () => Promise<void>;
   } = $props();
 
-  // The server chooses the download root; the client cannot set a path.
   const isDesktop = transport.kind === "desktop";
   const config = $derived(settings.config ?? DEFAULT_CONFIG);
   const update = (patch: Partial<typeof DEFAULT_CONFIG>) =>
@@ -67,7 +66,7 @@
       />
       <Button
         variant="outline"
-        class="h-11 shrink-0 rounded-xl border-transparent bg-primary/10 px-4 text-sm font-medium text-primary hover:bg-primary/15"
+        class="h-11 shrink-0 rounded-xl px-4 text-sm font-medium"
         onclick={selectDirectory}
       >
         Browse
@@ -78,20 +77,17 @@
 
 {#snippet backendsRow()}
   <div class="flex flex-col gap-3 px-4 py-4">
-    <div class="flex items-start justify-between gap-4">
+    <div class="flex items-center justify-between gap-4">
       <div class="min-w-0">
         <span class="text-[15px] font-normal text-foreground"
           >Update Backends now</span
         >
-        <p class="mt-1 text-xs leading-normal text-muted-foreground">
-          Reinstalls yt-dlp, gallery-dl and spotdl with pip.
-        </p>
       </div>
       <Button
         variant="outline"
         disabled={updating}
         onclick={updateBackends}
-        class="h-11 shrink-0 rounded-xl border-transparent bg-primary/10 px-4 text-sm font-medium text-primary hover:bg-primary/15"
+        class="h-11 shrink-0 rounded-xl px-4 text-sm font-medium"
       >
         {updating ? "Updating…" : "Update"}
       </Button>

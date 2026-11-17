@@ -104,7 +104,7 @@ export function backendAutoUpdateSetting(
     id: "auto_update_backends",
     label: "Update Backends on launch",
     description:
-      "Check for updates to backend each time the app starts",
+      "Check for backend updates each time the app starts",
     value: config.auto_update_backends,
     onchange: (v: boolean) => update({ auto_update_backends: v }),
   };
@@ -165,7 +165,6 @@ export function ytDlpSections(
           type: "textarea",
           id: "yt_format",
           label: "Format / Quality",
-          description: "yt-dlp format selector for which streams to download",
           presets: YT_FORMAT_PRESETS,
           value: config.yt_format,
           onchange: (v: string) => update({ yt_format: v }),
@@ -174,8 +173,8 @@ export function ytDlpSections(
         {
           type: "textarea",
           id: "yt_recode_format",
-          label: "Convert To",
-          description: "Re-encode after downloading to desired format (slower)",
+          label: "Post-processing format",
+          description: "Use ffmpeg to transcode the file to a desired format (slower)",
           presets: YT_RECODE_PRESETS,
           value: config.yt_recode_format,
           onchange: (v: string) => update({ yt_recode_format: v }),
@@ -186,10 +185,6 @@ export function ytDlpSections(
           type: "textarea",
           id: "yt_output_template",
           label: "Output Template",
-          description: outputTemplateDescription
-            ? undefined
-            : "yt-dlp -o filename template. Use %(title)s, %(uploader)s, etc.",
-          descriptionNode: outputTemplateDescription,
           presets: YT_OUTPUT_PRESETS,
           value: config.yt_output_template,
           onchange: (v: string) => update({ yt_output_template: v }),
@@ -204,7 +199,6 @@ export function ytDlpSections(
           type: "textarea",
           id: "yt_global_args",
           label: "Global Arguments",
-          description: "Pass custom arguments directly to the yt-dlp CLI.",
           value: config.yt_global_args,
           onchange: (v: string) => update({ yt_global_args: v }),
           placeholder: "--cookies-from-browser chrome --embed-metadata",
@@ -233,7 +227,6 @@ export function gallerySections(
           type: "textarea",
           id: "gdl_global_args",
           label: "Global Arguments",
-          description: "Pass custom arguments directly to the gallery-dl CLI.",
           value: config.gdl_global_args,
           onchange: (v: string) => update({ gdl_global_args: v }),
           placeholder: "--cookies cookies.txt --write-metadata",
@@ -258,8 +251,7 @@ export function spotdlSections(config: Config, update: ConfigPatch): Section[] {
         {
           type: "textarea",
           id: "spotdl_format",
-          label: "Format",
-          description: "Output track format",
+          label: "Output Format",
           presets: SPOTDL_FORMAT_PRESETS,
           value: config.spotdl_format,
           onchange: (v: string) => update({ spotdl_format: v }),
@@ -269,8 +261,7 @@ export function spotdlSections(config: Config, update: ConfigPatch): Section[] {
         {
           type: "textarea",
           id: "spotdl_bitrate",
-          label: "Bitrate",
-          description: "Output track conversion quality",
+          label: "Output Bitrate",
           presets: SPOTDL_BITRATE_PRESETS,
           value: config.spotdl_bitrate,
           onchange: (v: string) => update({ spotdl_bitrate: v }),
@@ -286,7 +277,6 @@ export function spotdlSections(config: Config, update: ConfigPatch): Section[] {
           type: "textarea",
           id: "spotdl_global_args",
           label: "Global Arguments",
-          description: "Pass custom arguments directly to the spotdl CLI.",
           value: config.spotdl_global_args,
           onchange: (v: string) => update({ spotdl_global_args: v }),
           placeholder: "--threads 4",
@@ -321,7 +311,6 @@ function siteArgsSection(
 ): Section {
   return {
     label: "Site-Based Arguments",
-    description: "Pass custom arguments for specific sites only",
     headerAction: {
       label: "Add Site",
       onclick: () =>

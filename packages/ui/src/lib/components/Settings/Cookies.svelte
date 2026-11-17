@@ -235,7 +235,6 @@
             type: "input",
             id: "cookie_domain",
             label: "Domain",
-            description: "Base domain of the website (e.g. google, youtube)",
             value: cookieDomain,
             onchange: (v: string) => (cookieDomain = v),
             placeholder: "google",
