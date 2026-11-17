@@ -30,6 +30,7 @@ pub fn mtime_flag(backend: Backend, preserve: bool) -> Option<&'static str> {
     }
 }
 const DEFAULT_OUTPUT_TEMPLATE: &str = "%(title)s.%(ext)s";
+const TRIM_LEN: u32 = 240;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -265,7 +266,7 @@ impl Engine {
     /// would use, so the probe cannot fail for a reason the download would not hit.
     async fn probe_ytdlp(&self, url: &str, spec: &JobSpec) -> std::result::Result<(), String> {
         let (mut cmd, _) = self
-            .apply_download_args(url, Backend::YtDlp, spec)
+            .apply_download_args(url, Backend::YtDlp, spec, None, false)
             .await
             .map_err(|e| e.to_string())?;
         cmd.args(["--print", "title", "--no-download"])
@@ -388,6 +389,8 @@ impl Engine {
         url: &str,
         backend: Backend,
         spec: &JobSpec,
+        trim_filenames: Option<u32>,
+        truncate_paths: bool,
     ) -> Result<(Command, bool)> {
         let settings = &spec.settings;
         let mut cmd = self
@@ -434,6 +437,9 @@ impl Engine {
                     "%(progress)j",
                     "--newline",
                 ]);
+                if let Some(limit) = trim_filenames {
+                    cmd.args(["--trim-filenames", &limit.to_string()]);
+                }
 
                 if is_youtube {
                     if !settings.yt_format.is_empty() {
@@ -476,6 +482,12 @@ impl Engine {
             }
             Backend::GalleryDl => {
                 cmd.args(["-d", "."]);
+                if truncate_paths {
+                    cmd.args([
+                        "-o",
+                        "directory=[\"{category}\", \"{gallery_id} {title[:120]}\"]",
+                    ]);
+                }
                 if let Some(flag) = mtime_flag(backend, settings.preserve_mtime) {
                     cmd.arg(flag);
                 }
@@ -583,7 +595,10 @@ impl Engine {
 
         self.emit(CoreEvent::DownloadStarted { id: id.clone() });
 
-        let prepared = match self.apply_download_args(&request.url, backend, &spec).await {
+        let prepared = match self
+            .apply_download_args(&request.url, backend, &spec, None, false)
+            .await
+        {
             Ok(prepared) => prepared,
             Err(e) => {
                 self.emit(CoreEvent::DownloadError {
@@ -610,7 +625,67 @@ impl Engine {
         {
             Ok(files) => finished_files = files,
             Err(e) => {
-                if prepared.1 {
+                let err = e.to_string();
+                let gdl = backend == Backend::GalleryDl && long_dir(&err);
+                if backend != Backend::SpotDl
+                    && too_long(&err)
+                    && (backend == Backend::YtDlp || gdl)
+                {
+                    println!(
+                        "[MediaMagnet] Download failed ({}), retrying with shorter filenames...",
+                        id
+                    );
+                    self.status(&id, "FAILED: Retrying with shorter filenames...");
+
+                    let trim = (backend == Backend::YtDlp).then_some(TRIM_LEN);
+                    match self
+                        .apply_download_args(
+                            &request.url,
+                            backend,
+                            &spec,
+                            trim,
+                            backend == Backend::GalleryDl,
+                        )
+                        .await
+                    {
+                        Ok((trimmed_cmd, _)) => {
+                            match self
+                                .download_url(
+                                    trimmed_cmd,
+                                    &request.url,
+                                    backend,
+                                    &request.base_dir,
+                                    &id,
+                                    spec.clone(),
+                                )
+                                .await
+                            {
+                                Ok(files) => finished_files = files,
+                                Err(e) => {
+                                    println!(
+                                        "[MediaMagnet] Download failed with shorter filenames ({}): {}",
+                                        id, e
+                                    );
+                                    self.emit(CoreEvent::DownloadError {
+                                        id: id.clone(),
+                                        value: format!(
+                                            "Download failed: {}",
+                                            with_probe_reason(e.to_string())
+                                        ),
+                                    });
+                                    succeeded = false;
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            self.emit(CoreEvent::DownloadError {
+                                id: id.clone(),
+                                value: e.to_string(),
+                            });
+                            succeeded = false;
+                        }
+                    }
+                } else if prepared.1 {
                     println!(
                         "[MediaMagnet] Download failed ({}), retrying without cookies...",
                         id
@@ -623,7 +698,7 @@ impl Engine {
                     };
 
                     match self
-                        .apply_download_args(&request.url, backend, &retry_spec)
+                        .apply_download_args(&request.url, backend, &retry_spec, None, false)
                         .await
                     {
                         Ok((retry_cmd, _)) => {
@@ -754,6 +829,8 @@ impl Engine {
         let id_out = id.clone();
         let base_out = base_dir.to_path_buf();
         let files_out = output_files.clone();
+        let filename_error = Arc::new(Mutex::new(None::<String>));
+        let filename_out = filename_error.clone();
 
         let out_handle = tokio::spawn(async move {
             match backend {
@@ -877,6 +954,12 @@ impl Engine {
                     let mut downloaded = 0usize;
 
                     while let Ok(Some(line)) = out_reader.next_line().await {
+                        if too_long(&line) {
+                            if let Ok(mut slot) = filename_out.lock() {
+                                *slot = Some(line.clone());
+                            }
+                        }
+
                         // gallery-dl prints each finished file path on stdout.
                         record_output_file(&files_out, &base_out, &line);
 
@@ -904,12 +987,30 @@ impl Engine {
 
         let sink_err = self.sink.clone();
         let id_err = id.clone();
+        let filename_err = filename_error.clone();
+        let engine_err = self.clone();
+        let kill_id = id.clone();
         let err_handle = tokio::spawn(async move {
             let mut error = String::new();
 
             while let Ok(Some(line)) = err_reader.next_line().await {
                 println!("{:#}", line);
                 let line_l = line.to_lowercase();
+
+                if too_long(&line) {
+                    if let Ok(mut slot) = filename_err.lock() {
+                        *slot = Some(line.clone());
+                    }
+                    // A long directory affects every remaining item; stop now.
+                    // A long individual filename should not abort the others.
+                    if long_dir(&line) {
+                        if let Ok(mut guard) = engine_err.downloads.lock() {
+                            if let Some(entry) = guard.get_mut(&kill_id) {
+                                let _ = entry.child.start_kill();
+                            }
+                        }
+                    }
+                }
 
                 if line_l.contains("[error") || line_l.contains("error:") {
                     error = line.clone();
@@ -969,6 +1070,10 @@ impl Engine {
 
         let (_, err) = tokio::join!(out_handle, err_handle);
         let error = err.unwrap_or_default();
+        let filename_error = filename_error
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone();
 
         if backend == Backend::GalleryDl {
             self.postprocess_directlink(base_dir)?;
@@ -982,6 +1087,22 @@ impl Engine {
                     *file = format!("{domain}/{name}");
                 }
             }
+        }
+
+        if let Some(message) = filename_error {
+            let keep_files = !long_dir(&message)
+                && !output_files
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .is_empty();
+            if !keep_files {
+                return Err(message.into());
+            }
+            println!(
+                "[MediaMagnet] Skipped a file with an overlong name, keeping the others: {}",
+                message
+            );
+            return collect_files(base_dir, &output_files, started_at);
         }
 
         if let Some(status) = exit_status {
@@ -998,20 +1119,7 @@ impl Engine {
             }
         }
 
-        let mut files = output_files
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .clone();
-
-        // spotdl never prints final paths, and other backends can be quiet when
-        // a file already existed. Fall back to files written during this job.
-        if files.is_empty() {
-            files = scan_recent_files(base_dir, started_at);
-        }
-
-        files.sort();
-        files.dedup();
-        Ok(files)
+        collect_files(base_dir, &output_files, started_at)
     }
 
     fn postprocess_directlink(&self, base_dir: &Path) -> Result<()> {
@@ -1339,8 +1447,61 @@ fn record_output_file(files: &Mutex<Vec<String>>, base_dir: &Path, line: &str) -
     true
 }
 
+pub fn too_long(message: &str) -> bool {
+    let message = message.to_ascii_lowercase();
+    [
+        "file name too long",
+        "filename too long",
+        "enametoolong",
+        "errno 36",
+        "os error 36",
+        "error 36",
+    ]
+    .iter()
+    .any(|needle| message.contains(needle))
+}
+
+/// Whether the overlong component is a directory shared by the job.
+pub fn long_dir(message: &str) -> bool {
+    let lower = message.to_ascii_lowercase();
+    let Some(index) = lower.find("file name too long:") else {
+        return false;
+    };
+    let path = message[index + "file name too long:".len()..]
+        .trim()
+        .trim_matches(|c| c == '\'' || c == '"');
+    if path.ends_with(['/', '\\']) {
+        return true;
+    }
+    let parts: Vec<&str> = path
+        .split(['/', '\\'])
+        .filter(|part| !part.is_empty() && *part != ".")
+        .collect();
+    parts
+        .iter()
+        .max_by_key(|part| part.len())
+        .is_some_and(|longest| parts.last() != Some(longest))
+}
+
 /// Fallback for backends that do not print paths (spotdl): every file written
 /// after the job started, relative to `base_dir`.
+fn collect_files(
+    base_dir: &Path,
+    output_files: &Arc<Mutex<Vec<String>>>,
+    started_at: std::time::SystemTime,
+) -> Result<Vec<String>> {
+    let mut files = output_files
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .clone();
+    if files.is_empty() {
+        files = scan_recent_files(base_dir, started_at);
+    }
+    files.sort();
+    files.dedup();
+    Ok(files)
+}
+
 fn scan_recent_files(base_dir: &Path, since: std::time::SystemTime) -> Vec<String> {
     let Ok(base) = base_dir.canonicalize() else {
         return Vec::new();

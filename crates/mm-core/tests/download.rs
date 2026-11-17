@@ -1,5 +1,6 @@
 use mm_core::download::{
-    contains_separator, matching_cookie, mtime_flag, recode_args, url_host_is, Backend, JobCookie,
+    contains_separator, long_dir, matching_cookie, mtime_flag, recode_args, too_long, url_host_is,
+    Backend, JobCookie,
 };
 
 fn cookie(domain: &str, content: &str) -> JobCookie {
@@ -7,6 +8,29 @@ fn cookie(domain: &str, content: &str) -> JobCookie {
         domain: domain.into(),
         content: content.into(),
     }
+}
+
+#[test]
+fn detects_enametoolong_errors() {
+    assert!(too_long(
+        "ERROR: unable to open for writing: [Errno 36] File name too long: '/tmp/a'"
+    ));
+    assert!(too_long("OSError: [Errno 36] File name too long"));
+    assert!(too_long("os error 36"));
+    assert!(too_long("ENAMETOOLONG"));
+    assert!(!too_long("HTTP Error 404: Not Found"));
+}
+
+#[test]
+fn classifies_long_path_components() {
+    let directory = "OSError: [Errno 36] File name too long: './nhentai/697736 [Torinuki] A very long gallery directory title that goes on and on and on/nhentai_697736_009.webp.part'";
+    assert!(long_dir(directory), "long folder");
+    let filename = "OSError: [Errno 36] File name too long: './nhentai/697736/this_is_a_very_long_individual_file_name_that_keeps_going.webp.part'";
+    assert!(!long_dir(filename), "long file");
+
+    let directory_only = "OSError: [Errno 36] File name too long: './nhentai/697736 [Torinuki] A very long gallery directory title that goes on and on and on/'";
+    assert!(long_dir(directory_only), "long folder ending in separator");
+    assert!(!long_dir("no path here"));
 }
 
 #[test]
