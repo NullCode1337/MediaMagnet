@@ -9,11 +9,10 @@
   import { applyAccent, settings } from "$lib/stores/settings.svelte";
   import { transport } from "$lib/stores/transport.svelte";
   import { Slider } from "bits-ui";
-  import { mode, userPrefersMode } from "mode-watcher";
+  import { mode, setMode, userPrefersMode } from "mode-watcher";
 
   let { currentPlatform }: { currentPlatform: string } = $props();
 
-  // Window controls only exist in the desktop app; the server has no window.
   const isDesktop = transport.kind === "desktop";
 
   let pendingAccent = $state<Accent | null>(null);
@@ -85,6 +84,7 @@
   }
 
   function onSwatch(kind: "black" | "white") {
+    setMode(kind === "black" ? "dark" : "light");
     commitAccent({ kind, hue: accent.hue });
   }
 
@@ -172,7 +172,7 @@
       <div class="flex items-center gap-2 pt-1">
         <button
           type="button"
-          aria-label="Black accent"
+          aria-label="Black accent (dark theme)"
           aria-pressed={accent.kind === "black"}
           onclick={() => onSwatch("black")}
           class="size-9 cursor-pointer rounded-full bg-black ring-1 ring-border/50
@@ -183,7 +183,7 @@
         ></button>
         <button
           type="button"
-          aria-label="White accent"
+          aria-label="White accent (light theme)"
           aria-pressed={accent.kind === "white"}
           onclick={() => onSwatch("white")}
           class="size-9 cursor-pointer rounded-full bg-white ring-1 ring-border/50

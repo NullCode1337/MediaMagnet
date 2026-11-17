@@ -81,7 +81,7 @@
   --mobile-pill: color-mix(in oklab, var(--primary) 5%, transparent);
 }
 
-:root[data-accent="black"] {
+.dark[data-accent="black"] {
   --background: #000000;
   --foreground: #ffffff;
   --card: #000000;
@@ -110,7 +110,7 @@
   --mobile-pill: rgb(255 255 255 / 8%);
 }
 
-:root[data-accent="white"] {
+:root:not(.dark)[data-accent="white"] {
   --background: #ffffff;
   --foreground: #000000;
   --card: #ffffff;
@@ -119,22 +119,22 @@
   --popover-foreground: #000000;
   --primary: #000000;
   --primary-foreground: #ffffff;
-  --secondary: #f4f4f5;
+  --secondary: #ececef;
   --secondary-foreground: #000000;
-  --muted: #f4f4f5;
+  --muted: #ececef;
   --muted-foreground: #71717a;
-  --accent: #e4e4e7;
+  --accent: #e2e2e6;
   --accent-foreground: #000000;
-  --border: rgb(0 0 0 / 12%);
-  --input: rgb(0 0 0 / 16%);
+  --border: rgb(0 0 0 / 15%);
+  --input: rgb(0 0 0 / 19%);
   --ring: #000000;
-  --sidebar: #fafafa;
+  --sidebar: #f7f7f8;
   --sidebar-foreground: #000000;
   --sidebar-primary: #000000;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #e4e4e7;
+  --sidebar-accent: #e2e2e6;
   --sidebar-accent-foreground: #000000;
-  --sidebar-border: rgb(0 0 0 / 8%);
+  --sidebar-border: rgb(0 0 0 / 9%);
   --sidebar-ring: #000000;
 }
 

@@ -35,6 +35,11 @@ export function applyAccent(
   }
 }
 
+function syncModeToAccent(config: Pick<FullConfig, "accent_kind"> | null) {
+  if (config?.accent_kind === "black") setMode("dark");
+  else if (config?.accent_kind === "white") setMode("light");
+}
+
 type SaveState = "idle" | "saving" | "saved" | "error";
 
 class Settings {
@@ -77,6 +82,7 @@ class Settings {
       this.config = config;
       this.lastPersisted = JSON.stringify(config);
       applyAccent(config);
+      syncModeToAccent(config);
     } catch (err) {
       console.error("[MediaMagnet][Settings] failed to load settings:", err);
       this.loadError = String(err);
@@ -191,6 +197,7 @@ class Settings {
   async replaceAll(next: FullConfig) {
     this.config = next;
     applyAccent(next);
+    syncModeToAccent(next);
     await this.persist();
   }
 
@@ -199,6 +206,7 @@ class Settings {
     this.config = config;
     this.lastPersisted = JSON.stringify(config);
     applyAccent(config);
+    syncModeToAccent(config);
   }
 
   async applyImport(rawText: string, source: "clipboard" | "file") {
@@ -385,6 +393,12 @@ class Settings {
 
   async setTheme(themeMode: "system" | "dark" | "light") {
     setMode(themeMode);
+    const kind = this.config?.accent_kind;
+    if (themeMode === "light" && kind === "black") {
+      await this.update({ accent_kind: "white" });
+    } else if (themeMode === "dark" && kind === "white") {
+      await this.update({ accent_kind: "black" });
+    }
   }
 }
 
