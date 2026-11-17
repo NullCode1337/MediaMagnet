@@ -3,7 +3,7 @@
   import { accentToHex, hexToAccent, type Accent } from "$lib/color";
   import { applyAccent, settings } from "$lib/stores/settings.svelte";
   import { transport } from "$lib/stores/transport.svelte";
-  import { userPrefersMode } from "mode-watcher";
+  import { mode, userPrefersMode } from "mode-watcher";
 
   let { currentPlatform }: { currentPlatform: string } = $props();
 
@@ -13,7 +13,7 @@
   let pendingAccent = $state<Accent | null>(null);
   let currentAccent = $derived<Accent>({
     kind: settings.config?.accent_kind ?? "hue",
-    hue: settings.config?.accent_hue ?? 260,
+    hue: settings.config?.accent_hue ?? 298,
   });
   let accent = $derived(pendingAccent ?? currentAccent);
   let primaryHex = $derived(accentToHex(accent));
@@ -124,10 +124,6 @@
 
     <div class="flex items-start gap-2">
       <div class="flex min-w-0 flex-1 flex-col gap-1">
-        <span
-          class="text-[13px] font-semibold tracking-wide text-muted-foreground"
-          >Hex</span
-        >
         <div
           class="flex h-11 items-center gap-2.5 rounded-xl border border-transparent bg-background/70 px-3 font-mono text-sm ring-1 ring-border/40 transition-shadow focus-within:ring-2 focus-within:ring-ring/40 {hexError
             ? 'ring-destructive/50'
@@ -153,7 +149,7 @@
         {/if}
       </div>
 
-      <div class="flex items-center gap-2 pt-6">
+      <div class="flex items-center gap-2 pt-1">
         <button
           type="button"
           aria-label="Black accent"
@@ -207,6 +203,19 @@
                   onchange: (v: boolean) =>
                     settings.update({ custom_titlebar: v }),
                 },
+                {
+                  type: "segmented" as const,
+                  label: "Title Bar Style",
+                  visible: settings.config?.custom_titlebar ?? false,
+                  options: [
+                    { label: "System", value: "system" },
+                    { label: "macOS", value: "mac" },
+                    { label: "Windows", value: "win" },
+                  ],
+                  value: settings.config?.custom_titlebar_type ?? "system",
+                  onchange: (v: string) =>
+                    settings.update({ custom_titlebar_type: v }),
+                },
               ],
             },
           ]
@@ -232,34 +241,10 @@
             label: "AMOLED Black",
             value: settings.config?.amoled_mode ?? false,
             onchange: (v: boolean) => settings.update({ amoled_mode: v }),
+            visible: mode.current !== "light",
           },
+          { type: "custom" as const, node: accentColorPicker },
         ],
-      },
-
-      ...(isDesktop && settings.config?.custom_titlebar
-        ? [
-            {
-              label: "Title Bar Style",
-              items: [
-                {
-                  type: "segmented" as const,
-                  options: [
-                    { label: "System", value: "system" },
-                    { label: "macOS", value: "mac" },
-                    { label: "Windows", value: "win" },
-                  ],
-                  value: settings.config?.custom_titlebar_type ?? "system",
-                  onchange: (v: string) =>
-                    settings.update({ custom_titlebar_type: v }),
-                },
-              ],
-            },
-          ]
-        : []),
-
-      {
-        label: "Color",
-        items: [{ type: "custom", node: accentColorPicker }],
       },
     ],
   }}

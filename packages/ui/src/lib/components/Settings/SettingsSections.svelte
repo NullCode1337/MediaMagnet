@@ -2,7 +2,8 @@
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
   import { Switch } from "$lib/components/ui/switch";
-  import { ChevronDown, Delete } from "@lucide/svelte";
+  import { Delete, ChevronDown } from "@lucide/svelte";
+  import { slide } from "svelte/transition";
   import type { GlobalArg, Section } from "./types";
 
   const ITEM_TITLE_CLASS =
@@ -80,12 +81,14 @@
 
         {#each section.items as item, ii (ii)}
           {#if item.type === "switch"}
-            <label
-              for="{item.id}--{sindex}-{ii}"
-              class="group flex min-h-16 cursor-pointer items-center gap-4 px-4 py-3.5 transition-colors hover:bg-foreground/3 {item.disabled
-                ? 'pointer-events-none opacity-40'
-                : ''}"
-            >
+            {#if item.visible !== false}
+              <label
+                for="{item.id}--{sindex}-{ii}"
+                transition:slide={{ duration: 300 }}
+                class="group flex min-h-16 cursor-pointer items-center gap-4 px-4 py-3.5 transition-colors hover:bg-foreground/3 {item.disabled
+                  ? 'pointer-events-none opacity-40'
+                  : ''}"
+              >
               {#if item.icon}
                 <div
                   class="shrink-0 text-primary group-hover:text-foreground transition-colors"
@@ -110,7 +113,8 @@
                 onCheckedChange={item.onchange}
                 class="shrink-0 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input"
               />
-            </label>
+              </label>
+            {/if}
           {:else if item.type === "input"}
             <div class="flex flex-col gap-2.5 px-4 py-4">
               <label
@@ -202,7 +206,11 @@
               ></textarea>
             </div>
           {:else if item.type === "segmented"}
-            <div class="flex flex-col gap-2.5 px-4 py-4">
+            {#if item.visible !== false}
+              <div
+                class="flex flex-col gap-2.5 px-4 py-4"
+                transition:slide={{ duration: 300 }}
+              >
               {#if item.label}
                 <div>
                   <p class={ITEM_TITLE_CLASS}>{item.label}</p>
@@ -240,6 +248,7 @@
                 {/each}
               </div>
             </div>
+            {/if}
           {:else if item.type === "list"}
             {#if item.entries.length === 0}
               <div class="p-4">

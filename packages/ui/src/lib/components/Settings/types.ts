@@ -23,6 +23,7 @@ export type SwitchItem = {
   value: boolean;
   onchange: (val: boolean) => void;
   disabled?: boolean;
+  visible?: boolean;
 };
 
 export type InputItem = {
@@ -56,6 +57,7 @@ export type SegmentedItem = {
   type: "segmented";
   label?: string;
   description?: string;
+  visible?: boolean;
   options: Option[];
   value: string;
   onchange: (val: string) => void;
