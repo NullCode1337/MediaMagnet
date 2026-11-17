@@ -93,7 +93,7 @@ export const DEFAULT_CONFIG: Config = {
 
   dark_mode: true,
   amoled_mode: false,
-  accent_hue: 260,
+  accent_hue: 298,
   accent_kind: "hue",
   always_on_top: false,
   custom_titlebar: false,

@@ -8,7 +8,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --hue: 260;
+  --hue: 298;
   --radius: 0.625rem;
   --background: oklch(0.98 0.008 var(--hue));
   --foreground: oklch(0.25 0.02 var(--hue));

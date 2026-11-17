@@ -541,7 +541,7 @@ export interface components {
             dark_mode?: boolean;
             /** @description Default `false`. */
             amoled_mode?: boolean;
-            /** @description Default `260`. */
+            /** @description Default `298`. */
             accent_hue?: number;
             /**
              * @description Default `hue`.

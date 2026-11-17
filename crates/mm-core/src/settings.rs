@@ -71,7 +71,7 @@ impl Default for Settings {
             auto_update_backends: false,
             dark_mode: true,
             amoled_mode: false,
-            accent_hue: 260,
+            accent_hue: 298,
             accent_kind: "hue".to_string(),
             custom_titlebar_type: "system".to_string(),
             yt_format: "bv*+ba/b".to_string(),

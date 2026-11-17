@@ -1015,7 +1015,7 @@ components:
           type: integer
           minimum: 0
           maximum: 360
-          description: Default `260`.
+          description: Default `298`.
         accent_kind:
           type: string
           enum: [hue, black, white]
