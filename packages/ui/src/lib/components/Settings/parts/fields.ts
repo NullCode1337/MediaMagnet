@@ -1,4 +1,4 @@
-import type { Config, DownloadBackend } from "@mediamagnet/api";
+import { randomId, type Config, type DownloadBackend } from "@mediamagnet/api";
 import type { Snippet } from "svelte";
 import type {
   GlobalArg,
@@ -312,7 +312,7 @@ function siteArgsSection(
     headerAction: {
       label: "Add Site",
       onclick: () =>
-        onchange([...value, { id: crypto.randomUUID(), domain: "", args: "" }]),
+        onchange([...value, { id: randomId(), domain: "", args: "" }]),
     },
     items: [
       {

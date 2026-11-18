@@ -89,6 +89,7 @@ export interface Transport extends Environment {
   pause(id: string): Promise<void>;
   cancel(id: string, url: string): Promise<void>;
   cancelAll(): Promise<void>;
+  saveJobFiles?(id: string, files: string[]): Promise<void>;
 
   // settings
   settings(): Promise<AnyConfig>;

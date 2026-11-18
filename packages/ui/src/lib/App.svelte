@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { ModeWatcher, mode } from "mode-watcher";
+  import { randomId } from "@mediamagnet/api";
   import type {
     DownloadOptions,
     DownloadTask,
@@ -31,6 +32,7 @@
   // eslint-disable-next-line svelte/prefer-writable-derived
   let isCollapsed = $state(false);
   let urlInput = $state("");
+  let urlInputEl = $state<HTMLInputElement | null>(null);
   let addTaskOpen = $state(false);
   let diskUsage = $state(0);
   let currentPlatform = $state("");
@@ -95,7 +97,7 @@
         );
       }
 
-      const id = existingId || crypto.randomUUID();
+      const id = existingId || randomId();
 
       if (existingId) {
         updateTask(id, {
@@ -163,11 +165,18 @@
         await startDownload(clipboardText);
         urlInput = "";
       } catch (err) {
-        await transport.notify(String(err));
+        await transport.notify(err instanceof Error ? err.message : String(err));
+        urlInputEl?.focus();
       }
     } else {
-      await startDownload(urlInput);
-      urlInput = "";
+      try {
+        await startDownload(urlInput);
+        urlInput = "";
+      } catch (err) {
+        await transport.notify(
+          err instanceof Error ? err.message : String(err),
+        );
+      }
     }
   }
 
@@ -576,6 +585,7 @@
                     <Input
                       placeholder="Enter URL"
                       bind:value={urlInput}
+                      bind:ref={urlInputEl}
                       class="h-12 bg-muted/40 focus-visible:ring-1 text-sm rounded-xl w-full"
                     />
                   </form>

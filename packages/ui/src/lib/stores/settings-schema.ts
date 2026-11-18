@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG, type Config } from "@mediamagnet/api";
+import { DEFAULT_CONFIG, randomId, type Config } from "@mediamagnet/api";
 import type { AccentKind } from "$lib/color";
 
 export type FieldProblem =
@@ -207,7 +207,7 @@ export function normalizeConfig(raw: unknown): {
             const id =
               typeof obj.id === "string" && obj.id.length > 0
                 ? obj.id
-                : crypto.randomUUID();
+                : randomId();
             list.push({ id, domain: obj.domain, args: obj.args });
           } else {
             issues.push({

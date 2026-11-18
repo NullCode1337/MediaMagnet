@@ -19,6 +19,7 @@
     CircleAlert,
     RotateCcw,
     FolderOpen,
+    Download,
     File as FileIcon,
     X,
     Copy,
@@ -282,6 +283,19 @@
               <FolderOpen size={13} />
             {/if}
           </Button>
+        {:else if transport.saveJobFiles && item.id && (item.files?.length ?? 0) > 0}
+          <Button
+            variant="ghost"
+            size="icon"
+            class="h-7 w-7 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all hover:scale-105 active:scale-95"
+            title="Download file"
+            onclick={(e) => {
+              e.stopPropagation();
+              void transport.saveJobFiles?.(item.id!, item.files!);
+            }}
+          >
+            <Download size={13} />
+          </Button>
         {/if}
       {:else}
         <Button
@@ -449,6 +463,17 @@
                   >
                     <FolderOpen size={13} />
                   </Button>
+                {:else if transport.saveJobFiles && selectedItem?.id}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    class="h-7 w-7 shrink-0 rounded-lg text-muted-foreground hover:bg-background/70 hover:text-foreground"
+                    title="Download file"
+                    aria-label="Download {file}"
+                    onclick={() => selectedItem && transport.saveJobFiles?.(selectedItem.id!, [file])}
+                  >
+                    <Download size={13} />
+                  </Button>
                 {/if}
               </div>
             {/each}
@@ -487,6 +512,15 @@
         >
           <FolderOpen size={14} />
           {selectedFiles.length === 1 ? "Open File" : "Open Folder"}
+        </Button>
+      {:else if !selectedFailed && selectedFiles.length > 0 && transport.saveJobFiles && selectedItem?.id}
+        <Button
+          class="gap-2 rounded-xl cursor-pointer"
+          onclick={() =>
+            selectedItem && transport.saveJobFiles?.(selectedItem.id!, selectedFiles)}
+        >
+          <Download size={14} />
+          {selectedFiles.length === 1 ? "Download" : "Download All"}
         </Button>
       {:else}
         <Button

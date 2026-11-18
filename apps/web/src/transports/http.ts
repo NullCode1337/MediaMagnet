@@ -1,6 +1,7 @@
 import {
   DEFAULT_CONFIG,
   nullWindow,
+  randomId,
   type AnyConfig,
   type AskOptions,
   type CookieInput,
@@ -171,7 +172,7 @@ export function createHttpTransport(): Transport {
           resolve(null);
           return;
         }
-        const id = `file://${crypto.randomUUID()}/${file.name}`;
+        const id = `file://${randomId()}/${file.name}`;
         pickedFiles.set(id, file);
         resolve(id);
       };
@@ -345,6 +346,11 @@ export function createHttpTransport(): Transport {
     cancelAll: async () => {
       requestedJobs.clear();
       await send("DELETE", "/downloads");
+    },
+    saveJobFiles: async (id, files) => {
+      if (files.length === 0) return;
+      if (files.length > 1) saveJobArchive(id, archiveName(id, files));
+      else await saveJobFile(id, files[0]);
     },
 
     settings: async () => storedConfig() ?? DEFAULT_CONFIG,
@@ -572,8 +578,42 @@ export function createHttpTransport(): Transport {
     },
 
     platform: () => "browser",
-    readClipboard: () => navigator.clipboard.readText(),
-    writeClipboard: (text) => navigator.clipboard.writeText(text),
+    readClipboard: async () => {
+      if (!window.isSecureContext || !navigator.clipboard?.readText) {
+        throw new Error(
+          "Clipboard access needs HTTPS on this device. Paste URL into the field instead",
+        );
+      }
+      try {
+        return await navigator.clipboard.readText();
+      } catch {
+        throw new Error(
+          "Clipboard permission was denied. Paste URL into the field instead",
+        );
+      }
+    },
+    writeClipboard: async (text) => {
+      if (navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(text);
+          return;
+        } catch {
+          // fall back to the selection-based copy below
+        }
+      }
+      const area = document.createElement("textarea");
+      area.value = text;
+      area.setAttribute("readonly", "");
+      area.style.position = "fixed";
+      area.style.opacity = "0";
+      document.body.appendChild(area);
+      area.focus();
+      area.select();
+      area.setSelectionRange(0, text.length);
+      const copied = document.execCommand("copy");
+      area.remove();
+      if (!copied) throw new Error("Clipboard is not available on this connection");
+    },
     openPath: async () => {
       throw new Error("opening files is only available in the desktop app");
     },
