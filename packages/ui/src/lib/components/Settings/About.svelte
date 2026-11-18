@@ -88,13 +88,11 @@
     },
     {
       label: "GitHub repository",
-      value: "NullCode1337/MediaMagnet",
       href: REPO,
       icon: Icons.GitFork,
     },
     {
       label: "Report an issue",
-      value: "MediaMagnet/issues",
       href: `${REPO}/issues`,
       icon: Icons.Bug,
     },
@@ -255,7 +253,7 @@
           <button
             type="button"
             onclick={() => transport.openUrl(link.href)}
-            class="group flex w-full cursor-pointer items-center gap-4 px-4 py-3 text-left transition-colors hover:bg-foreground/5"
+            class="group flex min-h-16 w-full cursor-pointer items-center gap-4 px-4 py-3 text-left transition-colors hover:bg-foreground/5"
           >
             <span class="shrink-0 text-primary">
               <Icon size={18} />
@@ -266,11 +264,13 @@
               >
                 {link.label}
               </span>
-              <span
-                class="mt-0.5 block truncate text-xs leading-relaxed text-muted-foreground"
-              >
-                {link.value}
-              </span>
+              {#if link.value}
+                <span
+                  class="mt-0.5 block truncate text-xs leading-relaxed text-muted-foreground"
+                >
+                  {link.value}
+                </span>
+              {/if}
             </span>
             <Icons.ExternalLink
               size={14}
