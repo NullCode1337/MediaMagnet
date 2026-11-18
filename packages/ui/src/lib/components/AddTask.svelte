@@ -250,7 +250,7 @@
 {#if isMobile && open}
   <div
     class="fixed inset-0 z-50 flex flex-col overflow-hidden bg-background {uiState.showCustom
-      ? 'top-10! h-[calc(100vh-2.5rem)]!'
+      ? 'top-10! h-[calc(100dvh-2.5rem)]!'
       : ''}"
     style="padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right);"
   >

@@ -424,7 +424,7 @@
 />
 
 <div
-  class="flex flex-col h-screen w-full bg-background text-foreground overflow-hidden"
+  class="flex flex-col h-dvh w-full bg-background text-foreground overflow-hidden"
   style="padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right);"
 >
   {#if transport.kind === "desktop"}

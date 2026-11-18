@@ -5,6 +5,11 @@ export const uiState = $state({
   innerHeight: 0,
   isMaximized: false,
   activeTab: "home" as "downloads" | "home" | "settings",
+  settingsListTick: 0,
+
+  returnToSettingsList() {
+    this.settingsListTick += 1;
+  },
 
   get showCustom() {
     return settings.config?.custom_titlebar ?? true;

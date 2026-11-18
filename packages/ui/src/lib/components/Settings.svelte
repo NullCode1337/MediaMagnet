@@ -63,6 +63,11 @@
     if (mainEl) mainEl.scrollTop = 0;
   });
 
+  $effect(() => {
+    void uiState.settingsListTick;
+    mobileView = "list";
+  });
+
   const CONFIG_TABS = [
     { id: "general", label: "Appearance", icon: Icons.Monitor },
     { id: "downloads", label: "Downloads", icon: Icons.Download },
@@ -407,7 +412,7 @@
       class="p-0 flex flex-col overflow-hidden shadow-[0_28px_90px_-30px_rgb(0_0_0/0.6)] transition-all max-sm:z-60
       {isFullscreen
         ? `w-screen! max-w-none! max-h-none! rounded-none! m-0!
-           ${uiState.showCustom ? "top-10! h-[calc(100vh-2.5rem)]!" : "h-screen!"}`
+           ${uiState.showCustom ? "top-10! h-[calc(100dvh-2.5rem)]!" : "h-dvh!"}`
         : `max-w-275! w-full! h-[89vh]! rounded-[20px]! backdrop:backdrop-blur-md
            ${uiState.showCustom ? "top-10!" : ""}`}"
       style="padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right);"

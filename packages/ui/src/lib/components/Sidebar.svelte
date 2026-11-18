@@ -211,7 +211,10 @@
             Settings,
             "Settings",
             uiState.activeTab === "settings",
-            () => (uiState.activeTab = "settings"),
+            () => {
+              if (uiState.activeTab === "settings") uiState.returnToSettingsList();
+              else uiState.activeTab = "settings";
+            },
           )}
         </div>
       </div>
