@@ -7,6 +7,11 @@
 
 @custom-variant dark (&:is(.dark *));
 
+html,
+body {
+  touch-action: manipulation;
+}
+
 :root {
   --hue: 298;
   --radius: 0.625rem;
