@@ -4,6 +4,7 @@
   import { transport } from "$lib/stores/transport.svelte";
   import { updater } from "$lib/stores/updater.svelte";
   import { Button } from "$lib/components/ui/button";
+  import SettingsHeader from "$lib/components/Settings/SettingsHeader.svelte";
   import type { ToolInfo } from "@mediamagnet/api";
 
   const REPO = "https://github.com/NullCode1337/MediaMagnet";
@@ -107,15 +108,7 @@
 </script>
 
 <div class="flex w-full flex-col">
-  <header class="flex shrink-0 items-start justify-between gap-4 pb-4 pt-0.5">
-    <div class="flex min-w-0 flex-col">
-      <h1
-        class="text-[22px] font-semibold leading-tight tracking-[-0.02em] text-foreground sm:text-[26px]"
-      >
-        About
-      </h1>
-    </div>
-  </header>
+  <SettingsHeader title="About" />
 
   <div class="flex flex-col gap-4">
     <div class="overflow-hidden rounded-2xl bg-secondary/55">

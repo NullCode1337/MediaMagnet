@@ -1,52 +1,17 @@
 <script lang="ts">
-  import { Button } from "$lib/components/ui/button";
   import SettingsSections from "./SettingsSections.svelte";
+  import SettingsHeader from "./SettingsHeader.svelte";
   import type { SectionBase } from "./types";
 
   let { config }: { config: SectionBase } = $props();
 </script>
 
 <div class="flex w-full flex-col {config.fill ? 'min-h-0 flex-1' : ''}">
-  <header
-    class="flex shrink-0 flex-wrap items-start justify-between gap-x-4 gap-y-3 pb-4 pt-0.5"
-  >
-    <div class="flex min-w-0 flex-col">
-      <h1
-        class="text-[22px] font-semibold leading-tight tracking-[-0.02em] text-foreground sm:text-[26px]"
-      >
-        {config.title || "Settings"}
-      </h1>
-      {#if config.description}
-        <p class="mt-1 text-sm leading-relaxed text-muted-foreground">
-          {config.description}
-        </p>
-      {/if}
-    </div>
-
-    <div class="flex shrink-0 items-center gap-2 max-sm:-mt-1">
-      {#if config.headerActions?.length}
-        {#each config.headerActions as action, index (action.label || index)}
-          <Button
-            variant={action.variant ?? "ghost"}
-            class="h-9 rounded-xl px-3.5 text-xs font-medium"
-            onclick={action.onclick}
-            aria-label={action.ariaLabel || action.label}
-          >
-            {#if action.icon}
-              <span
-                class="flex shrink-0 items-center {action.label
-                  ? 'mr-1.5'
-                  : ''}"
-              >
-                {@render action.icon()}
-              </span>
-            {/if}
-            {#if action.label}{action.label}{/if}
-          </Button>
-        {/each}
-      {/if}
-    </div>
-  </header>
+  <SettingsHeader
+    title={config.title || "Settings"}
+    description={config.description}
+    actions={config.headerActions ?? []}
+  />
 
   {#if config.sections.some((section) => section.items.length > 0)}
     <SettingsSections sections={config.sections} fill={config.fill} />

@@ -263,37 +263,45 @@
       class="relative w-full min-w-0 flex-1 overflow-y-auto bg-background transition-all scrollbar-thin
         {isMobile
         ? mobileView === 'content'
-          ? 'flex h-full w-full flex-col p-4 pb-28 pt-10 [&_header]:pl-12'
+          ? 'flex h-full w-full flex-col px-4 pb-28'
           : 'hidden'
-        : 'px-5 pb-5 pt-8 sm:px-6 sm:pb-6 sm:pt-10 sm:[&_header]:pr-12'}"
+        : 'px-5 pb-5 sm:px-6 sm:pb-6'}"
     >
       {#if !isMobile}
-        <div class="absolute right-5 top-8 z-20 sm:right-6 sm:top-10">
-          <Dialog.Close>
-            {#snippet child({ props })}
-              <Button
-                variant="ghost"
-                size="icon"
-                class="size-9 shrink-0 rounded-xl text-muted-foreground"
-                aria-label="Close settings"
-                {...props}
-              >
-                <Icons.X size={18} />
-              </Button>
-            {/snippet}
-          </Dialog.Close>
+        <div
+          class="pointer-events-none sticky top-0 z-30 h-0 w-full shrink-0"
+        >
+          <div class="pointer-events-auto absolute right-0 top-10">
+            <Dialog.Close>
+              {#snippet child({ props })}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  class="size-9 shrink-0 rounded-xl text-muted-foreground"
+                  aria-label="Close settings"
+                  {...props}
+                >
+                  <Icons.X size={18} />
+                </Button>
+              {/snippet}
+            </Dialog.Close>
+          </div>
         </div>
       {:else if mobileView === "content"}
-        <div class="absolute left-4 top-9.5 z-20">
-          <Button
-            variant="ghost"
-            size="icon"
-            class="size-9 shrink-0 rounded-xl text-muted-foreground"
-            onclick={() => (mobileView = "list")}
-            aria-label="Back to settings"
-          >
-            <Icons.ArrowLeft size={20} />
-          </Button>
+        <div
+          class="pointer-events-none sticky top-0 z-30 h-0 w-full shrink-0"
+        >
+          <div class="pointer-events-auto absolute left-0 top-9.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              class="size-9 shrink-0 rounded-xl text-muted-foreground"
+              onclick={() => (mobileView = "list")}
+              aria-label="Back to settings"
+            >
+              <Icons.ArrowLeft size={20} />
+            </Button>
+          </div>
         </div>
       {/if}
 
