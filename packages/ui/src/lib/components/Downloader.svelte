@@ -65,13 +65,15 @@
     history = history.filter((_, i) => i !== index);
   }
 
-  function getError(error: string): string[] {
-    return error
-      .split("\n")
-      .map((l) => l.trim())
-      .filter(Boolean)
-      .slice(-2);
-  }
+  let selectedFiles = $derived(selectedItem?.files ?? []);
+  let selectedFailed = $derived(selectedItem?.status === "error");
+  let selectedError = $derived.by(() => {
+    const raw = selectedItem?.error ?? "";
+    const trimmed = raw
+      .replace(/^\s*download(?:ing)?\s+failed\s*:?\s*/i, "")
+      .trim();
+    return trimmed || raw.trim();
+  });
 
   function handleRetry(item: HistoryItem) {
     history = history.filter((h) => h.url !== item.url);
@@ -117,51 +119,91 @@
       toast.error("Failed to open path: " + err);
     }
   }
+
+  async function openFile(file: string) {
+    try {
+      const root = await transport.downloadRoot();
+      const sep = root.includes("\\") ? "\\" : "/";
+      const base = root.replace(/[\\/]+$/, "");
+      const relative = file
+        .split(/[\\/]/)
+        .filter((part) => part && part !== ".");
+      await transport.openPath([base, ...relative].join(sep));
+    } catch (err) {
+      toast.error("Failed to open file: " + err);
+    }
+  }
 </script>
 
 {#snippet downloadCard(task: DownloadTask)}
   <Card.Root
-    class="relative overflow-hidden rounded-xl border shadow-sm transition-all duration-300
+    class="relative overflow-hidden rounded-xl border-0 py-0 shadow-none transition-all duration-300
       {task.error
-      ? 'border-destructive/30 bg-destructive/5'
+      ? 'bg-destructive/10'
       : task.isPaused
-        ? 'border-amber-500/30 bg-amber-500/5'
-        : 'bg-muted/20'}
+        ? 'bg-amber-500/10'
+        : 'bg-muted/30'}
       {!task.isDownloading && !task.isPaused && !task.error
       ? 'opacity-60 hover:opacity-100'
       : ''}"
   >
-    <Card.Content class="flex flex-col p-3.5 space-y-3">
-      <div class="flex items-center justify-between w-full">
-        <button
-          type="button"
-          class="group flex items-center min-w-0 flex-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer truncate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
-          title="Click to copy URL"
-          onclick={() => copyUrl(task.url)}
-        >
-          <span class="truncate">{task.url}</span>
-        </button>
+    <Card.Content class="flex flex-col gap-2 p-5">
+      <div class="flex items-center gap-4">
+        <div class="flex min-w-0 flex-1 flex-col gap-1.5">
+          <p
+            class="truncate text-sm font-semibold leading-snug text-foreground"
+            title={task.error ?? task.status}
+          >
+            {task.error ? "Download failed" : task.status || "Preparing…"}
+          </p>
 
-        <div class="flex items-center shrink-0 gap-0.5">
+          <button
+            type="button"
+            class="flex max-w-full cursor-pointer items-center rounded text-xs leading-snug text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            title="Click to copy URL"
+            onclick={() => copyUrl(task.url)}
+          >
+            <span class="truncate">{task.url}</span>
+          </button>
+        </div>
+
+        <div class="flex shrink-0 items-center gap-1.5">
+          {#if task.error}
+            <span
+              class="rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold tracking-wide text-destructive"
+              >Failed</span
+            >
+          {:else if task.isPaused}
+            <span
+              class="rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold tracking-wide text-amber-600"
+              >Paused</span
+            >
+          {:else if !task.isDownloading}
+            <span
+              class="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold tracking-wide text-emerald-600"
+              >Complete</span
+            >
+          {/if}
+
           {#if task.isDownloading}
             <Button
               variant="ghost"
               size="icon"
-              class="h-7 w-7 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-all hover:scale-105 active:scale-95"
+              class="h-8 w-8 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-all hover:scale-105 active:scale-95"
               onclick={() => pauseTask(task.id)}
               title="Pause download"
             >
-              <Pause size={14} />
+              <Pause size={15} />
             </Button>
           {:else if task.isPaused}
             <Button
               variant="ghost"
               size="icon"
-              class="h-7 w-7 rounded-lg text-amber-600 hover:bg-amber-500/10 hover:text-amber-700 transition-all hover:scale-105 active:scale-95"
+              class="h-8 w-8 rounded-lg text-amber-600 hover:bg-amber-500/10 hover:text-amber-700 transition-all hover:scale-105 active:scale-95"
               onclick={() => resumeTask(task.id, task.url)}
               title="Resume download"
             >
-              <Play size={14} />
+              <Play size={15} />
             </Button>
           {/if}
 
@@ -169,58 +211,25 @@
             <Button
               variant="ghost"
               size="icon"
-              class="h-7 w-7 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all hover:scale-105 active:scale-95"
+              class="h-8 w-8 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all hover:scale-105 active:scale-95"
               onclick={() => cancelTask(task.id, task.url)}
               title="Cancel and remove files"
             >
-              <Trash2 size={14} />
+              <Trash2 size={15} />
             </Button>
           {/if}
         </div>
       </div>
 
-      <div class="flex flex-col">
-        <div class="flex justify-between items-center">
-          <p
-            class="text-xs font-medium truncate leading-tight {task.error
-              ? 'text-destructive'
-              : 'text-foreground'}"
-            title={task.error ?? task.status}
+      {#if !task.error}
+        <div class="flex items-center gap-5 pt-0.5">
+          <Progress value={task.progress} class="h-0.75 flex-1 bg-muted/50" />
+          <span
+            class="w-8 shrink-0 text-center text-xs leading-none font-semibold tabular-nums text-muted-foreground"
+            >{Math.round(task.progress)}%</span
           >
-            {task.error ?? task.status}
-          </p>
-
-          {#if task.error}
-            <span
-              class="text-xs font-semibold tracking-wide text-destructive bg-destructive/10 px-1.5 py-0.5 rounded-full"
-              >Failed</span
-            >
-          {:else if task.isPaused}
-            <span
-              class="text-xs font-semibold tracking-wide text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded-full"
-              >Paused</span
-            >
-          {:else if !task.isDownloading}
-            <span
-              class="text-xs font-semibold tracking-wide text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded-full"
-              >Complete</span
-            >
-          {:else}
-            <span
-              class="text-xs font-semibold tabular-nums text-muted-foreground"
-              >{Math.round(task.progress)}%</span
-            >
-          {/if}
         </div>
-
-        {#if !task.error}
-          <div
-            class="relative h-1.5 w-full overflow-hidden rounded-full bg-muted/40 mt-1.5"
-          >
-            <Progress value={task.progress} class="h-2 bg-muted rounded-full" />
-          </div>
-        {/if}
-      </div>
+      {/if}
     </Card.Content>
   </Card.Root>
 {/snippet}
@@ -307,17 +316,9 @@
 <div class="space-y-6 w-full max-w-full mx-auto p-2 sm:px-2">
   <section>
     <div class="flex items-center justify-between mb-3">
-      <div class="flex items-center gap-2">
-        <h3 class="text-sm mx-2 font-semibold tracking-wide text-foreground">
-          Downloads
-        </h3>
-        {#if active > 0}
-          <span
-            class="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-xs font-medium"
-            >{active}</span
-          >
-        {/if}
-      </div>
+      <h3 class="text-sm mx-2 font-semibold tracking-wide text-foreground">
+        Downloads
+      </h3>
       {#if active > 1}
         <Button
           variant="ghost"
@@ -332,14 +333,14 @@
 
     {#if !hasTasks}
       <div
-        class="h-28 flex flex-col items-center justify-center bg-muted/20 rounded-3xl"
+        class="min-h-[105.75px] flex flex-col items-center justify-center bg-muted/20 rounded-xl"
       >
         <p class="text-sm text-muted-foreground font-medium">
           No active downloads
         </p>
       </div>
     {:else}
-      <div class="grid grid-cols-1 gap-2.5">
+      <div class="grid grid-cols-1 gap-3">
         {#each tasks as task (task.id)}
           {@render downloadCard(task)}
         {/each}
@@ -377,59 +378,124 @@
 </div>
 
 <Dialog.Root bind:open={dialogOpen}>
-  <Dialog.Content class="sm:max-w-md gap-0 bg-sidebar">
+  <Dialog.Content class="sm:max-w-2xl gap-0 bg-sidebar">
     <Dialog.Header class="pb-4">
-      <Dialog.Title class="flex items-center font-bold gap-2 text-base">
-        {#if selectedItem?.status === "error"}
+      <Dialog.Title
+        class="flex flex-wrap items-center gap-x-2 gap-y-1 pr-10 text-base font-bold"
+      >
+        {#if selectedFailed}
           <CircleAlert size={16} class="text-destructive shrink-0" />
-          Download Failed
+          <span>Download Failed</span>
         {:else}
           <CircleCheck size={16} class="text-primary shrink-0" />
-          Download Complete
+          <span>Download Complete</span>
         {/if}
+        <span
+          class="flex items-center gap-2 text-xs font-medium text-muted-foreground"
+        >
+          {#if selectedItem?.timestamp || selectedItem?.backend}
+            <span class="text-muted-foreground/40">·</span>
+          {/if}
+          {#if selectedItem?.timestamp}
+            <span>{selectedItem.timestamp}</span>
+          {/if}
+          {#if selectedItem?.backend}
+            <span class="text-muted-foreground/40">·</span>
+            <span>{selectedItem.backend}</span>
+          {/if}
+        </span>
       </Dialog.Title>
     </Dialog.Header>
 
-    <div class="flex flex-col gap-4">
-      <div class="flex flex-col gap-1.5">
-        <span class="text-sm font-bold text-muted-foreground">URL</span>
-        <div
-          class="bg-muted/40 border border-primary/20 rounded-xl px-3 py-2.5"
-        >
-          <span class="text-sm font-mono text-foreground break-all select-all">
-            {selectedItem?.url}
-          </span>
-        </div>
-      </div>
-
-      {#if selectedItem?.status === "error" && selectedItem?.error}
-        <div class="flex flex-col gap-1.5">
-          <span class="text-sm font-bold text-muted-foreground">Error</span>
-          <div
-            class="text-destructive border border-destructive/20 rounded-xl px-3 py-2.5 flex flex-col gap-1.5"
+    <div class="flex min-w-0 flex-col gap-4">
+      {#if selectedFailed && selectedError}
+        <div class="flex min-w-0 flex-col gap-1.5">
+          <span class="text-xs font-semibold tracking-wide text-muted-foreground"
+            >Error</span
           >
-            {#each getError(selectedItem.error) as line (line)}
-              <span class="text-sm font-bold wrap-break-word">{line}</span>
+          <pre
+            class="max-h-64 overflow-auto whitespace-pre-wrap wrap-break-word rounded-xl bg-muted/50 px-3 py-2.5 font-mono text-xs leading-relaxed text-foreground scrollbar-thin">{selectedError}</pre>
+        </div>
+      {/if}
+
+      {#if selectedFiles.length > 0}
+        <div class="flex min-w-0 flex-col gap-1.5">
+          <span class="text-xs font-semibold tracking-wide text-muted-foreground"
+            >Files
+            <span class="font-normal text-muted-foreground/60"
+              >· {selectedFiles.length}</span
+            ></span
+          >
+          <div
+            class="max-h-64 min-w-0 divide-y divide-border/30 overflow-x-hidden overflow-y-auto rounded-xl bg-muted/50 scrollbar-thin"
+          >
+            {#each selectedFiles as file (file)}
+              <div class="flex min-w-0 items-center gap-2 px-3 py-2.5">
+                <FileIcon size={14} class="shrink-0 text-muted-foreground" />
+                <span
+                  class="min-w-0 flex-1 truncate font-mono text-xs leading-relaxed text-foreground"
+                  title={file}
+                >
+                  {file}
+                </span>
+                {#if transport.kind === "desktop"}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    class="h-7 w-7 shrink-0 rounded-lg text-muted-foreground hover:bg-background/70 hover:text-foreground"
+                    title="Open file"
+                    aria-label="Open {file}"
+                    onclick={() => openFile(file)}
+                  >
+                    <FolderOpen size={13} />
+                  </Button>
+                {/if}
+              </div>
             {/each}
+          </div>
+        </div>
+      {/if}
+
+      {#if !selectedFailed}
+        <div class="flex min-w-0 flex-col gap-1.5">
+          <span class="text-xs font-semibold tracking-wide text-muted-foreground"
+            >Source URL</span
+          >
+          <div class="min-w-0 rounded-xl bg-muted/50 px-3 py-2.5">
+            <span
+              class="block select-all break-all font-mono text-xs leading-relaxed text-foreground"
+            >
+              {selectedItem?.url}
+            </span>
           </div>
         </div>
       {/if}
     </div>
 
-    <Dialog.Footer class="flex flex-row gap-2 mt-5">
+    <Dialog.Footer class="mt-5 gap-2 border-t-0 bg-transparent mx-0 mb-0 p-0">
       <Button
         variant="outline"
-        class="flex-1 gap-2 rounded-xl cursor-pointer"
+        class="gap-2 rounded-xl cursor-pointer"
         onclick={() => copyUrl(selectedItem?.url ?? "")}
       >
         <Copy size={14} /> Copy Link
       </Button>
-      <Button
-        class="flex-1 gap-2 rounded-xl cursor-pointer"
-        onclick={() => selectedItem && handleRetry(selectedItem)}
-      >
-        <RotateCcw size={14} /> Retry Download
-      </Button>
+      {#if !selectedFailed && selectedFiles.length > 0 && transport.kind === "desktop"}
+        <Button
+          class="gap-2 rounded-xl cursor-pointer"
+          onclick={() => selectedItem && openItemFolder(selectedItem)}
+        >
+          <FolderOpen size={14} />
+          {selectedFiles.length === 1 ? "Open File" : "Open Folder"}
+        </Button>
+      {:else}
+        <Button
+          class="gap-2 rounded-xl cursor-pointer"
+          onclick={() => selectedItem && handleRetry(selectedItem)}
+        >
+          <RotateCcw size={14} /> Retry Download
+        </Button>
+      {/if}
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>

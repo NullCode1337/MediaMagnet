@@ -129,7 +129,9 @@
           error,
           isDownloading: false,
           isPaused: false,
+          status: "Error",
         });
+        window.setTimeout(() => removeTask(id), 2000);
         return error;
       }
 
@@ -290,6 +292,7 @@
           status: "Error",
         });
         addToHistory(task?.url ?? event.id, "error", event.value, task);
+        window.setTimeout(() => removeTask(event.id), 2000);
         break;
       }
 
