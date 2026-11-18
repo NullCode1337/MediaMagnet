@@ -107,6 +107,7 @@ pub fn is_denied(tool: ArgTool, token: &str) -> bool {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Policy {
     pub allow_custom_args: bool,
+    pub trust_custom_args: bool,
     pub allow_client_paths: bool,
     pub cookie_store: bool,
 }
@@ -115,6 +116,7 @@ impl Policy {
     pub fn desktop() -> Self {
         Self {
             allow_custom_args: true,
+            trust_custom_args: true,
             allow_client_paths: true,
             cookie_store: true,
         }
@@ -123,6 +125,7 @@ impl Policy {
     pub fn server() -> Self {
         Self {
             allow_custom_args: false,
+            trust_custom_args: false,
             allow_client_paths: false,
             cookie_store: false,
         }
@@ -133,6 +136,18 @@ impl Policy {
     pub fn server_with_custom_args() -> Self {
         Self {
             allow_custom_args: true,
+            trust_custom_args: false,
+            allow_client_paths: false,
+            cookie_store: false,
+        }
+    }
+
+    /// Server policy that accepts every argument a backend supports. Only for
+    /// single-operator installs: options such as `--exec` run commands.
+    pub fn server_unrestricted() -> Self {
+        Self {
+            allow_custom_args: true,
+            trust_custom_args: true,
             allow_client_paths: false,
             cookie_store: false,
         }
@@ -151,7 +166,7 @@ impl Policy {
         }
         let tokens = shell_words::split(args)
             .map_err(|_| Error::Msg("Unable to split the arguments!".to_string()))?;
-        if self.allow_client_paths {
+        if self.allow_client_paths || self.trust_custom_args {
             return Ok(tokens);
         }
         for token in &tokens {

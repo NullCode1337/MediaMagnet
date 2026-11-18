@@ -57,10 +57,12 @@ document an opaque origin.
   hardening remove the easy path to script execution on the origin, but any
   future XSS is still a token compromise. Treat tokens as passwords: one per
   deployment, rotated when someone leaves, and never in a URL you paste around.
-- **Custom arguments are best-effort.** With `MM_ALLOW_CUSTOM_ARGS=1` the
-  deny-list tracks the tools' CLIs; a new exec-capable option that is not in the
-  list is a gap until it is added. Leave the setting off unless every client is
-  trusted, and keep the tools updated.
+- **Custom arguments run with the server's privileges.** They are unrestricted
+  by default, so a client that can reach the API can pass options that run
+  commands (`--exec`, gallery-dl filters). `MM_ALLOW_CUSTOM_ARGS=filtered`
+  enables the deny-list, which tracks the tools' CLIs (a new exec-capable option
+  is a gap until it is added); `off` refuses arguments entirely. Bind to
+  loopback or require `MM_TOKEN` when others can reach the port.
 - **No brute-force throttling or request rate limiting.** The token comparison
   is constant time, but authentication attempts and expensive endpoints are not
   rate limited. Put Cloudflare, an authenticated reverse proxy, or Zero Trust

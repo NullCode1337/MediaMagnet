@@ -388,6 +388,26 @@ impl Engine {
         Ok(())
     }
 
+    fn apply_user_agent(&self, cmd: &mut Command, backend: Backend, settings: &Settings) {
+        let agent = settings.user_agent.trim();
+        match backend {
+            Backend::SpotDl => {
+                println!("[MediaMagnet][Download] User agent: not applied to spotdl")
+            }
+            Backend::YtDlp | Backend::GalleryDl if agent.is_empty() => {
+                println!("[MediaMagnet][Download] User agent: tool default");
+            }
+            Backend::YtDlp => {
+                println!("[MediaMagnet][Download] User agent: {}", agent);
+                cmd.args(["--user-agent", agent]);
+            }
+            Backend::GalleryDl => {
+                println!("[MediaMagnet][Download] User agent: {}", agent);
+                cmd.args(["-a", agent]);
+            }
+        }
+    }
+
     fn output_template(&self, settings: &Settings) -> String {
         let template = &settings.yt_output_template;
         if self.policy.allow_client_paths || !contains_separator(template) {
@@ -482,10 +502,6 @@ impl Engine {
                     backend.arg_tool(),
                 )?;
 
-                if !settings.user_agent.is_empty() {
-                    cmd.args(["--user-agent", &settings.user_agent]);
-                }
-
                 cmd.args(["--print", "after_move:filepath", "--no-quiet"]);
                 if let Some(flag) = mtime_flag(backend, settings.preserve_mtime) {
                     cmd.arg(flag);
@@ -509,11 +525,10 @@ impl Engine {
                     &settings.gdl_site_args,
                     backend.arg_tool(),
                 )?;
-                if !settings.user_agent.is_empty() {
-                    cmd.args(["-a", &settings.user_agent]);
-                }
             }
         }
+
+        self.apply_user_agent(&mut cmd, backend, settings);
 
         let cookies_applied =
             spec.with_cookies && self.apply_cookie(&mut cmd, url, backend, &spec.cookies);

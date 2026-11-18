@@ -270,24 +270,25 @@ curl -s -X PUT http://localhost:8080/api/v1/settings \
 
 ### Policy
 
-By default the server refuses user-supplied tool arguments
-(`yt_global_args`, `yt_site_args[].args`, `gdl_*`, `spotdl_*`). If a job
-carries non-empty arguments for the backend that handles it, the job fails
-with a `Configuration Error`; the values are still stored and returned by the
-settings endpoints. Even with custom arguments enabled, an output template
-containing a path separator is replaced with the default template. This is what
-makes it safe to accept settings from a browser client.
+By default the server accepts user-supplied tool arguments
+(`yt_global_args`, `yt_site_args[].args`, `gdl_*`, `spotdl_*`) and passes them
+straight to the backend, exactly like the desktop app. An output template
+containing a path separator is still replaced with the default template.
 
-Start the server with `MM_ALLOW_CUSTOM_ARGS=1` to accept the arguments. They
-are still checked against a per-tool deny-list, matched by option family so
-`--exec` also covers `--exec-before-download` and `--output` covers
-`--output-na-placeholder`. The list blocks output paths, config loading,
-arbitrary executables (`--ffmpeg-location`, `--downloader`, spotdl's
-`--ffmpeg`) and command execution (`--exec`, gallery-dl's filter expressions).
-An output template that could leave the job directory (a path separator or a
-Windows drive prefix) is replaced with the default template. Only enable it when
-every client is trusted: the deny-list tracks the tools' CLIs and a new
-exec-capable option is a gap until it is added.
+`MM_ALLOW_CUSTOM_ARGS=filtered` checks the arguments against a per-tool
+deny-list instead, matched by option family so `--exec` also covers
+`--exec-before-download` and `--output` covers `--output-na-placeholder`. The
+list blocks output paths, config loading, arbitrary executables
+(`--ffmpeg-location`, `--downloader`, spotdl's `--ffmpeg`) and command
+execution (`--exec`, gallery-dl's filter expressions).
+
+`MM_ALLOW_CUSTOM_ARGS=off` refuses arguments entirely: a job carrying non-empty
+arguments for its backend fails with a `Configuration Error`, while the values
+stay stored and are returned by the settings endpoints.
+
+Because unrestricted arguments include options that run commands, keep the
+server loopback-only or behind a token (and a TLS proxy) when other people can
+reach it.
 
 The failure is asynchronous: `POST /downloads` still returns `202`, and the
 `download-error` event carries the message.

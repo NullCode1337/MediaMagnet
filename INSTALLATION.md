@@ -620,7 +620,7 @@ All configuration is through environment variables.
 | `MM_DOWNLOAD_ROOT` | `$MM_DATA_DIR/downloads` | Download directory, also served by `/api/v1/files`. |
 | `MM_STATIC_DIR` | embedded UI | Serve the web UI from a directory instead (development). |
 | `MM_TOKEN` | unset | Require this bearer token on every API request. |
-| `MM_ALLOW_CUSTOM_ARGS` | off | Accept user-supplied backend arguments (deny-list filtered). |
+| `MM_ALLOW_CUSTOM_ARGS` | on (unrestricted) | User-supplied backend arguments are passed straight to the tool. `filtered` applies the deny-list, `off` refuses them. |
 | `MM_PYTHON` | unset | Interpreter used for the system tool mode. |
 | `MM_BINARIES_DIR` | `binaries/` beside the executable, if present | Directory with a bundled `python/`, `deno`, `ffmpeg` and `ffprobe`. Set by hand only if they live elsewhere. |
 

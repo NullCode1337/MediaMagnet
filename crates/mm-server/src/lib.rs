@@ -32,13 +32,41 @@ use crate::jobs::Jobs;
 use crate::retention::Retention;
 use crate::state::AppState;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CustomArgs {
+    Off,  // Refuse every client-supplied argument.
+    Filtered,  // Accept arguments, refusing the options that escape the job.
+    Unrestricted,  // Accept every option the backend supports. Trusted hosts only.
+}
+
+impl CustomArgs {
+    fn from_env() -> Self {
+        match std::env::var("MM_ALLOW_CUSTOM_ARGS") {
+            Err(_) => Self::Unrestricted,
+            Ok(value) => match value.trim().to_ascii_lowercase().as_str() {
+                "0" | "false" | "no" | "off" => Self::Off,
+                "filtered" | "safe" => Self::Filtered,
+                _ => Self::Unrestricted,
+            },
+        }
+    }
+
+    fn describe(self) -> &'static str {
+        match self {
+            Self::Off => "off",
+            Self::Filtered => "on (deny-list filtered)",
+            Self::Unrestricted => "on (unrestricted)",
+        }
+    }
+}
+
 pub struct Config {
     pub bind: SocketAddr,
     pub data_dir: PathBuf,
     pub download_root: PathBuf,
     pub static_assets: StaticAssets,
     pub token: Option<String>,
-    pub allow_custom_args: bool,
+    pub custom_args: CustomArgs,
     pub file_ttl: Duration,
     /// Tools shipped beside the executable; `None` discovers them at startup.
     pub binaries_dir: Option<PathBuf>,
@@ -87,9 +115,7 @@ impl Config {
             .map(|t| t.trim().to_string())
             .filter(|t| !t.is_empty());
 
-        let allow_custom_args = std::env::var("MM_ALLOW_CUSTOM_ARGS")
-            .map(|v| matches!(v.trim().to_ascii_lowercase().as_str(), "1" | "true" | "yes"))
-            .unwrap_or(false);
+        let custom_args = CustomArgs::from_env();
 
         // How long an undelivered output may stay in the download root. A
         // client that fetches it sooner removes it immediately.
@@ -105,7 +131,7 @@ impl Config {
             download_root,
             static_assets,
             token,
-            allow_custom_args,
+            custom_args,
             file_ttl: Duration::from_secs(file_ttl),
             binaries_dir: bundled.or_else(binaries_dir),
         })
@@ -200,10 +226,10 @@ async fn serve(config: Config) -> Result<(), String> {
         app_data_dir.join("job-files.json"),
     );
     let events = crate::events::EventHub::new(jobs.clone(), retention.clone());
-    let policy = if config.allow_custom_args {
-        Policy::server_with_custom_args()
-    } else {
-        Policy::server()
+    let policy = match config.custom_args {
+        CustomArgs::Off => Policy::server(),
+        CustomArgs::Filtered => Policy::server_with_custom_args(),
+        CustomArgs::Unrestricted => Policy::server_unrestricted(),
     };
 
     let engine = Engine::new(runtime, config_dir, app_data_dir, policy, events.sink());
@@ -262,6 +288,18 @@ async fn serve(config: Config) -> Result<(), String> {
             None => "open (set MM_TOKEN to require one)",
         }
     );
+    println!(
+        "[MediaMagnet][Server] custom args: {}",
+        config.custom_args.describe()
+    );
+
+    if config.custom_args == CustomArgs::Unrestricted && !config.bind.ip().is_loopback() {
+        eprintln!(
+            "[MediaMagnet][Server] WARNING: custom arguments are unrestricted, so clients \
+             can pass options that run commands (for example --exec). Set \
+             MM_ALLOW_CUSTOM_ARGS=filtered (or off) unless every client is trusted."
+        );
+    }
 
     if config.token.is_none() && !config.bind.ip().is_loopback() {
         eprintln!(

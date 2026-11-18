@@ -31,6 +31,25 @@ fn server_with_custom_args_still_filters() {
 }
 
 #[test]
+fn server_unrestricted_accepts_every_argument() {
+    let policy = Policy::server_unrestricted();
+    assert_eq!(
+        policy
+            .filter_custom_args(
+                ArgTool::GalleryDl,
+                "--filter \"width > 900\" -o output.mode=zip"
+            )
+            .unwrap(),
+        vec!["--filter", "width > 900", "-o", "output.mode=zip"]
+    );
+    assert!(policy
+        .filter_custom_args(ArgTool::YtDlp, "--exec echo {}")
+        .is_ok());
+    assert!(!policy.cookie_store);
+    assert!(!policy.allow_client_paths);
+}
+
+#[test]
 fn server_refuses_custom_args_entirely() {
     let policy = Policy::server();
     assert!(policy

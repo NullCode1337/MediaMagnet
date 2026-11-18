@@ -37,11 +37,11 @@ info:
 
     ## Policy
 
-    Servers built without `MM_ALLOW_CUSTOM_ARGS` refuse user-supplied tool
-    arguments (`yt_global_args`, `yt_site_args[].args`, `gdl_*`, `spotdl_*`):
-    a job carrying non-empty arguments for its backend fails with a
-    `Configuration Error`. Settings remain stored. With the flag set,
-    arguments are accepted through a per-tool deny-list instead. Output
+    User-supplied tool arguments (`yt_global_args`, `yt_site_args[].args`,
+    `gdl_*`, `spotdl_*`) are passed to the backend. With
+    `MM_ALLOW_CUSTOM_ARGS=filtered` they go through a per-tool deny-list;
+    with `off`, a job carrying them fails with a `Configuration Error` and the
+    settings remain stored. Output
     templates containing a path separator always fall back to the default.
     The default server configuration therefore accepts settings from
     untrusted clients without turning them into arbitrary command lines.

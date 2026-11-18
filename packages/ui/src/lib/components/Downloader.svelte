@@ -428,7 +428,7 @@
             >Error</span
           >
           <pre
-            class="max-h-64 overflow-auto whitespace-pre-wrap wrap-break-word rounded-xl bg-muted/50 px-3 py-2.5 font-mono text-xs leading-relaxed text-foreground scrollbar-thin">{selectedError}</pre>
+            class="max-h-64 select-text overflow-auto whitespace-pre-wrap wrap-break-word rounded-xl bg-muted/50 px-3 py-2.5 font-mono text-xs leading-relaxed text-foreground scrollbar-thin">{selectedError}</pre>
         </div>
       {/if}
 

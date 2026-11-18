@@ -137,11 +137,16 @@ pub struct CookieInput { FilePath(String) | Content(String) } // {type,value} ta
 ## Policy
 
 ```rust
-pub struct Policy { pub allow_custom_args: bool, pub allow_client_paths: bool }
+pub struct Policy {
+    pub allow_custom_args: bool,
+    pub trust_custom_args: bool,
+    pub allow_client_paths: bool,
+}
 impl Policy {
-    pub fn desktop() -> Self;                 // permissive — OLD behaviour
-    pub fn server() -> Self;                  // no custom args, no client paths
-    pub fn server_with_custom_args() -> Self; // deny-list filtering only
+    pub fn desktop() -> Self;                  // permissive — OLD behaviour
+    pub fn server() -> Self;                   // no custom args, no client paths
+    pub fn server_with_custom_args() -> Self;  // deny-list filtering only
+    pub fn server_unrestricted() -> Self;      // every argument, trusted hosts only
     pub fn filter_custom_args(&self, tool: ArgTool, args: &str) -> Result<Vec<String>>;
 }
 ```
