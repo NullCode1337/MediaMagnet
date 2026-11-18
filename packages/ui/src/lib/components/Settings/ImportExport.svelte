@@ -10,7 +10,7 @@
     FileBraces,
     FileDown,
   } from "@lucide/svelte";
-  import Section from "$lib/components/Settings/SECTION.svelte";
+  import Section from "$lib/components/Settings/parts/SECTION.svelte";
 
   let rawJsonString = $derived(
     settings.config

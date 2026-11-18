@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Section from "$lib/components/Settings/SECTION.svelte";
+  import Section from "$lib/components/Settings/parts/SECTION.svelte";
   import FileEditor from "$lib/components/FileEditor.svelte";
   import { Button } from "$lib/components/ui/button";
   import { transport } from "$lib/stores/transport.svelte";

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import Section from "$lib/components/Settings/SECTION.svelte";
-  import { ytDlpSections } from "$lib/components/Settings/fields";
+  import Section from "$lib/components/Settings/parts/SECTION.svelte";
+  import { ytDlpSections } from "$lib/components/Settings/parts/fields";
   import { DEFAULT_CONFIG } from "@mediamagnet/api";
   import { settings } from "$lib/stores/settings.svelte";
 

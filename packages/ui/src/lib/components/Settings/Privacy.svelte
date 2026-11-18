@@ -1,7 +1,7 @@
 <script lang="ts">
   import { settings } from "$lib/stores/settings.svelte";
   import { transport } from "$lib/stores/transport.svelte";
-  import Section from "$lib/components/Settings/SECTION.svelte";
+  import Section from "$lib/components/Settings/parts/SECTION.svelte";
 
   const isDesktop = transport.kind === "desktop";
 </script>

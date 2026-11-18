@@ -13,13 +13,13 @@
   } from "@lucide/svelte";
   import * as Dialog from "$lib/components/ui/dialog";
   import { Button } from "$lib/components/ui/button";
-  import SettingsSections from "$lib/components/Settings/SettingsSections.svelte";
+  import SettingsSections from "$lib/components/Settings/parts/SettingsSections.svelte";
   import {
     backendSections,
     commonSections,
     type ConfigPatch,
-  } from "$lib/components/Settings/fields";
-  import type { Section } from "$lib/components/Settings/types";
+  } from "$lib/components/Settings/parts/fields";
+  import type { Section } from "$lib/components/Settings/parts/types";
   import { extractUrls } from "$lib/utils";
   import { settings } from "$lib/stores/settings.svelte";
   import { uiState } from "$lib/stores/store.svelte";

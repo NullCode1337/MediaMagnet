@@ -4,12 +4,12 @@
   import { Input } from "$lib/components/ui/input";
   import { settings } from "$lib/stores/settings.svelte";
   import { transport } from "$lib/stores/transport.svelte";
-  import Section from "$lib/components/Settings/SECTION.svelte";
+  import Section from "$lib/components/Settings/parts/SECTION.svelte";
   import {
     backendAutoUpdateSetting,
     preserveMtimeSetting,
     userAgentSetting,
-  } from "$lib/components/Settings/fields";
+  } from "$lib/components/Settings/parts/fields";
   import { DEFAULT_CONFIG } from "@mediamagnet/api";
 
   let {

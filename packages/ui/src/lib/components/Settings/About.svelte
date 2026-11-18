@@ -4,7 +4,7 @@
   import { transport } from "$lib/stores/transport.svelte";
   import { updater } from "$lib/stores/updater.svelte";
   import { Button } from "$lib/components/ui/button";
-  import SettingsHeader from "$lib/components/Settings/SettingsHeader.svelte";
+  import SettingsHeader from "$lib/components/Settings/parts/SettingsHeader.svelte";
   import type { ToolInfo } from "@mediamagnet/api";
 
   const REPO = "https://github.com/NullCode1337/MediaMagnet";
