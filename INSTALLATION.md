@@ -19,7 +19,7 @@ building for architectures that do not have pre-built binaries.
 
 ## Supported platforms
 
-Pre-built desktop installers are attached to `app-v<version>` releases; server
+Pre-built desktop installers are attached to `v<version>-beta` releases; server
 archives are attached to `server-v<version>` releases.
 
 | Platform | x64 (`x86_64` / `amd64`) | arm64 (`aarch64`) | 32-bit x86 (`i686`) | 32-bit ARM (`armv7`) |
@@ -89,7 +89,7 @@ sudo pacman -S ffmpeg
 
 ### Windows (x64 and arm64)
 
-1. Download the installer for your architecture from the latest `app-v<version>`
+1. Download the installer for your architecture from the latest `v<version>-beta`
    release:
 
    | Architecture | Preferred installer | Alternative |

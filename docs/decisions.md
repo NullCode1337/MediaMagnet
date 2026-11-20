@@ -334,7 +334,7 @@ says what changed and why.
     app, runs it again with `--with-tools` (decision 66), uploads each archive
     as a workflow artifact, and a single release job
     attaches them to `server-v<version>`. The tag is separate from the
-    desktop's `app-v<version>` so concurrent jobs never create the same
+    desktop's `v<version>-beta` so concurrent jobs never create the same
     release. Archives are `.tar.gz` on every platform; Windows 10+ can extract
     them with the built-in `tar`.
 64. **The server keeps its own in-memory job records.** Core removes a job from
