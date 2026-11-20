@@ -421,7 +421,7 @@ export interface components {
         Health: {
             /** @constant */
             status: "ok";
-            /** @example 0.6.3 */
+            /** @example 0.7.0 */
             version: string;
         };
         DownloadRequest: {

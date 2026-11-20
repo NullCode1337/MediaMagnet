@@ -2352,7 +2352,7 @@ checksum = "47e1ffaa40ddd1f3ed91f717a33c8c0ee23fff369e3aa8772b9605cc1d22f4c3"
 
 [[package]]
 name = "mediamagnet"
-version = "0.6.3"
+version = "0.7.0"
 dependencies = [
  "fix-path-env",
  "libc",
@@ -2448,7 +2448,7 @@ dependencies = [
 
 [[package]]
 name = "mm-core"
-version = "0.6.3"
+version = "0.7.0"
 dependencies = [
  "regex",
  "serde",
@@ -2463,7 +2463,7 @@ dependencies = [
 
 [[package]]
 name = "mm-server"
-version = "0.6.3"
+version = "0.7.0"
 dependencies = [
  "axum",
  "futures-util",
