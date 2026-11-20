@@ -217,3 +217,11 @@ body {
     background: var(--muted-foreground);
   }
 }
+
+@media (hover: none) and (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
