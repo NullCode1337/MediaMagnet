@@ -157,7 +157,9 @@ file that nobody fetches is deleted `MM_FILE_TTL_SECS` after the job finished
 (one hour by default). A range request does not trigger deletion, because it may
 be one seek in a longer session; the expiry sweep still removes the file. Files
 recorded by a previous server process are removed at startup, since their job
-records did not survive the restart.
+records did not survive the restart. Anything else left in the download root —
+including partial downloads from an interrupted job — is cleared when the
+server starts, so the directory only ever holds the current process's outputs.
 
 The web UI uses this: the tab that created a job saves its output through the
 browser when `download-finished` arrives. API clients should fetch through this

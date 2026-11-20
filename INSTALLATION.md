@@ -630,7 +630,7 @@ Data layout under `MM_DATA_DIR`:
 config/settings.json  server defaults, used when a client sends no settings
 data/cookies/         cookie store used when a job sends no cookies
 data/py-overlay/      tools installed by POST /api/v1/tools/update
-downloads/            default download root
+downloads/            default download root; emptied when the server starts
 ```
 
 ### Access token and browser UI

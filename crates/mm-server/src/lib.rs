@@ -146,7 +146,7 @@ fn default_data_dir() -> PathBuf {
     base.join("mediamagnet")
 }
 
-fn sweep_job_cookies(dir: &std::path::Path) {
+fn clean_job_cookies(dir: &std::path::Path) {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return;
     };
@@ -154,6 +154,32 @@ fn sweep_job_cookies(dir: &std::path::Path) {
         if entry.file_type().is_ok_and(|kind| kind.is_file()) {
             let _ = std::fs::remove_file(entry.path());
         }
+    }
+}
+
+/// SERVER ONLY: clean the download folder on startup
+fn clean_download_root(root: &std::path::Path) {
+    let Ok(entries) = std::fs::read_dir(root) else {
+        return;
+    };
+    let mut removed = 0usize;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let result = match entry.file_type() {
+            Ok(kind) if kind.is_dir() => std::fs::remove_dir_all(&path),
+            Ok(_) => std::fs::remove_file(&path),
+            Err(_) => continue,
+        };
+        match result {
+            Ok(()) => removed += 1,
+            Err(e) => eprintln!(
+                "[MediaMagnet][Server] could not clear {}: {e}",
+                path.display()
+            ),
+        }
+    }
+    if removed > 0 {
+        println!("[MediaMagnet][Server] cleared {removed} leftover item(s) from the download root");
     }
 }
 
@@ -194,8 +220,9 @@ async fn serve(config: Config) -> Result<(), String> {
             .map_err(|e| format!("could not create {}: {e}", dir.display()))?;
     }
 
-    sweep_job_cookies(&app_data_dir.join("job-cookies"));
+    clean_job_cookies(&app_data_dir.join("job-cookies"));
     remove_legacy_cookie_store(&app_data_dir.join("cookies"));
+    clean_download_root(&config.download_root);
 
     // Settings and job metadata live here; keep them private.
     #[cfg(unix)]
