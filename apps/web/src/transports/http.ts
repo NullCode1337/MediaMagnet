@@ -2,6 +2,7 @@ import {
   DEFAULT_CONFIG,
   nullWindow,
   randomId,
+  type ActiveJob,
   type AnyConfig,
   type AskOptions,
   type CookieInput,
@@ -332,6 +333,18 @@ export function createHttpTransport(): Transport {
     },
     pause: async (id) => {
       await send("POST", `/downloads/${encodeURIComponent(id)}/pause`);
+    },
+    resume: async (id) => {
+      await send("POST", `/downloads/${encodeURIComponent(id)}/resume`);
+    },
+    listJobs: async () => {
+      const { jobs } = await request<{ jobs: ActiveJob[] }>("/downloads");
+      for (const job of jobs) {
+        if (job.state === "running" || job.state === "paused") {
+          requestedJobs.add(job.id);
+        }
+      }
+      return jobs;
     },
     // A finished or cancelled job is gone from the server; the desktop treats
     // that as success, so the browser does too.

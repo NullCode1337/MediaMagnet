@@ -36,6 +36,14 @@ export type TransportEvent =
 
 export type Unsubscribe = () => void;
 
+/** A job the host is still running or holding, as returned by `listJobs`. */
+export interface ActiveJob {
+  id: string;
+  url: string;
+  state: "running" | "paused" | "finished" | "cancelled" | "failed" | string;
+  files: string[];
+}
+
 /** A newer desktop build reported by the Tauri updater. */
 export interface UpdateInfo {
   version: string;
@@ -87,9 +95,13 @@ export interface Transport extends Environment {
   // downloads
   download(url: string, id: string, options?: DownloadOptions): Promise<void>;
   pause(id: string): Promise<void>;
+  /** Resumes a paused job where the host keeps its request (browser server). */
+  resume?(id: string): Promise<void>;
   cancel(id: string, url: string): Promise<void>;
   cancelAll(): Promise<void>;
   saveJobFiles?(id: string, files: string[]): Promise<void>;
+  /** Jobs the host still tracks, so a reloaded browser can rebuild its list. */
+  listJobs?(): Promise<ActiveJob[]>;
 
   // settings
   settings(): Promise<AnyConfig>;

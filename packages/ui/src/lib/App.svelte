@@ -125,7 +125,8 @@
       }
 
       try {
-        await transport.download(url, id, options);
+        if (existingId && transport.resume) await transport.resume(existingId);
+        else await transport.download(url, id, options);
       } catch (e) {
         const error = String(e);
         updateTask(id, {
@@ -158,6 +159,33 @@
   async function retryDownload(url: string, options?: DownloadOptions) {
     await startDownload(url, undefined, options);
   }
+
+  /** A browser reload loses the task list; the host still knows its jobs. */
+  async function restoreJobs() {
+    if (!transport.listJobs) return;
+    try {
+      const jobs = await transport.listJobs();
+      const active = jobs
+        .filter((job) => job.state === "running" || job.state === "paused")
+        .filter((job) => !tasks.some((task) => task.id === job.id))
+        .map<DownloadTask>((job) => ({
+          id: job.id,
+          url: job.url,
+          status: job.state === "paused" ? "Paused" : "Downloading…",
+          progress: 0,
+          isDownloading: job.state === "running",
+          isPaused: job.state === "paused",
+          error: null,
+          backend: null,
+          overrides: null,
+        }));
+      if (active.length > 0) tasks = [...active, ...tasks];
+    } catch {
+
+    }
+  }
+
+  onMount(restoreJobs);
 
   async function pasteOrDownload() {
     if (!urlInput) {

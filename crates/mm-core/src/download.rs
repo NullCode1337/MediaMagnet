@@ -131,6 +131,13 @@ struct ActiveDownload {
     outputs: Arc<Mutex<Vec<String>>>,
 }
 
+/// How a run ended. `Detached` means pause/cancel removed the job while the
+/// process ran, so no completion event belongs to it.
+enum DownloadOutcome {
+    Finished(Vec<String>),
+    Detached,
+}
+
 struct RetainedJob {
     backend: Backend,
     base_dir: PathBuf,
@@ -638,6 +645,7 @@ impl Engine {
         };
 
         let mut succeeded = true;
+        let mut detached = false;
         let mut finished_files = Vec::new();
 
         match self
@@ -651,7 +659,8 @@ impl Engine {
             )
             .await
         {
-            Ok(files) => finished_files = files,
+            Ok(DownloadOutcome::Finished(files)) => finished_files = files,
+            Ok(DownloadOutcome::Detached) => detached = true,
             Err(e) => {
                 let err = e.to_string();
                 let gdl = backend == Backend::GalleryDl && long_dir(&err);
@@ -686,7 +695,8 @@ impl Engine {
                                 )
                                 .await
                             {
-                                Ok(files) => finished_files = files,
+                                Ok(DownloadOutcome::Finished(files)) => finished_files = files,
+                                Ok(DownloadOutcome::Detached) => detached = true,
                                 Err(e) => {
                                     println!(
                                         "[MediaMagnet] Download failed with shorter filenames ({}): {}",
@@ -739,7 +749,8 @@ impl Engine {
                                 )
                                 .await
                             {
-                                Ok(files) => finished_files = files,
+                                Ok(DownloadOutcome::Finished(files)) => finished_files = files,
+                                Ok(DownloadOutcome::Detached) => detached = true,
                                 Err(e) => {
                                     println!(
                                         "[MediaMagnet] Download failed without cookies ({}): {}",
@@ -775,7 +786,7 @@ impl Engine {
             }
         }
 
-        if succeeded {
+        if succeeded && !detached {
             self.emit(CoreEvent::DownloadFinished {
                 id,
                 files: finished_files,
@@ -791,7 +802,7 @@ impl Engine {
         base_dir: &Path,
         id: &str,
         spec: JobSpec,
-    ) -> Result<Vec<String>> {
+    ) -> Result<DownloadOutcome> {
         let id = id.to_string();
         std::fs::create_dir_all(base_dir)?;
         cmd.current_dir(base_dir);
@@ -1078,12 +1089,14 @@ impl Engine {
         });
 
         let mut exit_status: Option<std::process::ExitStatus> = None;
+        let mut detached = false;
 
         loop {
             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
             let mut guard = self.downloads.lock().map_err(|_| Error::Lock)?;
 
             if !guard.contains_key(&id) {
+                detached = true;
                 break;
             }
 
@@ -1105,6 +1118,9 @@ impl Engine {
         }
 
         let (_, err) = tokio::join!(out_handle, err_handle);
+        if detached {
+            return Ok(DownloadOutcome::Detached);
+        }
         let error = err.unwrap_or_default();
         let filename_error = filename_error
             .lock()
@@ -1138,7 +1154,11 @@ impl Engine {
                 "[MediaMagnet] Skipped a file with an overlong name, keeping the others: {}",
                 message
             );
-            return collect_files(base_dir, &output_files, started_at);
+            return Ok(DownloadOutcome::Finished(collect_files(
+                base_dir,
+                &output_files,
+                started_at,
+            )?));
         }
 
         if let Some(status) = exit_status {
@@ -1155,7 +1175,11 @@ impl Engine {
             }
         }
 
-        collect_files(base_dir, &output_files, started_at)
+        Ok(DownloadOutcome::Finished(collect_files(
+            base_dir,
+            &output_files,
+            started_at,
+        )?))
     }
 
     fn postprocess_directlink(&self, base_dir: &Path) -> Result<()> {

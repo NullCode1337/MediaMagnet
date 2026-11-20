@@ -34,9 +34,9 @@ use crate::state::AppState;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CustomArgs {
-    Off,  // Refuse every client-supplied argument.
-    Filtered,  // Accept arguments, refusing the options that escape the job.
-    Unrestricted,  // Accept every option the backend supports. Trusted hosts only.
+    Off,          // Refuse every client-supplied argument.
+    Filtered,     // Accept arguments, refusing the options that escape the job.
+    Unrestricted, // Accept every option the backend supports. Trusted hosts only.
 }
 
 impl CustomArgs {
