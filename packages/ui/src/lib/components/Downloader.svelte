@@ -74,6 +74,24 @@
     return trimmed || raw.trim();
   });
 
+  let downloadedJobs = $state<string[]>([]);
+  let downloadedFiles = $state<string[]>([]);
+
+  function markJobDownloaded(
+    id: string | null | undefined,
+    files: string[] = [],
+  ) {
+    if (!id) return;
+    if (!downloadedJobs.includes(id)) downloadedJobs = [...downloadedJobs, id];
+    for (const file of files) markFileDownloaded(id, file);
+  }
+
+  function markFileDownloaded(id: string | null | undefined, file: string) {
+    if (!id) return;
+    const key = `${id}:${file}`;
+    if (!downloadedFiles.includes(key)) downloadedFiles = [...downloadedFiles, key];
+  }
+
   function handleRetry(item: HistoryItem) {
     history = history.filter((h) => h.url !== item.url);
     retryDownload(item.url, {
@@ -182,7 +200,7 @@
               <FolderOpen size={13} />
             {/if}
           </Button>
-        {:else if transport.saveJobFiles && item.id && (item.files?.length ?? 0) > 0}
+        {:else if transport.saveJobFiles && item.id && (item.files?.length ?? 0) > 0 && !downloadedJobs.includes(item.id)}
           <Button
             variant="ghost"
             size="icon"
@@ -190,6 +208,7 @@
             title="Download file"
             onclick={(e) => {
               e.stopPropagation();
+              markJobDownloaded(item.id, item.files ?? []);
               void transport.saveJobFiles?.(item.id!, item.files!);
             }}
           >
@@ -360,14 +379,18 @@
                   >
                     <FolderOpen size={13} />
                   </Button>
-                {:else if transport.saveJobFiles && selectedItem?.id}
+                {:else if transport.saveJobFiles && selectedItem?.id && !downloadedFiles.includes(`${selectedItem.id}:${file}`)}
                   <Button
                     variant="ghost"
                     size="icon"
                     class="h-7 w-7 shrink-0 rounded-lg text-muted-foreground hover:bg-background/70 hover:text-foreground"
                     title="Download file"
                     aria-label="Download {file}"
-                    onclick={() => selectedItem && transport.saveJobFiles?.(selectedItem.id!, [file])}
+                    onclick={() => {
+                      if (!selectedItem?.id) return;
+                      markFileDownloaded(selectedItem.id, file);
+                      void transport.saveJobFiles?.(selectedItem.id, [file]);
+                    }}
                   >
                     <Download size={13} />
                   </Button>
@@ -410,11 +433,14 @@
           <FolderOpen size={14} />
           {selectedFiles.length === 1 ? "Open File" : "Open Folder"}
         </Button>
-      {:else if !selectedFailed && selectedFiles.length > 0 && transport.saveJobFiles && selectedItem?.id}
+      {:else if !selectedFailed && selectedFiles.length > 0 && transport.saveJobFiles && selectedItem?.id && !downloadedJobs.includes(selectedItem.id)}
         <Button
           class="gap-2 rounded-xl cursor-pointer"
-          onclick={() =>
-            selectedItem && transport.saveJobFiles?.(selectedItem.id!, selectedFiles)}
+          onclick={() => {
+            if (!selectedItem?.id) return;
+            markJobDownloaded(selectedItem.id, selectedFiles);
+            void transport.saveJobFiles?.(selectedItem.id, selectedFiles);
+          }}
         >
           <Download size={14} />
           {selectedFiles.length === 1 ? "Download" : "Download All"}
