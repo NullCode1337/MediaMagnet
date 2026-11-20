@@ -103,16 +103,23 @@ async function errorMessage(response: Response): Promise<string> {
   }
 }
 
-export function createHttpTransport(): Transport {
+/** Asks the shell for the server token; `null` means the user gave up. */
+export type TokenPrompt = (message: string) => Promise<string | null>;
+
+const TOKEN_MESSAGE =
+  "This instance is protected. Please enter your access token.";
+
+export function createHttpTransport(
+  options: { askForToken?: TokenPrompt } = {},
+): Transport {
   let token = readStoredToken();
   /** Jobs this browser started, so only it saves their finished files. */
   const requestedJobs = new Set<string>();
 
-  function promptForToken(): boolean {
-    const entered = window.prompt(
-      "This MediaMagnet server requires an access token:",
-      "",
-    );
+  async function promptForToken(): Promise<boolean> {
+    const entered = options.askForToken
+      ? await options.askForToken(TOKEN_MESSAGE)
+      : window.prompt(TOKEN_MESSAGE, "");
     if (!entered?.trim()) return false;
     token = entered.trim();
     setToken(token);
@@ -132,7 +139,7 @@ export function createHttpTransport(): Transport {
     const response = await fetch(API + path, { ...init, headers });
 
     if (response.status === 401) {
-      if (retry && promptForToken()) return request<T>(path, init, false);
+      if (retry && (await promptForToken())) return request<T>(path, init, false);
       throw new HttpError(401, "unauthorized");
     }
     if (!response.ok) {
@@ -449,7 +456,9 @@ export function createHttpTransport(): Transport {
 
       try {
         let response = await run();
-        if (response.status === 401 && promptForToken()) response = await run();
+        if (response.status === 401 && (await promptForToken())) {
+          response = await run();
+        }
         if (!response.ok) {
           const message = await errorMessage(response);
           return { ok: false, output: message, error: message };
