@@ -18,6 +18,7 @@
   import Sidebar from "$lib/components/Sidebar.svelte";
   import Topbar from "$lib/components/Topbar.svelte";
   import Downloader from "$lib/components/Downloader.svelte";
+  import DownloaderCard from "$lib/components/DownloaderCard.svelte";
   import Settings from "$lib/components/Settings.svelte";
   import Titlebar from "$lib/components/Titlebar.svelte";
 
@@ -137,7 +138,7 @@
         return error;
       }
 
-      uiState.activeTab = "downloads";
+      if (uiState.innerWidth >= 640) uiState.activeTab = "downloads";
     }
 
     return null;
@@ -558,49 +559,66 @@
             style="transform: translateX(-{mobileTabIndex * 100}%);"
           >
             <div
-              class="w-full h-full shrink-0 overflow-y-auto px-6 pt-4 pb-32 flex flex-col justify-center"
+              class="w-full h-full shrink-0 overflow-y-auto px-6 pt-4 pb-32 flex flex-col"
             >
-              <div
-                class="max-w-md mx-auto w-full flex flex-col items-center gap-3"
-              >
+              <div class="my-auto w-full flex flex-col">
                 <div
-                  class="flex flex-row items-center justify-center gap-2 w-full"
+                  class="max-w-md mx-auto w-full flex flex-col items-center gap-3"
                 >
-                  <img src={logo} alt="logo" class="w-12 h-12 object-contain" />
-                  <h2
-                    class="text-2xl font-bold tracking-tight text-foreground leading-none"
+                  <div
+                    class="flex flex-row items-center justify-center gap-2 w-full"
                   >
-                    MediaMagnet
-                  </h2>
+                    <img
+                      src={logo}
+                      alt="logo"
+                      class="w-12 h-12 object-contain"
+                    />
+                    <h2
+                      class="text-2xl font-bold tracking-tight text-foreground leading-none"
+                    >
+                      MediaMagnet
+                    </h2>
+                  </div>
+
+                  <div class="w-full flex items-center gap-2">
+                    <form
+                      onsubmit={(e) => {
+                        e.preventDefault();
+                        pasteOrDownload();
+                      }}
+                      class="flex-1"
+                    >
+                      <Input
+                        placeholder="Enter URL"
+                        bind:value={urlInput}
+                        bind:ref={urlInputEl}
+                        class="h-12 bg-muted/40 focus-visible:ring-1 text-sm rounded-xl w-full"
+                      />
+                    </form>
+                    <Button
+                      variant="secondary"
+                      onclick={pasteOrDownload}
+                      class="h-12 w-12 bg-primary text-primary-foreground shrink-0 rounded-xl shadow-md flex items-center justify-center"
+                    >
+                      {#if urlInput === ""}
+                        <Clipboard size={18} />
+                      {:else}
+                        <Play size={18} />
+                      {/if}
+                    </Button>
+                  </div>
                 </div>
 
-                <div class="w-full flex items-center gap-2">
-                  <form
-                    onsubmit={(e) => {
-                      e.preventDefault();
-                      pasteOrDownload();
-                    }}
-                    class="flex-1"
-                  >
-                    <Input
-                      placeholder="Enter URL"
-                      bind:value={urlInput}
-                      bind:ref={urlInputEl}
-                      class="h-12 bg-muted/40 focus-visible:ring-1 text-sm rounded-xl w-full"
+                {#if tasks.length > 0}
+                  <div class="max-w-md mx-auto w-full mt-6">
+                    <DownloaderCard
+                      {tasks}
+                      pauseTask={pauseDownload}
+                      resumeTask={resumeDownload}
+                      cancelTask={cancelDownload}
                     />
-                  </form>
-                  <Button
-                    variant="secondary"
-                    onclick={pasteOrDownload}
-                    class="h-12 w-12 bg-primary text-primary-foreground shrink-0 rounded-xl shadow-md flex items-center justify-center"
-                  >
-                    {#if urlInput === ""}
-                      <Clipboard size={18} />
-                    {:else}
-                      <Play size={18} />
-                    {/if}
-                  </Button>
-                </div>
+                  </div>
+                {/if}
               </div>
             </div>
 
@@ -611,6 +629,7 @@
                 <Downloader
                   {tasks}
                   bind:history
+                  showTasks={false}
                   pauseTask={pauseDownload}
                   resumeTask={resumeDownload}
                   cancelTask={cancelDownload}
