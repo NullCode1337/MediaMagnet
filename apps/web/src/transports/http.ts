@@ -104,7 +104,10 @@ async function errorMessage(response: Response): Promise<string> {
 }
 
 /** Asks the shell for the server token; `null` means the user gave up. */
-export type TokenPrompt = (message: string) => Promise<string | null>;
+export type TokenPrompt = (
+  message: string,
+  verify: (token: string) => Promise<boolean>,
+) => Promise<string | null>;
 
 const TOKEN_MESSAGE =
   "This instance is protected. Please enter your access token.";
@@ -116,10 +119,33 @@ export function createHttpTransport(
   /** Jobs this browser started, so only it saves their finished files. */
   const requestedJobs = new Set<string>();
 
+  /** A token is only accepted if the server agrees it is valid. */
+  async function tokenIsValid(candidate: string): Promise<boolean> {
+    const response = await fetch(API + "/health", {
+      headers: { authorization: `Bearer ${candidate}` },
+    });
+    return response.ok;
+  }
+
+  async function askForToken(): Promise<string | null> {
+    if (options.askForToken) {
+      return options.askForToken(TOKEN_MESSAGE, tokenIsValid);
+    }
+    for (;;) {
+      const entered = window.prompt(TOKEN_MESSAGE, "");
+      if (!entered?.trim()) return null;
+      try {
+        if (await tokenIsValid(entered.trim())) return entered.trim();
+        window.alert("Invalid access token, please try again.");
+      } catch {
+        window.alert("Could not reach the server to verify the token.");
+        return null;
+      }
+    }
+  }
+
   async function promptForToken(): Promise<boolean> {
-    const entered = options.askForToken
-      ? await options.askForToken(TOKEN_MESSAGE)
-      : window.prompt(TOKEN_MESSAGE, "");
+    const entered = await askForToken();
     if (!entered?.trim()) return false;
     token = entered.trim();
     setToken(token);

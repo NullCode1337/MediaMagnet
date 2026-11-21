@@ -3,20 +3,36 @@
 
   let {
     message,
+    verify,
     ondone,
   }: {
     message: string;
+    verify: (token: string) => Promise<boolean>;
     ondone: (token: string | null) => void;
   } = $props();
 
   let value = $state("");
+  let error = $state("");
+  let checking = $state(false);
   let input = $state<HTMLInputElement | null>(null);
 
   onMount(() => input?.focus());
 
-  function submit(event: SubmitEvent) {
+  async function submit(event: SubmitEvent) {
     event.preventDefault();
-    ondone(value.trim() || null);
+    const candidate = value.trim();
+    if (!candidate || checking) return;
+
+    checking = true;
+    error = "";
+    try {
+      if (await verify(candidate)) ondone(candidate);
+      else error = "Invalid access token, please try again.";
+    } catch {
+      error = "Could not reach the server to verify the token.";
+    } finally {
+      checking = false;
+    }
   }
 </script>
 
@@ -41,26 +57,35 @@
     <input
       bind:this={input}
       bind:value
+      oninput={() => (error = "")}
       type="password"
       placeholder="Access token"
       autocomplete="off"
       spellcheck="false"
-      class="mt-4 h-11 w-full rounded-xl bg-background/70 px-3.5 text-sm text-foreground ring-1 ring-border/40 outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+      disabled={checking}
+      class="mt-4 h-11 w-full rounded-xl bg-background/70 px-3.5 text-sm text-foreground ring-1 ring-border/40 outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-60 {error
+        ? 'ring-destructive/50'
+        : ''}"
     />
+    {#if error}
+      <p class="mt-2 text-xs leading-relaxed text-destructive">{error}</p>
+    {/if}
 
     <div class="mt-4 flex justify-end gap-2">
       <button
         type="button"
         onclick={() => ondone(null)}
-        class="h-9 cursor-pointer rounded-xl px-3.5 text-sm font-medium text-muted-foreground ring-1 ring-border/40 transition-colors hover:bg-foreground/5 hover:text-foreground"
+        disabled={checking}
+        class="h-9 cursor-pointer rounded-xl px-3.5 text-sm font-medium text-muted-foreground ring-1 ring-border/40 transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-50"
       >
         Cancel
       </button>
       <button
         type="submit"
-        class="h-9 cursor-pointer rounded-xl bg-primary px-3.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+        disabled={checking}
+        class="h-9 cursor-pointer rounded-xl bg-primary px-3.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
       >
-        Unlock
+        {checking ? "Checking…" : "Unlock"}
       </button>
     </div>
   </form>

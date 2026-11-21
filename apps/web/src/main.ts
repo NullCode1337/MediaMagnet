@@ -8,7 +8,10 @@ type PromptInstance = ReturnType<typeof mount> | null;
 let tokenPrompt: Promise<string | null> | null = null;
 
 /** The token gate lives above the app, so it runs before any settings load. */
-function askForToken(message: string): Promise<string | null> {
+function askForToken(
+  message: string,
+  verify: (token: string) => Promise<boolean>,
+): Promise<string | null> {
   if (tokenPrompt) return tokenPrompt;
 
   tokenPrompt = new Promise<string | null>((resolve) => {
@@ -23,7 +26,7 @@ function askForToken(message: string): Promise<string | null> {
     };
     instance = mount(TokenPrompt, {
       target: host,
-      props: { message, ondone: done },
+      props: { message, verify, ondone: done },
     });
   });
   return tokenPrompt;
