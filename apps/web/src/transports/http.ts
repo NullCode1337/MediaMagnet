@@ -165,6 +165,10 @@ export function createHttpTransport(
     const response = await fetch(API + path, { ...init, headers });
 
     if (response.status === 401) {
+      if (token) {
+        token = null;
+        setToken(null);
+      }
       if (retry && (await promptForToken())) return request<T>(path, init, false);
       throw new HttpError(401, "unauthorized");
     }
