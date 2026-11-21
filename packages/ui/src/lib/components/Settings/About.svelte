@@ -118,7 +118,7 @@
           alt="MediaMagnet logo"
           class="size-20 shrink-0 rounded-xl"
         />
-        <div class="flex min-w-0 flex-col gap-2">
+        <div class="flex min-w-0 flex-1 flex-col gap-2">
           <div
             class="flex flex-wrap items-center justify-center gap-2 sm:justify-start"
           >
@@ -138,31 +138,20 @@
           <p class="max-w-md text-sm leading-relaxed text-muted-foreground">
             {updateText}
           </p>
+          {#if updater.status === "available" && updater.info?.body}
+            <p
+              class="max-h-32 max-w-lg overflow-auto whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground scrollbar-thin"
+            >
+              {updater.info.body}
+            </p>
+          {/if}
         </div>
-      </div>
-    </div>
 
-    {#if isDesktop && updater.supported}
-      <div class="overflow-hidden rounded-2xl bg-secondary/55">
-        <div class="flex flex-col gap-3 px-4 py-4">
-          <div class="flex items-start justify-between gap-4">
-            <div class="min-w-0">
-              <p class="text-[15px] leading-tight text-foreground">App Updates</p>
-              <p class="mt-1 text-xs leading-normal text-muted-foreground">
-                {updateText}
-              </p>
-              {#if updater.status === "available" && updater.info?.body}
-                <p
-                  class="mt-2 max-h-32 overflow-auto whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground scrollbar-thin"
-                >
-                  {updater.info.body}
-                </p>
-              {/if}
-            </div>
-
+        {#if isDesktop && updater.supported}
+          <div class="flex shrink-0 items-center">
             {#if updater.status === "available"}
               <Button
-                class="h-9 shrink-0 rounded-xl px-3.5 text-xs font-medium"
+                class="h-9 rounded-xl px-3.5 text-xs font-medium"
                 onclick={() => updater.install()}
               >
                 Install
@@ -170,7 +159,7 @@
             {:else}
               <Button
                 variant="outline"
-                class="h-9 shrink-0 rounded-xl px-3.5 text-xs font-medium"
+                class="h-9 rounded-xl px-3.5 text-xs font-medium"
                 disabled={updater.busy}
                 onclick={() => updater.check()}
               >
@@ -178,21 +167,23 @@
               </Button>
             {/if}
           </div>
-
-          {#if updater.status === "downloading"}
-            <div class="h-1.5 overflow-hidden rounded-full bg-background/70">
-              <div
-                class="h-full rounded-full bg-primary transition-[width] duration-200"
-                class:animate-pulse={updater.progress < 0}
-                style="width: {updater.progress >= 0
-                  ? `${Math.round(updater.progress * 100)}%`
-                  : '100%'}"
-              ></div>
-            </div>
-          {/if}
-        </div>
+        {/if}
       </div>
-    {/if}
+
+      {#if updater.status === "downloading"}
+        <div class="px-4 pb-4">
+          <div class="h-1.5 overflow-hidden rounded-full bg-background/70">
+            <div
+              class="h-full rounded-full bg-primary transition-[width] duration-200"
+              class:animate-pulse={updater.progress < 0}
+              style="width: {updater.progress >= 0
+                ? `${Math.round(updater.progress * 100)}%`
+                : '100%'}"
+            ></div>
+          </div>
+        </div>
+      {/if}
+    </div>
 
     <div class="overflow-hidden rounded-2xl bg-secondary/55 py-1">
       <div class="divide-y divide-border/20">
