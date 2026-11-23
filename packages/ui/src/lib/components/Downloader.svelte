@@ -296,7 +296,11 @@
     </div>
 
     {#if history.length === 0}
-      <div class="h-28 flex flex-col items-center justify-center"></div>
+      <div
+        class="min-h-[105.75px] flex flex-col items-center justify-center bg-muted/20 rounded-xl"
+      >
+        <p class="text-sm text-muted-foreground font-medium">No history yet</p>
+      </div>
     {:else}
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 w-full">
         {#each history as item, index (index)}
