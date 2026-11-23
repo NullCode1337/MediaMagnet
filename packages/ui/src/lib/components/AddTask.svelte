@@ -179,7 +179,7 @@
           bind:value={text}
           rows="4"
           placeholder={"Paste any text with links in it, e.g.\n\u201cdownload this https://example.com/gallery\u201d"}
-          class="min-h-28 w-full resize-y bg-transparent text-[15px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground/55 sm:min-h-32"
+          class="min-h-28 w-full resize-y bg-transparent text-[15px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground/55 sm:min-h-32 lg:h-[calc(min(82vh,820px)_-_354px)]"
         ></textarea>
       </div>
     </div>
