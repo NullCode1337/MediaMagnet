@@ -619,7 +619,11 @@ All configuration is through environment variables.
 | `MM_DATA_DIR` | `$XDG_DATA_HOME/mediamagnet` | Settings, cookies and runtime data. Set explicitly on Windows. |
 | `MM_DOWNLOAD_ROOT` | `$MM_DATA_DIR/downloads` | Download directory, also served by `/api/v1/files`. |
 | `MM_STATIC_DIR` | embedded UI | Serve the web UI from a directory instead (development). |
-| `MM_TOKEN` | unset | Require this bearer token on every API request. |
+| `MM_TOKEN` | unset | Require this bearer token on every API request. Generate at least 16 random characters. |
+| `MM_AUTH_MAX_FAILURES` | `10` | Failed token attempts per address per window before a lockout. `0` disables throttling. |
+| `MM_AUTH_WINDOW_SECS` | `300` | Window over which failures are counted. |
+| `MM_AUTH_LOCKOUT_SECS` | `300` | Lockout length after too many failures. |
+| `MM_TRUST_PROXY` | unset | Key throttling on the last `X-Forwarded-For` hop. Only set behind a proxy that appends the client address. |
 | `MM_ALLOW_CUSTOM_ARGS` | on (unrestricted) | User-supplied backend arguments are passed straight to the tool. `filtered` applies the deny-list, `off` refuses them. |
 | `MM_PYTHON` | unset | Interpreter used for the system tool mode. |
 | `MM_BINARIES_DIR` | `binaries/` beside the executable, if present | Directory with a bundled `python/`, `deno`, `ffmpeg` and `ffprobe`. Set by hand only if they live elsewhere. |
@@ -628,7 +632,6 @@ Data layout under `MM_DATA_DIR`:
 
 ```text
 config/settings.json  server defaults, used when a client sends no settings
-data/cookies/         cookie store used when a job sends no cookies
 data/py-overlay/      tools installed by POST /api/v1/tools/update
 downloads/            default download root; emptied when the server starts
 ```
@@ -636,18 +639,33 @@ downloads/            default download root; emptied when the server starts
 ### Access token and browser UI
 
 The web UI itself is public; every `/api/v1` request requires the token when
-`MM_TOKEN` is set. The UI prompts for the token on the first request and keeps
-it in `localStorage`. To avoid the prompt, open the UI once with the token in
-the URL:
+`MM_TOKEN` is set. Generate one rather than choosing a word:
+
+```sh
+openssl rand -hex 32
+```
+
+The UI prompts for the token on the first request and keeps it in
+`localStorage`. To avoid the prompt, open the UI once with the token in the URL:
 
 ```text
-http://localhost:8080/?token=change-me
+http://localhost:8080/?token=<your-token>
 ```
 
 The token is removed from the address bar after the page loads. Server-Sent
 Events (`/api/v1/events`) send it as a query parameter because `EventSource`
 cannot set headers, so make sure your reverse proxy does not log query strings
-or terminate TLS in front of the server.
+and terminate TLS in front of the server.
+
+Repeated failures are throttled per client address: after 10 failures in five
+minutes the address receives `429` with `Retry-After` and cannot authenticate
+until the lockout ends, even with the right token. Tune this with
+`MM_AUTH_MAX_FAILURES`, `MM_AUTH_WINDOW_SECS` and `MM_AUTH_LOCKOUT_SECS`
+(`MM_AUTH_MAX_FAILURES=0` disables it). Behind a proxy set `MM_TRUST_PROXY=1`
+so clients are keyed by the address in `X-Forwarded-For` instead of the proxy's
+address; do not enable it on a server that is reachable directly. Failures on
+the events stream are not counted, because `EventSource` reconnects on its own
+and one stale token in an open tab would otherwise lock the address out.
 
 ### Reverse proxy and TLS
 

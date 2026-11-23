@@ -23,3 +23,5 @@ tokio-util = { version = "0.7.19", features = ["io"] }
 futures-util = "0.3"
 mime_guess = "2.0.5"
 url = "2.5.8"
+sha2 = "0.10"
+subtle = "2.6"

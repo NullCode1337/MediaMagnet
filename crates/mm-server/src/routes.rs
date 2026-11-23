@@ -63,7 +63,10 @@ pub fn router(state: Arc<AppState>) -> Router {
         )
         .route("/torrents/{id}", delete(torrents_unavailable))
         .layer(axum::extract::DefaultBodyLimit::max(MAX_BODY_BYTES))
-        .layer(middleware::from_fn_with_state(state.clone(), require_token))
+        .layer(middleware::from_fn_with_state(
+            state.auth.clone(),
+            require_token,
+        ))
         .with_state(state.clone());
 
     Router::new()
@@ -743,6 +746,12 @@ async fn events(
 /// navigation works on a hard reload.
 async fn spa(State(state): State<Arc<AppState>>, request: axum::extract::Request) -> Response {
     let path = request.uri().path().trim_start_matches('/');
+
+    // Unknown API paths are not SPA routes: an HTML 200 would look like a
+    // successful call to an API client that only checks the status.
+    if path.starts_with("api/") {
+        return error(StatusCode::NOT_FOUND, "not_found", "no such API route");
+    }
 
     // A traversal attempt must not fall through to `index.html`.
     if path.contains("..") {

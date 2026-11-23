@@ -113,7 +113,11 @@ desktop app's own settings.
 | `MM_DOWNLOAD_ROOT` | `$MM_DATA_DIR/downloads` | Download directory, also served by `/files`. |
 | `MM_FILE_TTL_SECS` | `3600` | Seconds an undelivered job output may remain before the server deletes it. |
 | `MM_STATIC_DIR` | embedded UI | Serve the web UI from this directory instead. |
-| `MM_TOKEN` | unset | Require this bearer token on every request. |
+| `MM_TOKEN` | unset | Require this bearer token on every request. Use at least 16 random characters. |
+| `MM_AUTH_MAX_FAILURES` | `10` | Failed token attempts per address per window before a lockout (`0` disables). |
+| `MM_AUTH_WINDOW_SECS` | `300` | Window over which failed attempts are counted. |
+| `MM_AUTH_LOCKOUT_SECS` | `300` | Lockout length after too many failures. |
+| `MM_TRUST_PROXY` | unset | Key throttling on the last `X-Forwarded-For` hop; only behind a trusted proxy. |
 | `MM_ALLOW_CUSTOM_ARGS` | on (unrestricted) | User-supplied tool arguments are passed straight to the backend. `filtered` applies the deny-list, `off` refuses them; see [the API docs](docs/API.md#policy). |
 
 The binary speaks plain HTTP. Put it behind a TLS reverse proxy before exposing it, and set `MM_TOKEN` if anyone else can reach it. Without a token the API is open.

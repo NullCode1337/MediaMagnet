@@ -28,8 +28,11 @@
     try {
       if (await verify(candidate)) ondone(candidate);
       else error = "Invalid access token, please try again.";
-    } catch {
-      error = "Could not reach the server to verify the token.";
+    } catch (err) {
+      error =
+        err instanceof Error && err.message
+          ? err.message
+          : "Could not reach the server to verify the token.";
     } finally {
       checking = false;
     }

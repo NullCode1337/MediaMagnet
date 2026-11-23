@@ -12,7 +12,10 @@ mod state;
 
 #[doc(hidden)]
 pub mod testing {
-    pub use crate::auth::{query_token_allowed, same};
+    pub use crate::auth::{
+        query_token_allowed, require_token, same, token_is_weak, AuthGuard, AuthLimiter,
+        AuthPolicy, Failure,
+    };
     pub use crate::events::to_transport_event;
     pub use crate::files::{encode_path, is_active_content, serve, DeleteAfter, Disposition};
     pub use crate::jobs::{JobSummary, Jobs, RETAINED_JOBS};
@@ -28,6 +31,7 @@ use std::time::Duration;
 use mm_core::{Engine, Policy, RuntimeConfig, ToolRuntime};
 
 use crate::assets::StaticAssets;
+use crate::auth::{token_is_weak, AuthGuard, AuthPolicy};
 use crate::jobs::Jobs;
 use crate::retention::Retention;
 use crate::state::AppState;
@@ -261,11 +265,14 @@ async fn serve(config: Config) -> Result<(), String> {
 
     let engine = Engine::new(runtime, config_dir, app_data_dir, policy, events.sink());
 
+    let auth_policy = AuthPolicy::from_env();
+    let auth = AuthGuard::new(config.token.clone(), auth_policy);
+
     let state = Arc::new(AppState {
         engine,
         events,
         download_root: config.download_root.clone(),
-        token: config.token.clone(),
+        auth,
         static_assets: config.static_assets.clone(),
         jobs,
         retention,
@@ -319,6 +326,24 @@ async fn serve(config: Config) -> Result<(), String> {
         "[MediaMagnet][Server] custom args: {}",
         config.custom_args.describe()
     );
+    println!(
+        "[MediaMagnet][Server] auth throttling: {}",
+        if auth_policy.max_failures == 0 {
+            "off".to_string()
+        } else {
+            format!(
+                "{} failed attempts per {}s -> {}s lockout{}",
+                auth_policy.max_failures,
+                auth_policy.window.as_secs(),
+                auth_policy.lockout.as_secs(),
+                if auth_policy.trust_proxy {
+                    " (trusting X-Forwarded-For)"
+                } else {
+                    ""
+                }
+            )
+        }
+    );
 
     if config.custom_args == CustomArgs::Unrestricted && !config.bind.ip().is_loopback() {
         eprintln!(
@@ -326,6 +351,16 @@ async fn serve(config: Config) -> Result<(), String> {
              can pass options that run commands (for example --exec). Set \
              MM_ALLOW_CUSTOM_ARGS=filtered (or off) unless every client is trusted."
         );
+    }
+
+    if let Some(token) = &config.token {
+        if token_is_weak(token) {
+            eprintln!(
+                "[MediaMagnet][Server] WARNING: MM_TOKEN is short or a well-known value. \
+                 Generate one with `openssl rand -hex 32`; a guessable token defeats the \
+                 bearer check even with brute-force throttling."
+            );
+        }
     }
 
     if config.token.is_none() && !config.bind.ip().is_loopback() {
@@ -342,10 +377,13 @@ async fn serve(config: Config) -> Result<(), String> {
         .await
         .map_err(|e| format!("could not bind {}: {e}", config.bind))?;
 
-    axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal())
-        .await
-        .map_err(|e| format!("server error: {e}"))
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .with_graceful_shutdown(shutdown_signal())
+    .await
+    .map_err(|e| format!("server error: {e}"))
 }
 
 async fn shutdown_signal() {

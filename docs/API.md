@@ -30,7 +30,11 @@ Pre-built standalone archives are attached to `server-v*` releases. Locally,
 | `MM_DOWNLOAD_ROOT` | `$MM_DATA_DIR/downloads` | Directory that `/files` serves from and downloads are written to. |
 | `MM_FILE_TTL_SECS` | `3600` | Seconds an undelivered job output may remain before it is deleted. |
 | `MM_STATIC_DIR` | embedded UI | Serve the web UI from this directory instead. |
-| `MM_TOKEN` | unset | When set, every request needs this bearer token. |
+| `MM_TOKEN` | unset | When set, every API request needs this bearer token. |
+| `MM_AUTH_MAX_FAILURES` | `10` | Failed token attempts per address per window before a lockout. `0` disables throttling. |
+| `MM_AUTH_WINDOW_SECS` | `300` | Window over which failures are counted. |
+| `MM_AUTH_LOCKOUT_SECS` | `300` | How long an address is locked out after too many failures. |
+| `MM_TRUST_PROXY` | unset | Key throttling on the last `X-Forwarded-For` hop. Only set behind a proxy that appends the client address. |
 | `MM_ALLOW_CUSTOM_ARGS` | off | Allows user-supplied tool arguments; see [Policy](#policy). |
 | `MM_PYTHON` | unset | Interpreter for the system tool mode (used with the overlay). |
 | `MM_BINARIES_DIR` | `binaries/` beside the executable, if present | Directory holding bundled `python/`, `deno`, `ffmpeg` and `ffprobe`. Without it the server uses tools on `PATH` or `MM_PYTHON`. |
@@ -45,18 +49,31 @@ curl -s http://localhost:8080/api/v1/health
 ## Authentication
 
 With `MM_TOKEN` set, send `Authorization: Bearer <token>` on every request.
-A missing or wrong token returns `401` with `WWW-Authenticate: Bearer`.
+The scheme is case-insensitive. A missing or wrong token returns `401` with
+`WWW-Authenticate: Bearer`.
 
-Three `GET`/`HEAD` routes also accept `?token=<token>`, because `EventSource`
+Four `GET`/`HEAD` routes also accept `?token=<token>`, because `EventSource`
 and a plain download link cannot set headers:
 
 - `/events`
 - `/files/{path}`
 - `/downloads/{id}/file`
+- `/downloads/{id}/archive`
 
 Every other endpoint rejects query tokens, so ordinary API calls never carry the
-token in a URL or an access log. Those three still do: use a proxy that does not
+token in a URL or an access log. Those four still do: use a proxy that does not
 log query strings, and prefer the header wherever the client can set one.
+
+Repeated failures are throttled per client address: after 10 failures in five
+minutes the address receives `429` with `Retry-After` for five minutes, and even
+the correct token is refused until the lockout ends. Tune this with
+`MM_AUTH_MAX_FAILURES`, `MM_AUTH_WINDOW_SECS` and `MM_AUTH_LOCKOUT_SECS`
+(`MM_AUTH_MAX_FAILURES=0` disables it). Behind a reverse proxy, set
+`MM_TRUST_PROXY=1` so the throttle key is the client address rather than the
+proxy's; do not enable it on a directly exposed server. Failures on
+`GET /events` are not counted, because `EventSource` retries that stream
+automatically and a stale token in an open tab would otherwise lock the address
+out.
 
 Without `MM_TOKEN` the API is open. The server warns on startup when it binds a
 non-loopback address without a token. Do not expose it to an untrusted network.

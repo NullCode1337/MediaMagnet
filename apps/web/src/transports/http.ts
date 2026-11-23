@@ -121,9 +121,22 @@ export function createHttpTransport(
 
   /** A token is only accepted if the server agrees it is valid. */
   async function tokenIsValid(candidate: string): Promise<boolean> {
-    const response = await fetch(API + "/health", {
-      headers: { authorization: `Bearer ${candidate}` },
-    });
+    let response: Response;
+    try {
+      response = await fetch(API + "/health", {
+        headers: { authorization: `Bearer ${candidate}` },
+      });
+    } catch {
+      throw new Error("Could not reach the server to verify the token.");
+    }
+    if (response.status === 429) {
+      const retry = response.headers.get("retry-after");
+      throw new Error(
+        retry
+          ? `Too many failed attempts. Try again in ${retry} seconds.`
+          : "Too many failed attempts. Try again later.",
+      );
+    }
     return response.ok;
   }
 
@@ -137,8 +150,12 @@ export function createHttpTransport(
       try {
         if (await tokenIsValid(entered.trim())) return entered.trim();
         window.alert("Invalid access token, please try again.");
-      } catch {
-        window.alert("Could not reach the server to verify the token.");
+      } catch (err) {
+        window.alert(
+          err instanceof Error && err.message
+            ? err.message
+            : "Could not reach the server to verify the token.",
+        );
         return null;
       }
     }
