@@ -1,7 +1,7 @@
 <div align="center">
 <img width="4536" height="1537" alt="image" src="https://github.com/user-attachments/assets/c64adb39-f522-4146-8a2b-98119a39450e" />
  
-**A polished desktop app and self-hostable server for downloading any media from any* website**
+**A polished desktop app + server for downloading any media from any* website**
  
 [![License](https://img.shields.io/github/license/NullCode1337/MediaMagnet?color=6366f1)](https://github.com/NullCode1337/MediaMagnet/blob/main/LICENSE)
 [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-6366f1)](https://tauri.app)
@@ -12,27 +12,15 @@
  
 </div>
 
-
-## Overview
-
-MediaMagnet puts the power of [gallery-dl](https://github.com/mikf/gallery-dl), [yt-dlp](https://github.com/yt-dlp/yt-dlp) and [spotdl](https://github.com/spotDL/spotify-downloader) behind a clean GUI.
-
-It ships as two variants for the same interface:
-
-- **Desktop**: a Tauri 2 application for Windows, Linux and macOS, with native window controls, notifications and file pickers.
-- **Server**: a single Rust binary that serves the same web UI to a browser and exposes a versioned REST API at `/api/v1`. Anything the browser stores (settings, cookies, API keys) stays in that browser's `localStorage` and is sent with each job, so the server keeps no per-user configuration.
-
-Paste a URL, configure your options, and let MediaMagnet handle the rest.
-
 ## Features
 
-- **Unified downloader**: smart selection between gallery-dl, yt-dlp and spotdl
-- **Headless mode**: one click to download as you browse through sites
+- **Unified downloader**: Auto selection between gallery-dl, yt-dlp and spotdl
+- **Headless mode**: One click to download as you browse through sites
 - **REST API**: OpenAPI 3.1 specification and a typed TypeScript client
-- **Custom arguments**: pass **global** or **per-site arguments** directly to the backends (API keys, user IDs, anything supported by the backend)
-- **Cookie manager**: supports both JSON and Netscape formats; the desktop keeps a local store, while API clients send cookies with each job
-- **Settings import / export**: back up and share your configuration with a single click
-- **Cross-platform**: native binaries for Windows, Linux and macOS; the server runs anywhere Rust does
+- **Custom arguments**: Pass **global** or **per-site arguments** directly to the backends (API keys, authentications and anything else)
+- **Cookie manager**: Supports both JSON and Netscape formats with many other actions
+- **Settings import / export**: Back up and share your configuration with a single click
+- **Cross-platform**: Native binaries for Windows, Linux and macOS (with Docker for the server too)
 - **Lightweight**: built on Tauri and a single Axum server
 
 
@@ -56,8 +44,6 @@ For step-by-step instructions for every platform, architecture and installation 
 > **Linux users:** The `.AppImage` works on most distributions without installation. Just mark it executable and run it.
 >
 > **Arch Linux:** Download [PKGBUILD](https://github.com/NullCode1337/MediaMagnet/blob/main/PKGBUILD) and install to your system!
-
-Standalone server archives for Linux (x86_64/aarch64), macOS and Windows are attached to `server-v*` releases. Each archive contains the self-contained binary, the LICENSE and the API docs; the web UI is embedded.
 
 
 ## Self-hosting
