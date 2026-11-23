@@ -7,6 +7,7 @@
     Image as ImageIcon,
     Loader2,
     Music,
+    SlidersHorizontal,
     Sparkles,
     Video,
     X,
@@ -19,7 +20,6 @@
     commonSections,
     type ConfigPatch,
   } from "$lib/components/Settings/parts/fields";
-  import type { Section } from "$lib/components/Settings/parts/types";
   import { extractUrls } from "$lib/utils";
   import { settings } from "$lib/stores/settings.svelte";
   import { uiState } from "$lib/stores/store.svelte";
@@ -32,6 +32,7 @@
   } from "@mediamagnet/api";
 
   type BackendChoice = "auto" | DownloadBackend;
+  type SettingsTab = "common" | DownloadBackend;
 
   const BACKENDS = [
     { value: "auto", label: "Auto", icon: Sparkles },
@@ -39,6 +40,15 @@
     { value: "gallery-dl", label: "gallery-dl", icon: ImageIcon },
     { value: "spotdl", label: "spotdl", icon: Music },
   ] satisfies { value: BackendChoice; label: string; icon: typeof Sparkles }[];
+
+  const BACKEND_META = {
+    "yt-dlp": { label: "yt-dlp", icon: Video },
+    "gallery-dl": { label: "gallery-dl", icon: ImageIcon },
+    spotdl: { label: "spotdl", icon: Music },
+  } satisfies Record<
+    DownloadBackend,
+    { label: string; icon: typeof Sparkles }
+  >;
 
   let {
     open = $bindable(false),
@@ -53,6 +63,7 @@
 
   let text = $state("");
   let backend = $state<BackendChoice>("auto");
+  let settingsTab = $state<SettingsTab>("common");
   let base: Config = structuredClone(DEFAULT_CONFIG) as Config;
   let local = $state<Config>(structuredClone(base));
   let submitting = $state(false);
@@ -70,24 +81,38 @@
 
   const extractedUrls = $derived(extractUrls(text));
 
-  const prefixed = (name: string, sections: Section[]) =>
-    sections.map((section) => ({
-      ...section,
-      label: section.label ? `${name} · ${section.label}` : name,
-    }));
+  const backendTabs = $derived(
+    (backend === "auto"
+      ? (["yt-dlp", "gallery-dl", "spotdl"] as DownloadBackend[])
+      : [backend]
+    ).map((name) => ({ value: name, ...BACKEND_META[name] })),
+  );
+
+  const settingsTabs = $derived([
+    {
+      value: "common" as const,
+      label: "Common",
+      icon: SlidersHorizontal,
+    },
+    ...backendTabs,
+  ]);
 
   const common = $derived(commonSections(local, update));
-  const backendSettings = $derived(
-    backend === "auto"
-      ? (["yt-dlp", "gallery-dl", "spotdl"] as DownloadBackend[]).flatMap(
-          (name) => prefixed(name, backendSections(name, local, update)),
-        )
-      : prefixed(backend, backendSections(backend, local, update)),
+  const settingsSections = $derived(
+    settingsTab === "common"
+      ? common
+      : backendSections(settingsTab, local, update),
   );
+
+  function chooseBackend(choice: BackendChoice) {
+    backend = choice;
+    settingsTab = choice === "auto" ? "common" : choice;
+  }
 
   function reset() {
     text = "";
     backend = "auto";
+    settingsTab = "common";
     error = null;
     base = $state.snapshot(settings.config ?? DEFAULT_CONFIG) as Config;
     local = structuredClone(base);
@@ -166,7 +191,7 @@
       ></textarea>
     </div>
 
-    <div class="flex flex-col gap-2">
+    <div class="flex flex-col gap-2.5">
       <div class="flex items-center justify-between gap-3 px-1">
         <p
           class="text-[13px] font-semibold tracking-wide text-muted-foreground"
@@ -190,7 +215,7 @@
             type="button"
             role="radio"
             aria-checked={selected}
-            onclick={() => (backend = option.value)}
+            onclick={() => chooseBackend(option.value)}
             class="flex h-10 min-w-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2 text-[13px] font-medium transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] active:scale-[0.97] motion-reduce:transition-none {selected
               ? 'bg-primary text-primary-foreground shadow-md shadow-primary/25'
               : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground'}"
@@ -201,8 +226,6 @@
         {/each}
       </div>
     </div>
-
-    <SettingsSections sections={common} />
 
     {#if error}
       <div
@@ -216,7 +239,50 @@
 {/snippet}
 
 {#snippet settingsPane()}
-  <SettingsSections sections={backendSettings} />
+  <div class="flex flex-col gap-5">
+    <div class="flex flex-col gap-2.5">
+      <div class="flex items-center justify-between gap-3 px-1">
+        <p
+          class="text-[13px] font-semibold tracking-wide text-muted-foreground"
+        >
+          Settings
+        </p>
+      </div>
+
+      <div
+        role="tablist"
+        aria-label="Backend settings"
+        class="flex gap-1 overflow-x-auto rounded-2xl bg-secondary/60 p-1 scrollbar-none [&::-webkit-scrollbar]:hidden"
+      >
+        {#each settingsTabs as tab (tab.value)}
+          {@const selected = settingsTab === tab.value}
+          {@const Icon = tab.icon}
+          <button
+            type="button"
+            role="tab"
+            id="add-task-settings-tab-{tab.value}"
+            aria-selected={selected}
+            aria-controls="add-task-settings-panel"
+            onclick={() => (settingsTab = tab.value)}
+            class="flex h-9 min-w-max flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl px-2.5 text-[13px] font-medium transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] active:scale-[0.97] motion-reduce:transition-none sm:px-3 {selected
+              ? 'bg-background text-foreground shadow-sm ring-1 ring-border/40'
+              : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground'}"
+          >
+            <Icon size={14} class="hidden shrink-0 sm:block" />
+            <span class="whitespace-nowrap">{tab.label}</span>
+          </button>
+        {/each}
+      </div>
+    </div>
+
+    <div
+      id="add-task-settings-panel"
+      role="tabpanel"
+      aria-labelledby="add-task-settings-tab-{settingsTab}"
+    >
+      <SettingsSections sections={settingsSections} />
+    </div>
+  </div>
 {/snippet}
 
 {#snippet actions()}
@@ -274,7 +340,7 @@
     <div
       class="flex-1 overflow-y-auto px-4 pb-8 pt-3 scrollbar-none [&::-webkit-scrollbar]:hidden"
     >
-      <div class="flex flex-col gap-4">
+      <div class="flex flex-col gap-5">
         {@render sourcePane()}
         {@render settingsPane()}
       </div>
@@ -290,7 +356,7 @@
   <Dialog.Root bind:open>
     <Dialog.Content
       showCloseButton={false}
-      class="w-[calc(100%-10rem)]! gap-0 overflow-hidden rounded-[20px] bg-background p-0 shadow-[0_28px_90px_-30px_rgb(0_0_0/0.65)] ring-1 ring-foreground/5 sm:max-w-275! lg:h-[min(82vh,820px)]"
+      class="w-[calc(100%-10rem)]! gap-0 overflow-hidden rounded-[20px] bg-background p-0 shadow-[0_28px_90px_-30px_rgb(0_0_0/0.65)] ring-1 ring-foreground/5 sm:max-w-275! lg:h-[min(82vh,820px)] lg:grid-rows-[auto_minmax(0,1fr)]"
     >
       <Dialog.Header class="px-5 pb-3 pt-5">
         <div class="flex items-start gap-4">
@@ -322,7 +388,7 @@
           class="flex max-h-[60vh] min-h-0 flex-1 flex-col overflow-y-auto scrollbar-none [&::-webkit-scrollbar]:hidden lg:grid lg:max-h-none lg:grid-cols-2 lg:overflow-hidden"
         >
           <div
-            class="flex flex-col gap-4 px-5 pb-3 pt-3 scrollbar-thin lg:overflow-y-auto lg:pb-4"
+            class="flex flex-col gap-5 px-5 pb-3 pt-3 scrollbar-thin lg:overflow-y-auto lg:pb-4"
           >
             {@render sourcePane()}
           </div>
