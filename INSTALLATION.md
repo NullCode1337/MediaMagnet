@@ -2,20 +2,24 @@
 
 MediaMagnet is two products that share one interface:
 
-- **Desktop** — a Tauri 2 application for Windows, macOS and Linux.
-- **Server** — a single binary that serves the same web UI and the `/api/v1` REST API.
+- **Desktop**: a Tauri 2 application for Windows, macOS and Linux.
+- **Server**: a single binary that serves the same web UI and the `/api/v1` REST API.
 
 This guide covers installing either one on every supported platform and
 architecture, including first-run setup, running the server at boot, and
 building for architectures that do not have pre-built binaries.
 
-## Contents
+## Table of Contents
 
-- [Supported platforms](#supported-platforms)
-- [Desktop application](#desktop-application)
-- [Server](#server)
-- [Other architectures](#other-architectures)
-- [Troubleshooting](#troubleshooting)
+| Area | Jump to |
+| --- | --- |
+| **Platform support** | [Supported platforms](#supported-platforms) · [Architecture check](#check-your-architecture) · [Archive names](#server-archive-names) |
+| **Desktop app** | [Before you install](#before-you-install) · [Windows](#windows-x64-and-arm64) · [macOS](#macos-intel-and-apple-silicon) · [Linux](#linux-x64-and-arm64) · [First launch](#first-launch) · [Data location](#where-desktop-data-lives) · [Updating](#updating) · [Uninstalling](#uninstalling) |
+| **Server install** | [Requirements](#requirements) · [Docker](#docker-recommended) · [Standalone archive](#standalone-archive) · [Desktop binary](#desktop-binary-as-a-server) · [Source build](#build-from-source) · [Run at boot](#run-at-boot) |
+| **Server settings** | [Variables](#configuration) · [Access token](#access-token-and-browser-ui) · [Reverse proxy](#reverse-proxy-and-tls) · [Verify](#verify-the-installation) · [Data and backups](#data-backups-upgrades) |
+| **Source builds** | [Build requirements](#build-requirements) · [Build](#build) · [Cross-compiling](#cross-compiling-notes) |
+| **Other platforms** | [32-bit x86](#32-bit-x86-i686) · [32-bit ARM](#32-bit-arm-armv7--armhf) |
+| **Help** | [Troubleshooting](#troubleshooting) · [Getting help](#getting-help) |
 
 ## Supported platforms
 
@@ -280,9 +284,9 @@ docker run -d --name mediamagnet \
   mediamagnet
 ```
 
-Open <http://localhost:8080>. Downloads, settings and cookies live in the
-`mediamagnet` volume. `-p 127.0.0.1:8080:8080` keeps the server off the network;
-use `-p 8080:8080` to expose it on your LAN.
+Open <http://localhost:8080>. Downloads and settings live in the `mediamagnet`
+volume. `-p 127.0.0.1:8080:8080` keeps the server off the network; use
+`-p 8080:8080` to expose it on your LAN.
 
 To keep downloads on the host:
 
@@ -473,6 +477,21 @@ setx /M MM_PYTHON "<the path printed above>"
 Use permanent variables (`setx /M`) for a server that runs at boot; `$env:`
 variables only last for the current PowerShell session.
 
+### Desktop binary as a server
+
+The desktop executable embeds the same server and web UI. Pass
+`--launch-server` to serve the SPA and `/api/v1` without opening a window:
+
+```sh
+MediaMagnet --launch-server
+```
+
+On Windows the executable is `MediaMagnet.exe`. It listens on `0.0.0.0:8080` and
+honors the same `MM_*` variables as the standalone server (including
+`MM_TOKEN`). The bundled Python tools are found relative to the installed
+executable. Server mode keeps its data in the standalone server's directory
+(`$XDG_DATA_HOME/mediamagnet`), separate from the desktop app's own settings.
+
 ### Build from source
 
 See the requirements for each OS in
@@ -616,8 +635,9 @@ All configuration is through environment variables.
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `MM_BIND` | `0.0.0.0:8080` | Listen address. Use `127.0.0.1:8080` behind a proxy. |
-| `MM_DATA_DIR` | `$XDG_DATA_HOME/mediamagnet` | Settings, cookies and runtime data. Set explicitly on Windows. |
+| `MM_DATA_DIR` | `$XDG_DATA_HOME/mediamagnet` | Settings and runtime data. Set explicitly on Windows. |
 | `MM_DOWNLOAD_ROOT` | `$MM_DATA_DIR/downloads` | Download directory, also served by `/api/v1/files`. |
+| `MM_FILE_TTL_SECS` | `3600` | Seconds an undelivered job output may remain before the server deletes it. |
 | `MM_STATIC_DIR` | embedded UI | Serve the web UI from a directory instead (development). |
 | `MM_TOKEN` | unset | Require this bearer token on every API request. Generate at least 16 random characters. |
 | `MM_AUTH_MAX_FAILURES` | `10` | Failed token attempts per address per window before a lockout. `0` disables throttling. |
@@ -644,6 +664,10 @@ The web UI itself is public; every `/api/v1` request requires the token when
 ```sh
 openssl rand -hex 32
 ```
+
+The examples in this guide use `change-me` as a placeholder; replace it with the
+token you generated. The server prints a warning at startup while `MM_TOKEN` is
+short or is one of the stock values.
 
 The UI prompts for the token on the first request and keeps it in
 `localStorage`. To avoid the prompt, open the UI once with the token in the URL:
@@ -710,12 +734,15 @@ responses, downloads still work but event streams appear frozen.
 ### Verify the installation
 
 ```sh
-curl -fsS http://127.0.0.1:8080/api/v1/health
+curl -fsS -H "Authorization: Bearer change-me" \
+  http://127.0.0.1:8080/api/v1/health
 # {"status":"ok","version":"0.7.0"}
 
 curl -fsS -H "Authorization: Bearer change-me" \
   http://127.0.0.1:8080/api/v1/tools
 ```
+
+Drop the header if the server was started without `MM_TOKEN`.
 
 `/api/v1/tools` reports how each backend resolved (`preinstalled`, `system`,
 `bundled` or `overlay`) and whether Deno and ffmpeg were found. Then open the UI
@@ -723,8 +750,8 @@ in a browser and start a download.
 
 ### Data, backups, upgrades
 
-Back up `MM_DATA_DIR` (or the Docker volume) to keep settings and cookies.
-Downloaded files are in `MM_DOWNLOAD_ROOT`; back them up separately.
+Back up `MM_DATA_DIR` (or the Docker volume) to keep settings. Downloaded files
+are in `MM_DOWNLOAD_ROOT`; back them up separately.
 
 Job records from `GET /api/v1/downloads` are in memory only and are cleared by a
 restart. Paused jobs do not survive a restart and must be started again.

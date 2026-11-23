@@ -12,7 +12,6 @@
  
 </div>
 
----
 
 ## Overview
 
@@ -36,7 +35,6 @@ Paste a URL, configure your options, and let MediaMagnet handle the rest.
 - **Cross-platform**: native binaries for Windows, Linux and macOS; the server runs anywhere Rust does
 - **Lightweight**: built on Tauri and a single Axum server
 
----
 
 ## Installation
 
@@ -61,7 +59,6 @@ For step-by-step instructions for every platform, architecture and installation 
 
 Standalone server archives for Linux (x86_64/aarch64), macOS and Windows are attached to `server-v*` releases. Each archive contains the self-contained binary, the LICENSE and the API docs; the web UI is embedded.
 
----
 
 ## Self-hosting
 
@@ -72,9 +69,9 @@ The server needs the same download tools as the desktop app: `yt-dlp`, `gallery-
 ```bash
 docker build -t mediamagnet .
 docker run -d --name mediamagnet \
-  -p 8080:8080 \
+  -p 127.0.0.1:8080:8080 \
   -v mediamagnet:/data \
-  -e MM_TOKEN=change-me \
+  -e MM_TOKEN=CHANGEME \
   mediamagnet
 ```
 
@@ -100,29 +97,11 @@ The desktop executable embeds the same server and web UI. Pass
 MediaMagnet --launch-server
 ```
 
-It listens on `0.0.0.0:8080` and honors the same `MM_*` variables as the
-standalone server (including `MM_TOKEN`). The bundled Python tools are found
-relative to the installed executable. Server mode keeps its data in the
-standalone server's directory (`$XDG_DATA_HOME/mediamagnet`), separate from the
-desktop app's own settings.
+It reads the same `MM_*` variables as the standalone server. Without
+`MM_TOKEN` the API is open. The full reference, the access token and
+reverse-proxy setup are in
+[server configuration](INSTALLATION.md#configuration).
 
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `MM_BIND` | `0.0.0.0:8080` | Listen address. |
-| `MM_DATA_DIR` | `$XDG_DATA_HOME/mediamagnet` | Settings, cookies and runtime data. |
-| `MM_DOWNLOAD_ROOT` | `$MM_DATA_DIR/downloads` | Download directory, also served by `/files`. |
-| `MM_FILE_TTL_SECS` | `3600` | Seconds an undelivered job output may remain before the server deletes it. |
-| `MM_STATIC_DIR` | embedded UI | Serve the web UI from this directory instead. |
-| `MM_TOKEN` | unset | Require this bearer token on every request. Use at least 16 random characters. |
-| `MM_AUTH_MAX_FAILURES` | `10` | Failed token attempts per address per window before a lockout (`0` disables). |
-| `MM_AUTH_WINDOW_SECS` | `300` | Window over which failed attempts are counted. |
-| `MM_AUTH_LOCKOUT_SECS` | `300` | Lockout length after too many failures. |
-| `MM_TRUST_PROXY` | unset | Key throttling on the last `X-Forwarded-For` hop; only behind a trusted proxy. |
-| `MM_ALLOW_CUSTOM_ARGS` | on (unrestricted) | User-supplied tool arguments are passed straight to the backend. `filtered` applies the deny-list, `off` refuses them; see [the API docs](docs/API.md#policy). |
-
-The binary speaks plain HTTP. Put it behind a TLS reverse proxy before exposing it, and set `MM_TOKEN` if anyone else can reach it. Without a token the API is open.
-
----
 
 ## Building from Source
 
@@ -153,7 +132,6 @@ bun run build:server
 ./target/release/mediamagnet-server
 ```
 
----
 
 ## API
 
@@ -169,16 +147,6 @@ curl -N http://localhost:8080/api/v1/events   # Server-Sent Events
 
 A typed client lives in [`packages/client`](packages/client):
 
-```ts
-import { createMediaMagnetClient, subscribeEvents } from "@mediamagnet/client";
-
-const api = createMediaMagnetClient({ baseUrl: "http://localhost:8080" });
-await api.POST("/downloads", { body: { url } });
-```
-
-Regenerate its types after changing the spec with `bun run generate:api`.
-
----
 
 ## Roadmap
 
@@ -207,9 +175,8 @@ Please [open an issue](https://github.com/NullCode1337/MediaMagnet/issues) first
 
 MediaMagnet is a GUI frontend for numerous backends and does not itself host, cache, or redistribute any media, or provide any means to obtain said media. Users are responsible for ensuring their downloads comply with the terms of service of the sites they download from and applicable copyright law.
 
----
 
-⚠️ **Alpha software.** MediaMagnet is in active development. Please [report any bugs](https://github.com/NullCode1337/MediaMagnet/issues) that you might encounter.
+⚠️ **Beta software.** MediaMagnet is in active development. Please [report any bugs](https://github.com/NullCode1337/MediaMagnet/issues) that you might encounter.
 
 </br>
 
