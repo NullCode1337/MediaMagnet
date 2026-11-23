@@ -162,33 +162,26 @@
 </script>
 
 {#snippet sourcePane()}
-    <div
-      class="rounded-2xl bg-secondary/60 px-4 pb-3 pt-3 ring-1 ring-border/40 transition-[box-shadow,background-color] duration-300 ease-[cubic-bezier(0.2,0,0,1)] focus-within:ring-2 focus-within:ring-ring/50"
-    >
-      <div class="flex items-center justify-between gap-3">
+    <div class="flex flex-col gap-2.5">
+      <div class="flex items-center justify-between gap-3 px-1">
         <label
           for="add-task-links"
-          class="text-[11px] font-semibold tracking-wide text-muted-foreground"
+          class="text-[13px] font-semibold tracking-wide text-muted-foreground"
           >Links</label
         >
-        <span
-          class="rounded-full px-2.5 py-0.5 text-[11px] font-semibold tabular-nums {extractedUrls.length >
-          0
-            ? 'bg-primary/12 text-primary'
-            : 'bg-background/70 text-muted-foreground'}"
-        >
-          {extractedUrls.length} found
-        </span>
       </div>
 
-      <textarea
-        id="add-task-links"
-        bind:value={text}
-        rows="4"
-        placeholder={"Paste any text with links in it, e.g.\nhttps://example.com/video or: \u201cdownload this https://example.com/gallery\u201d"}
-        aria-describedby="add-task-links-help"
-        class="mt-2 min-h-28 w-full resize-y bg-transparent text-[15px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground/55 sm:min-h-32"
-      ></textarea>
+      <div
+        class="rounded-2xl bg-secondary/60 px-4 py-3 transition-[box-shadow,background-color] duration-300 ease-[cubic-bezier(0.2,0,0,1)] focus-within:ring-2 focus-within:ring-ring/50"
+      >
+        <textarea
+          id="add-task-links"
+          bind:value={text}
+          rows="4"
+          placeholder={"Paste any text with links in it, e.g.\n\u201cdownload this https://example.com/gallery\u201d"}
+          class="min-h-28 w-full resize-y bg-transparent text-[15px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground/55 sm:min-h-32"
+        ></textarea>
+      </div>
     </div>
 
     <div class="flex flex-col gap-2.5">
