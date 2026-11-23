@@ -62,7 +62,6 @@ Standalone server archives for Linux (x86_64/aarch64), macOS and Windows are att
 
 ## Self-hosting
 
-The server needs the same download tools as the desktop app: `yt-dlp`, `gallery-dl` and `spotdl` on `PATH` (or a directory set in `MM_BINARIES_DIR`), plus `ffmpeg` for merging. Desktop release builds, the Docker image and the `-tools` server archives install the latest versions from PyPI at build time; the plain server archive expects the tools on `PATH`.
 
 ### Docker
 
@@ -75,32 +74,28 @@ docker run -d --name mediamagnet \
   mediamagnet
 ```
 
-Then open <http://localhost:8080>. Downloads and settings live in the `/data` volume. The image installs `yt-dlp`, `gallery-dl`, `spotdl` and `ffmpeg` from the repositories, plus Deno.
+Open <http://localhost:8080>.
 
 ### Standalone binary
 
-Download the archive for your platform from a `server-v*` release, extract it and run the binary:
+Grab a `server-v*` archive, extract it and run the binary:
 
 ```bash
 tar -xzf mediamagnet-server-0.7.0-x86_64-unknown-linux-gnu-tools.tar.gz
 ./mediamagnet-server-0.7.0-x86_64-unknown-linux-gnu-tools/mediamagnet-server
 ```
 
-The server picks up the backends from PATH or `binaries/` directory beside the executable automatically.
+For the -tools zip, bundled tools live in `binaries/` beside the executable.
 
 ### Desktop binary as a server
 
-The desktop executable embeds the same server and web UI. Pass
-`--launch-server` to serve the SPA and `/api/v1` without opening a window:
+The desktop app embeds the same server. `--launch-server` serves the UI and API without opening a window:
 
 ```bash
 MediaMagnet --launch-server
 ```
 
-It reads the same `MM_*` variables as the standalone server. Without
-`MM_TOKEN` the API is open. The full reference, the access token and
-reverse-proxy setup are in
-[server configuration](INSTALLATION.md#configuration).
+The API is open unless `MM_TOKEN` is set. Configuration of the token and reverse-proxy setup are in [INSTALLATION.md](INSTALLATION.md#configuration).
 
 
 ## Building from Source
