@@ -297,7 +297,7 @@
 
     {#if history.length === 0}
       <div
-        class="min-h-[105.75px] flex flex-col items-center justify-center bg-muted/20 rounded-xl"
+        class="min-h-[105.75px] flex flex-col items-center justify-center bg-muted/20 rounded-xl sm:hidden"
       >
         <p class="text-sm text-muted-foreground font-medium">No history yet</p>
       </div>
