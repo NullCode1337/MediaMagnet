@@ -212,11 +212,11 @@ class Settings {
     syncModeToAccent(config);
   }
 
-  async applyImport(rawText: string, source: "clipboard" | "file") {
+  async applyImport(rawText: string, source: "clipboard" | "file"): Promise<boolean> {
     const text = (rawText ?? "").trim();
     if (!text) {
       toast.error(source === "file" ? "File is empty" : "Clipboard is empty");
-      return;
+      return false;
     }
 
     let parsed: unknown;
@@ -224,7 +224,7 @@ class Settings {
       parsed = JSON.parse(text);
     } catch (err) {
       toast.error(`Invalid JSON in ${source}`, { description: String(err) });
-      return;
+      return false;
     }
 
     if (
@@ -233,7 +233,7 @@ class Settings {
       Array.isArray(parsed)
     ) {
       toast.error(`The ${source} does not contain a settings object`);
-      return;
+      return false;
     }
 
     const { config, issues } = normalizeConfig(parsed);
@@ -272,13 +272,13 @@ class Settings {
           cancelLabel: "Cancel",
         },
       );
-      if (!ok) return;
+      if (!ok) return false;
     }
 
     try {
       await this.replaceAll(config);
     } catch {
-      return;
+      return false;
     }
 
     if (issues.length === 0) {
@@ -295,6 +295,8 @@ class Settings {
         },
       );
     }
+
+    return true;
   }
 
   async importFromClipboard() {

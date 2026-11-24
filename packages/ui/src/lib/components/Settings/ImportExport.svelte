@@ -9,6 +9,9 @@
     FileDown,
   } from "@lucide/svelte";
   import Section from "$lib/components/Settings/parts/SECTION.svelte";
+  import * as Dialog from "$lib/components/ui/dialog";
+  import { Button } from "$lib/components/ui/button";
+  import { transport } from "$lib/stores/transport.svelte";
 
   let rawJsonString = $derived(
     settings.config
@@ -18,11 +21,31 @@
 
   let lines = $derived(rawJsonString.split("\n"));
   let copied = $state(false);
+  let importOpen = $state(false);
+  let importText = $state("");
 
   async function handleCopy() {
     await settings.exportToClipboard();
     copied = true;
     setTimeout(() => (copied = false), 2000);
+  }
+
+  async function handleImportJson() {
+    try {
+      const text = await transport.readClipboard();
+      await settings.applyImport(text ?? "", "clipboard");
+    } catch {
+      importText = "";
+      importOpen = true;
+    }
+  }
+
+  async function submitImport() {
+    const ok = await settings.applyImport(importText, "clipboard");
+    if (ok) {
+      importOpen = false;
+      importText = "";
+    }
   }
 
   const actionButton =
@@ -41,7 +64,7 @@
     >
       <button
         type="button"
-        onclick={() => settings.importFromClipboard()}
+        onclick={handleImportJson}
         class="{actionButton} {actionIdle}"
       >
         <ClipboardPaste size={14} class="shrink-0" />
@@ -124,3 +147,42 @@
     ],
   }}
 />
+
+<Dialog.Root bind:open={importOpen}>
+  <Dialog.Content class="sm:max-w-xl gap-4">
+    <Dialog.Header>
+      <Dialog.Title>Import settings</Dialog.Title>
+      <Dialog.Description>
+        Clipboard access is unavailable here (it needs HTTPS). Paste your
+        settings JSON below instead.
+      </Dialog.Description>
+    </Dialog.Header>
+
+    <textarea
+      bind:value={importText}
+      rows="11"
+      spellcheck="false"
+      autocomplete="off"
+      aria-label="Settings JSON"
+      placeholder={'{\n  "settings_version": 1\n}'}
+      class="min-h-52 w-full resize-y rounded-xl border border-border/60 bg-background px-3.5 py-3 font-mono text-xs leading-relaxed text-foreground outline-none placeholder:text-muted-foreground/50 focus-visible:ring-2 focus-visible:ring-ring/50"
+    ></textarea>
+
+    <Dialog.Footer class="gap-2">
+      <Button
+        variant="outline"
+        class="h-10 rounded-xl px-4"
+        onclick={() => (importOpen = false)}
+      >
+        Cancel
+      </Button>
+      <Button
+        class="h-10 rounded-xl px-4"
+        disabled={!importText.trim()}
+        onclick={submitImport}
+      >
+        Import
+      </Button>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
