@@ -167,7 +167,15 @@ pub async fn download(
     } else {
         Disposition::Inline
     };
-    serve(&state.download_root, &relative, headers, disposition, None).await
+    serve(
+        &state.download_root,
+        &relative,
+        headers,
+        disposition,
+        None,
+        None,
+    )
+    .await
 }
 
 /// Deletes a job's output after the whole body has been streamed to the client.
@@ -184,6 +192,7 @@ pub async fn serve(
     headers: HeaderMap,
     disposition: Disposition,
     delete_after: Option<DeleteAfter>,
+    download_name: Option<String>,
 ) -> Response {
     let relative = relative.replace('\\', "/");
 
@@ -227,10 +236,11 @@ pub async fn serve(
         None => None,
     };
 
-    let file_name = path
-        .file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_else(|| "download".into());
+    let file_name = download_name.unwrap_or_else(|| {
+        path.file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "download".into())
+    });
 
     let mut builder = Response::builder()
         .header(

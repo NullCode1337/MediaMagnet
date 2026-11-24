@@ -1,4 +1,4 @@
-use mm_server::testing::{file_route, valid_job_id};
+use mm_server::testing::{archive_file_name, file_route, valid_job_id};
 
 #[test]
 fn sandbox_policy_only_applies_to_api_file_routes() {
@@ -22,4 +22,21 @@ fn job_ids_are_bounded_and_safe() {
     assert!(!valid_job_id("job/1"));
     assert!(!valid_job_id("job\n1"));
     assert!(!valid_job_id(&"a".repeat(129)));
+}
+
+#[test]
+fn archive_names_use_the_source_host() {
+    assert_eq!(
+        archive_file_name("https://www.example.com/watch?v=1"),
+        "example.com.zip"
+    );
+    assert_eq!(
+        archive_file_name("https://media.example.org/a/b"),
+        "media.example.org.zip"
+    );
+}
+
+#[test]
+fn archive_names_fall_back_without_a_host() {
+    assert_eq!(archive_file_name("not a url"), "download.zip");
 }

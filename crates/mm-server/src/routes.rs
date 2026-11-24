@@ -349,6 +349,7 @@ async fn output_file(
             retention: state.retention.clone(),
             job_id: id,
         }),
+        None,
     )
     .await;
     if response.status().is_success() {
@@ -358,6 +359,35 @@ async fn output_file(
         );
     }
     response
+}
+
+/// Names the browser download after the source host instead of the internal job id.
+#[doc(hidden)]
+pub fn archive_file_name(url: &str) -> String {
+    let host = url::Url::parse(url)
+        .ok()
+        .and_then(|parsed| {
+            parsed
+                .host_str()
+                .map(|host| host.trim_start_matches("www.").to_string())
+        })
+        .unwrap_or_else(|| "download".to_string());
+    let safe: String = host
+        .chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || matches!(ch, '.' | '-') {
+                ch
+            } else {
+                '-'
+            }
+        })
+        .collect();
+    let safe = safe.trim_matches(|ch| ch == '.' || ch == '-');
+    if safe.is_empty() {
+        "download.zip".to_string()
+    } else {
+        format!("{safe}.zip")
+    }
 }
 
 /// Streams every file a finished multi-file job produced as one ZIP archive.
@@ -433,6 +463,7 @@ async fn output_archive(
                     retention: state.retention.clone(),
                     job_id: id,
                 }),
+                Some(archive_file_name(&job.url)),
             )
             .await;
             if response.status().is_success() {

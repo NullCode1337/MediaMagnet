@@ -60,6 +60,7 @@ async fn a_fully_streamed_body_deletes_the_output() {
             retention,
             job_id: "job".into(),
         }),
+        None,
     )
     .await;
     let body = to_bytes(response.into_body(), 16).await.unwrap();
@@ -74,5 +75,40 @@ async fn a_fully_streamed_body_deletes_the_output() {
     .await
     .unwrap();
     assert!(!path.exists());
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+#[tokio::test]
+async fn download_name_overrides_the_disposition_name() {
+    let unique = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let root = std::env::temp_dir().join(format!("mm-files-name-{unique}"));
+    std::fs::create_dir_all(&root).unwrap();
+    std::fs::write(root.join("clip.mp4"), b"hello").unwrap();
+
+    let response = serve(
+        &root,
+        "clip.mp4",
+        HeaderMap::new(),
+        Disposition::Attachment,
+        None,
+        Some("example.com.zip".into()),
+    )
+    .await;
+
+    let disposition = response
+        .headers()
+        .get(axum::http::header::CONTENT_DISPOSITION)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or_default()
+        .to_string();
+    assert!(
+        disposition.contains("example.com.zip"),
+        "unexpected disposition: {disposition}"
+    );
+
+    let _ = to_bytes(response.into_body(), 16).await.unwrap();
     let _ = std::fs::remove_dir_all(&root);
 }

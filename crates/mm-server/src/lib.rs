@@ -20,7 +20,7 @@ pub mod testing {
     pub use crate::files::{encode_path, is_active_content, serve, DeleteAfter, Disposition};
     pub use crate::jobs::{JobSummary, Jobs, RETAINED_JOBS};
     pub use crate::retention::{FileIdentity, Retention};
-    pub use crate::routes::{file_route, valid_job_id};
+    pub use crate::routes::{archive_file_name, file_route, valid_job_id};
 }
 
 use std::net::SocketAddr;
