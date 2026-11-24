@@ -16,7 +16,7 @@
 
   import AddTask from "$lib/components/AddTask.svelte";
   import Sidebar from "$lib/components/Sidebar.svelte";
-  import Topbar from "$lib/components/Topbar.svelte";
+  import WebHome from "$lib/components/WebHome.svelte";
   import Downloader from "$lib/components/Downloader.svelte";
   import DownloaderCard from "$lib/components/DownloaderCard.svelte";
   import Settings from "$lib/components/Settings.svelte";
@@ -38,6 +38,10 @@
   let diskUsage = $state(0);
   let currentPlatform = $state("");
   let hour24 = $state(false);
+
+  const isWebLayout = $derived(
+    transport.kind === "http" && uiState.innerWidth >= 640,
+  );
 
   let tasks = $state<DownloadTask[]>([]);
   let history = $state<HistoryItem[]>([]);
@@ -469,8 +473,6 @@
     <div class="relative z-100">
       <Titlebar {currentPlatform} />
     </div>
-  {:else}
-    <Topbar {currentPlatform} onAddTask={() => (addTaskOpen = true)} />
   {/if}
 
   <AddTask bind:open={addTaskOpen} {addTasks} />
@@ -518,6 +520,20 @@
         {/if}
       </Button>
     </div>
+  {:else if isWebLayout}
+    <WebHome
+      bind:urlInput
+      onSubmit={pasteOrDownload}
+      {tasks}
+      bind:history
+      pauseTask={pauseDownload}
+      resumeTask={resumeDownload}
+      cancelTask={cancelDownload}
+      {stopAllDownloads}
+      {retryDownload}
+      {currentPlatform}
+      onAddTask={() => (addTaskOpen = true)}
+    />
   {:else}
     <div class="flex flex-1 w-full min-h-0 overflow-hidden relative">
       {#if transport.kind === "desktop"}

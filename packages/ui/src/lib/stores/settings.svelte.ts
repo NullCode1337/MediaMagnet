@@ -35,9 +35,12 @@ export function applyAccent(
   }
 }
 
-function syncModeToAccent(config: Pick<FullConfig, "accent_kind"> | null) {
+function syncModeToAccent(
+  config: Pick<FullConfig, "accent_kind" | "dark_mode"> | null,
+) {
   if (config?.accent_kind === "black") setMode("dark");
   else if (config?.accent_kind === "white") setMode("light");
+  else if (config) setMode(config.dark_mode ? "dark" : "light");
 }
 
 type SaveState = "idle" | "saving" | "saved" | "error";

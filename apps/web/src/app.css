@@ -143,6 +143,21 @@ body {
   --sidebar-ring: #000000;
 }
 
+.m3-home .grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.m3-home h3 {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--muted-foreground);
+}
+
+.m3-home .rounded-2xl {
+  border-radius: 1.5rem;
+}
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
