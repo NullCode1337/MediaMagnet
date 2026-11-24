@@ -13,6 +13,12 @@
     actions={config.headerActions ?? []}
   />
 
+  {#if config.toolbar}
+    <div class="mb-3 shrink-0">
+      {@render config.toolbar()}
+    </div>
+  {/if}
+
   {#if config.sections.some((section) => section.items.length > 0)}
     <SettingsSections sections={config.sections} fill={config.fill} />
   {:else}

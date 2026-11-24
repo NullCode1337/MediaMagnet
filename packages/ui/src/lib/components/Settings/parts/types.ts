@@ -132,6 +132,7 @@ export type SectionBase = {
   title: string;
   description?: string;
   headerActions?: PageAction[];
+  toolbar?: Snippet<[]>;
   sections: Section[];
   fill?: boolean;
 };

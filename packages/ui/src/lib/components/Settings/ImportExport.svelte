@@ -1,7 +1,5 @@
 <script lang="ts">
   import { settings } from "$lib/stores/settings.svelte";
-  import { Button } from "$lib/components/ui/button";
-  import * as Tooltip from "$lib/components/ui/tooltip";
   import {
     FileUp,
     ClipboardPaste,
@@ -26,108 +24,72 @@
     copied = true;
     setTimeout(() => (copied = false), 2000);
   }
+
+  const actionButton =
+    "flex h-9 w-full min-w-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl px-3 text-[13px] font-medium whitespace-nowrap transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] active:scale-[0.97] motion-reduce:transition-none";
+  const actionIdle =
+    "text-muted-foreground hover:bg-foreground/5 hover:text-foreground";
+  const actionActive = "bg-background text-foreground shadow-sm ring-1 ring-border/40";
 </script>
+
+{#snippet toolbar()}
+  <div class="@container">
+    <div
+      role="group"
+      aria-label="Import and export"
+      class="grid grid-cols-2 gap-1 rounded-2xl bg-secondary/60 p-1 @lg:grid-cols-4"
+    >
+      <button
+        type="button"
+        onclick={() => settings.importFromClipboard()}
+        class="{actionButton} {actionIdle}"
+      >
+        <ClipboardPaste size={14} class="shrink-0" />
+        Import JSON
+      </button>
+      <button
+        type="button"
+        onclick={() => settings.importFromFile()}
+        class="{actionButton} {actionIdle}"
+      >
+        <FileUp size={14} class="shrink-0" />
+        Import file
+      </button>
+      <button
+        type="button"
+        onclick={handleCopy}
+        class="{actionButton} {copied ? actionActive : actionIdle}"
+      >
+        {#if copied}
+          <Check size={14} class="shrink-0 text-emerald-500" />
+          Copied
+        {:else}
+          <Copy size={14} class="shrink-0" />
+          Export JSON
+        {/if}
+      </button>
+      <button
+        type="button"
+        onclick={() => settings.exportToFile()}
+        class="{actionButton} {actionIdle}"
+      >
+        <FileDown size={14} class="shrink-0" />
+        Export file
+      </button>
+    </div>
+  </div>
+{/snippet}
 
 {#snippet jsonViewer()}
   <div
-    class="flex shrink-0 items-center justify-between gap-3 border-b bg-muted/50 px-3 py-2"
+    class="flex shrink-0 items-center gap-2 border-b bg-muted/50 px-3 py-2"
   >
-    <div class="flex min-w-0 items-center gap-2">
-      <FileBraces size={12} class="shrink-0 text-muted-foreground" />
-      <span
-        class="whitespace-nowrap text-[11px] font-medium leading-none tracking-wide text-muted-foreground"
-      >
-        settings.json
-      </span>
-    </div>
-
-    <Tooltip.Provider delayDuration={200}>
-      <div class="flex shrink-0 items-center gap-0.5">
-        <Tooltip.Root>
-          <Tooltip.Trigger>
-            {#snippet child({ props })}
-              <Button
-                {...props}
-                variant="ghost"
-                size="icon-xs"
-                class="text-muted-foreground"
-                aria-label="Import File"
-                onclick={() => settings.importFromFile()}
-              >
-                <FileUp size={13} />
-              </Button>
-            {/snippet}
-          </Tooltip.Trigger>
-          <Tooltip.Content side="bottom" sideOffset={4}>
-            Import File
-          </Tooltip.Content>
-        </Tooltip.Root>
-
-        <Tooltip.Root>
-          <Tooltip.Trigger>
-            {#snippet child({ props })}
-              <Button
-                {...props}
-                variant="ghost"
-                size="icon-xs"
-                class="text-muted-foreground"
-                aria-label="Import JSON"
-                onclick={() => settings.importFromClipboard()}
-              >
-                <ClipboardPaste size={13} />
-              </Button>
-            {/snippet}
-          </Tooltip.Trigger>
-          <Tooltip.Content side="bottom" sideOffset={4}>
-            Import JSON
-          </Tooltip.Content>
-        </Tooltip.Root>
-
-        <Tooltip.Root>
-          <Tooltip.Trigger>
-            {#snippet child({ props })}
-              <Button
-                {...props}
-                variant="ghost"
-                size="icon-xs"
-                class="text-muted-foreground"
-                aria-label={copied ? "Copied" : "Export JSON"}
-                onclick={handleCopy}
-              >
-                {#if copied}
-                  <Check size={13} class="text-emerald-500" />
-                {:else}
-                  <Copy size={13} />
-                {/if}
-              </Button>
-            {/snippet}
-          </Tooltip.Trigger>
-          <Tooltip.Content side="bottom" sideOffset={4}>
-            {copied ? "Copied!" : "Export JSON"}
-          </Tooltip.Content>
-        </Tooltip.Root>
-
-        <Tooltip.Root>
-          <Tooltip.Trigger>
-            {#snippet child({ props })}
-              <Button
-                {...props}
-                variant="ghost"
-                size="icon-xs"
-                class="text-muted-foreground"
-                aria-label="Export File"
-                onclick={() => settings.exportToFile()}
-              >
-                <FileDown size={13} />
-              </Button>
-            {/snippet}
-          </Tooltip.Trigger>
-          <Tooltip.Content side="bottom" sideOffset={4}>
-            Export File
-          </Tooltip.Content>
-        </Tooltip.Root>
-      </div>
-    </Tooltip.Provider>
+    <FileBraces size={12} class="shrink-0 text-muted-foreground" />
+    <span
+      class="whitespace-nowrap text-[11px] font-medium leading-none tracking-wide text-muted-foreground"
+    >
+      settings.json
+    </span>
   </div>
 
   <div
@@ -153,6 +115,7 @@
   config={{
     title: "Import/Export Settings",
     fill: true,
+    toolbar,
     sections: [
       {
         fill: true,
