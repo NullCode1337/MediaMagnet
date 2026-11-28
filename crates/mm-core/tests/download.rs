@@ -1,6 +1,6 @@
 use mm_core::download::{
-    contains_separator, long_dir, matching_cookie, mtime_flag, recode_args, too_long, url_host_is,
-    Backend, JobCookie,
+    contains_separator, is_youtube, long_dir, matching_cookie, mtime_flag, recode_args, too_long,
+    url_host_is, with_warnings, ytdlp_challenge, ytdlp_cookie_retry, Backend, JobCookie,
 };
 
 fn cookie(domain: &str, content: &str) -> JobCookie {
@@ -52,6 +52,65 @@ fn host_checks_ignore_paths_and_queries() {
     ));
     assert!(!url_host_is("https://notyoutube.com/x", "youtube.com"));
     assert!(!url_host_is("not a url", "youtube.com"));
+}
+
+#[test]
+fn youtube_challenge_failures_say_what_to_update() {
+    let error = "ERROR: [youtube] x: Requested format is not available";
+    let hinted = ytdlp_challenge(error.to_string(), true);
+    assert!(hinted.contains("Requested format is not available"));
+    assert!(hinted.contains("yt-dlp-ejs"));
+    assert_eq!(ytdlp_challenge(error.to_string(), false), error);
+    assert!(!ytdlp_challenge(String::new(), true).is_empty());
+}
+
+#[test]
+fn errors_carry_every_collected_warning() {
+    let warnings = vec![
+        "WARNING: [youtube] [jsc] n challenge solving failed".to_string(),
+        "WARNING: Only images are available for download".to_string(),
+    ];
+    let error = with_warnings(
+        "ERROR: [youtube] x: Requested format is not available".into(),
+        &warnings,
+    );
+    assert!(error.contains("Requested format is not available"));
+    assert!(error.contains("n challenge solving failed"));
+    assert!(error.contains("Only images are available"));
+
+    assert_eq!(with_warnings("ERROR: x".into(), &[]), "ERROR: x");
+    assert_eq!(
+        with_warnings(String::new(), &warnings),
+        "",
+        "no error line keeps the exit-status message"
+    );
+}
+
+#[test]
+fn only_cookie_related_errors_are_retried_without_cookies() {
+    assert!(ytdlp_cookie_retry(
+        "ERROR: [youtube] x: Sign in to confirm you're not a bot"
+    ));
+    assert!(ytdlp_cookie_retry("HTTP Error 403: Forbidden"));
+    assert!(ytdlp_cookie_retry("Unable to load cookies"));
+    assert!(!ytdlp_cookie_retry(
+        "ERROR: [youtube] x: Requested format is not available. Use --list-formats"
+    ));
+    assert!(!ytdlp_cookie_retry("ERROR: Unsupported URL"));
+    assert!(!ytdlp_cookie_retry(
+        "ERROR: [youtube] x: Requested format is not available\nWarnings:\nWARNING: bad cookies were ignored"
+    ));
+}
+
+#[test]
+fn youtube_hosts_are_recognized() {
+    assert!(is_youtube("https://www.youtube.com/watch?v=1"));
+    assert!(is_youtube("https://music.youtube.com/watch?v=1"));
+    assert!(is_youtube("https://youtu.be/abc"));
+    assert!(is_youtube("https://www.youtube-nocookie.com/embed/abc"));
+    assert!(!is_youtube("https://example.com/?next=youtube.com"));
+    assert!(!is_youtube("https://notyoutube.com/x"));
+    assert!(!is_youtube("not a url"));
 }
 
 #[test]

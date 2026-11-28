@@ -262,9 +262,6 @@ impl Engine {
         Ok(cmd)
     }
 
-    /// Returns the backend and, when yt-dlp was rejected, why. The reason is kept
-    /// for the error message if the fallback also fails; a normal gallery-dl link
-    /// ("no dedicated extractor") is expected and must not surface as a warning.
     async fn identify(&self, url: &str, spec: &JobSpec) -> (Backend, Option<String>) {
         if url_host_is(url, "spotify.com") {
             return (Backend::SpotDl, None);
@@ -272,6 +269,13 @@ impl Engine {
 
         match self.probe_ytdlp(url, spec).await {
             Ok(()) => (Backend::YtDlp, None),
+            Err(reason) if is_youtube(url) => {
+                println!(
+                    "[MediaMagnet] yt-dlp probe failed ({}); gallery-dl cannot handle YouTube, keeping yt-dlp",
+                    reason
+                );
+                (Backend::YtDlp, None)
+            }
             Err(reason) => {
                 println!(
                     "[MediaMagnet] yt-dlp probe failed ({}), falling back to gallery-dl",
@@ -282,11 +286,31 @@ impl Engine {
         }
     }
 
-    /// Probes yt-dlp with the same arguments (and cookies) the real download
-    /// would use, so the probe cannot fail for a reason the download would not hit.
+    async fn apply_probe_args(&self, url: &str, spec: &JobSpec) -> Result<Command> {
+        let settings = &spec.settings;
+        let mut cmd = self
+            .base_command(Tool::YtDlp)
+            .await
+            .map_err(|e| Error::Msg(format!("yt-dlp backend error: {}", e)))?;
+
+        self.apply_args(
+            &mut cmd,
+            url,
+            &settings.yt_global_args,
+            &settings.yt_site_args,
+            ArgTool::YtDlp,
+        )?;
+        self.apply_user_agent(&mut cmd, Backend::YtDlp, settings);
+        if spec.with_cookies {
+            self.apply_cookie(&mut cmd, url, Backend::YtDlp, &spec.cookies);
+        }
+        cmd.arg(url);
+        Ok(cmd)
+    }
+
     async fn probe_ytdlp(&self, url: &str, spec: &JobSpec) -> std::result::Result<(), String> {
-        let (mut cmd, _) = self
-            .apply_download_args(url, Backend::YtDlp, spec)
+        let mut cmd = self
+            .apply_probe_args(url, spec)
             .await
             .map_err(|e| e.to_string())?;
         cmd.args(["--print", "title", "--no-download"])
@@ -436,9 +460,7 @@ impl Engine {
             .await
             .map_err(|e| Error::Msg(format!("{} backend error: {}", backend.as_str(), e)))?;
 
-        let is_youtube = url_host_is(url, "youtube.com")
-            || url_host_is(url, "youtu.be")
-            || url_host_is(url, "youtube-nocookie.com");
+        let youtube = is_youtube(url);
 
         match backend {
             Backend::SpotDl => {
@@ -479,7 +501,7 @@ impl Engine {
                     cmd.args(["--trim-filenames", &limit.to_string()]);
                 }
 
-                if is_youtube {
+                if youtube {
                     if !settings.yt_format.is_empty() {
                         cmd.args(["-f", &settings.yt_format]);
                     }
@@ -721,7 +743,7 @@ impl Engine {
                             succeeded = false;
                         }
                     }
-                } else if prepared.1 {
+                } else if prepared.1 && ytdlp_cookie_retry(&err) {
                     println!(
                         "[MediaMagnet] Download failed ({}), retrying without cookies...",
                         id
@@ -1039,10 +1061,24 @@ impl Engine {
         let kill_id = id.clone();
         let err_handle = tokio::spawn(async move {
             let mut error = String::new();
+            let mut challenge_failed = false;
+            let mut warnings: Vec<String> = Vec::new();
 
             while let Ok(Some(line)) = err_reader.next_line().await {
                 println!("{:#}", line);
                 let line_l = line.to_lowercase();
+
+                if line_l.contains("n challenge solving failed") {
+                    challenge_failed = true;
+                }
+
+                let clean = strip_ansi_codes(&line);
+                let warning = clean.trim();
+                if warning.to_lowercase().starts_with("warning")
+                    && !warnings.iter().any(|w| w == warning)
+                {
+                    warnings.push(warning.to_string());
+                }
 
                 if too_long(&line) {
                     if let Ok(mut slot) = filename_err.lock() {
@@ -1085,7 +1121,8 @@ impl Engine {
                     });
                 }
             }
-            error
+            let error = ytdlp_challenge(error, challenge_failed);
+            with_warnings(error, &warnings)
         });
 
         let mut exit_status: Option<std::process::ExitStatus> = None;
@@ -1480,6 +1517,14 @@ pub fn url_host_is(link: &str, domain: &str) -> bool {
 }
 
 #[doc(hidden)]
+pub fn is_youtube(link: &str) -> bool {
+    url_host_is(link, "youtube.com")
+        || url_host_is(link, "youtu.be")
+        || url_host_is(link, "yt.be")
+        || url_host_is(link, "youtube-nocookie.com")
+}
+
+#[doc(hidden)]
 pub fn matching_cookie<'a>(cookies: &'a [JobCookie], link: &str) -> Option<&'a JobCookie> {
     let host = url::Url::parse(link).ok()?.host_str()?.to_lowercase();
     let host = host.trim_end_matches('.').to_string();
@@ -1576,6 +1621,51 @@ fn record_output_file(files: &Mutex<Vec<String>>, base_dir: &Path, line: &str) -
         files.push(relative);
     }
     true
+}
+
+#[doc(hidden)]
+pub fn ytdlp_challenge(error: String, challenge_failed: bool) -> String {
+    if !challenge_failed {
+        return error;
+    }
+    let hint = "hint: YouTube's JavaScript challenge could not be solved; update yt-dlp and yt-dlp-ejs";
+    if error.trim().is_empty() {
+        hint.to_string()
+    } else {
+        format!("{error} ({hint})")
+    }
+}
+
+#[doc(hidden)]
+pub fn with_warnings(mut error: String, warnings: &[String]) -> String {
+    if warnings.is_empty() || error.trim().is_empty() {
+        return error;
+    }
+    error.push_str("\nWarnings:");
+    for warning in warnings {
+        error.push('\n');
+        error.push_str(warning);
+    }
+    error
+}
+
+#[doc(hidden)]
+pub fn ytdlp_cookie_retry(error: &str) -> bool {
+    // Only the error line decides; warnings smuggled into the message must not
+    // trigger a pointless retry.
+    let error = error.lines().next().unwrap_or_default().to_lowercase();
+    [
+        "cookie",
+        "sign in",
+        "log in",
+        "login",
+        "private video",
+        "members-only",
+        "http error 401",
+        "http error 403",
+    ]
+    .iter()
+    .any(|needle| error.contains(needle))
 }
 
 pub fn too_long(message: &str) -> bool {
